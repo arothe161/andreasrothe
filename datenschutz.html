@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Datenschutz – Andreas Rothe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0e0e0c;
+      --white: #fafaf7;
+      --stone: #f4f3ee;
+      --muted: #8a8880;
+      --accent-dark: #9a8570;
+      --border: #e4e2da;
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --sans: 'DM Sans', system-ui, sans-serif;
+      --nav-h: 72px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--white);
+      color: var(--black);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: var(--nav-h);
+      background: rgba(250,250,247,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 6vw;
+    }
+    .nav-logo {
+      font-family: var(--serif);
+      font-size: 1.25rem;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      color: var(--black);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--black); }
+
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: calc(var(--nav-h) + 5rem) 6vw 6rem;
+    }
+    .eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 1rem;
+      font-weight: 400;
+    }
+    h1 {
+      font-family: var(--serif);
+      font-size: 2.8rem;
+      font-weight: 300;
+      line-height: 1.15;
+      margin-bottom: 3rem;
+    }
+    h2 {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-weight: 400;
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      color: var(--black);
+    }
+    h3 {
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      color: #4a4944;
+      font-weight: 300;
+      margin-bottom: 0.75rem;
+    }
+    ul {
+      color: #4a4944;
+      font-weight: 300;
+      margin: 0.5rem 0 0.75rem 1.5rem;
+    }
+    ul li { margin-bottom: 0.3rem; }
+    a { color: var(--accent-dark); text-decoration: none; border-bottom: 1px solid var(--border); }
+    a:hover { border-color: var(--accent-dark); }
+    .divider { height: 1px; background: var(--border); margin: 2.5rem 0; }
+    .info-box {
+      background: var(--stone);
+      border-left: 3px solid var(--accent-dark);
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    footer {
+      padding: 2rem 6vw;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    footer a { color: inherit; border: none; }
+    footer a:hover { color: var(--black); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html" class="nav-logo">Andreas Rothe</a>
+    <ul class="nav-links">
+      <li><a href="index.html#ueber-mich">Über mich</a></li>
+      <li><a href="index.html#angebote">Angebote</a></li>
+      <li><a href="index.html#testimonials">Referenzen</a></li>
+      <li><a href="index.html#kontakt">Kontakt</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <p class="eyebrow">Rechtliches</p>
+    <h1>Datenschutz&shy;erklärung</h1>
+
+    <!-- 1. Verantwortlicher -->
+    <h2>1. Verantwortlicher</h2>
+    <p>Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:</p>
+    <p>
+      Andreas Rothe<br />
+      John-Schehr-Str. 66<br />
+      10409 Berlin<br />
+      E-Mail: <a href="mailto:hallo@andreasrothe.de">hallo@andreasrothe.de</a>
+    </p>
+
+    <div class="divider"></div>
+
+    <!-- 2. Allgemeines -->
+    <h2>2. Allgemeine Hinweise</h2>
+    <p>Der Schutz Ihrer persönlichen Daten ist mir ein wichtiges Anliegen. Ich verarbeite Ihre Daten daher ausschließlich auf Grundlage der gesetzlichen Bestimmungen (DSGVO, BDSG). In dieser Datenschutzerklärung informiere ich Sie über die wichtigsten Aspekte der Datenverarbeitung im Rahmen meiner Website.</p>
+
+    <div class="divider"></div>
+
+    <!-- 3. Hosting -->
+    <h2>3. Hosting bei Netlify</h2>
+    <p>Diese Website wird gehostet bei:</p>
+    <p>
+      Netlify, Inc.<br />
+      512 2nd Street, Suite 200<br />
+      San Francisco, CA 94107, USA
+    </p>
+    <p>Beim Besuch dieser Website werden automatisch technische Zugriffsdaten (Server-Logs) gespeichert, darunter IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Seite sowie Browsertyp. Diese Daten werden ausschließlich zur Sicherstellung des technischen Betriebs verarbeitet und nicht mit anderen Daten zusammengeführt.</p>
+    <p>Die Datenübertragung in die USA erfolgt auf Grundlage der Standardvertragsklauseln der EU-Kommission. Weitere Informationen finden Sie in der Datenschutzerklärung von Netlify: <a href="https://www.netlify.com/privacy/" target="_blank" rel="noopener">netlify.com/privacy</a>.</p>
+    <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse am Betrieb der Website).</p>
+
+    <div class="divider"></div>
+
+    <!-- 4. Google Fonts -->
+    <h2>4. Google Fonts</h2>
+    <p>Diese Website verwendet Google Fonts, einen Dienst der Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA. Beim Laden der Seite wird eine Verbindung zu Google-Servern hergestellt, wobei Ihre IP-Adresse übertragen wird.</p>
+    <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer einheitlichen Darstellung der Website). Weitere Informationen: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
+    <div class="info-box">
+      Hinweis: Für maximale Datensparsamkeit empfiehlt sich die lokale Einbindung von Google Fonts, bei der keine Verbindung zu Google-Servern hergestellt wird.
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 5. Google Analytics -->
+    <h2>5. Google Analytics</h2>
+    <p>Diese Website nutzt Google Analytics, einen Webanalysedienst der Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA.</p>
+
+    <h3>Was wird erfasst?</h3>
+    <p>Google Analytics verwendet Cookies, die eine Analyse Ihrer Nutzung der Website ermöglichen. Die durch den Cookie erzeugten Informationen über Ihre Nutzung dieser Website (einschließlich der gekürzten IP-Adresse) werden an einen Server von Google in den USA übertragen und dort gespeichert. Zu den erfassten Daten gehören:</p>
+    <ul>
+      <li>Besuchte Seiten und Verweildauer</li>
+      <li>Herkunft des Besuchs (z. B. Suchmaschine, direkte Eingabe)</li>
+      <li>Ungefährer Standort (Stadt/Region)</li>
+      <li>Gerät und Browsertyp</li>
+    </ul>
+
+    <h3>IP-Anonymisierung</h3>
+    <p>Ich habe die IP-Anonymisierung (anonymizeIp) aktiviert, sodass Ihre IP-Adresse von Google innerhalb der EU gekürzt wird, bevor sie in die USA übertragen wird.</p>
+
+    <h3>Rechtsgrundlage und Einwilligung</h3>
+    <p>Google Analytics wird nur nach Ihrer ausdrücklichen Einwilligung aktiviert (Art. 6 Abs. 1 lit. a DSGVO). Sie können Ihre Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen, indem Sie die Cookie-Einstellungen auf dieser Website ändern oder das Browser-Add-on zur Deaktivierung von Google Analytics installieren: <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">tools.google.com/dlpage/gaoptout</a>.</p>
+
+    <h3>Auftragsverarbeitung</h3>
+    <p>Ich habe mit Google einen Vertrag zur Auftragsverarbeitung geschlossen. Die Datenübertragung in die USA erfolgt auf Grundlage der Standardvertragsklauseln der EU-Kommission. Weitere Informationen: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
+
+    <div class="divider"></div>
+
+    <!-- 6. Kontaktformular -->
+    <h2>6. Kontaktformular</h2>
+    <p>Wenn Sie mir über das Kontaktformular eine Nachricht senden, werden die von Ihnen angegebenen Daten (Name, E-Mail-Adresse, Betreff, Nachricht) zum Zweck der Bearbeitung Ihrer Anfrage verarbeitet und gespeichert.</p>
+    <p>Diese Daten gebe ich nicht ohne Ihre Einwilligung weiter. Sie werden gelöscht, sobald Ihre Anfrage abschließend bearbeitet ist und keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</p>
+    <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung) bzw. Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Beantwortung von Anfragen).</p>
+
+    <div class="divider"></div>
+
+    <!-- 7. Cookies -->
+    <h2>7. Cookies</h2>
+    <p>Diese Website verwendet Cookies. Cookies sind kleine Textdateien, die auf Ihrem Endgerät gespeichert werden. Es werden folgende Arten von Cookies eingesetzt:</p>
+    <ul>
+      <li>Technisch notwendige Cookies: für den Betrieb der Website erforderlich, keine Einwilligung nötig.</li>
+      <li>Analyse-Cookies (Google Analytics): nur nach Ihrer Einwilligung.</li>
+    </ul>
+    <p>Sie können Cookies in Ihren Browsereinstellungen jederzeit deaktivieren oder löschen.</p>
+
+    <div class="divider"></div>
+
+    <!-- 8. Betroffenenrechte -->
+    <h2>8. Ihre Rechte</h2>
+    <p>Sie haben gegenüber mir folgende Rechte hinsichtlich der Sie betreffenden personenbezogenen Daten:</p>
+    <ul>
+      <li>Recht auf Auskunft (Art. 15 DSGVO)</li>
+      <li>Recht auf Berichtigung (Art. 16 DSGVO)</li>
+      <li>Recht auf Löschung (Art. 17 DSGVO)</li>
+      <li>Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
+      <li>Recht auf Datenübertragbarkeit (Art. 20 DSGVO)</li>
+      <li>Recht auf Widerspruch gegen die Verarbeitung (Art. 21 DSGVO)</li>
+      <li>Recht auf Widerruf einer erteilten Einwilligung (Art. 7 Abs. 3 DSGVO)</li>
+    </ul>
+    <p>Zur Ausübung Ihrer Rechte wenden Sie sich bitte an: <a href="mailto:hallo@andreasrothe.de">hallo@andreasrothe.de</a></p>
+
+    <h3>Beschwerderecht</h3>
+    <p>Sie haben das Recht, sich bei der zuständigen Datenschutzaufsichtsbehörde zu beschweren. In Berlin ist das:</p>
+    <p>
+      Berliner Beauftragte für Datenschutz und Informationsfreiheit<br />
+      Friedrichstr. 219, 10969 Berlin<br />
+      <a href="https://www.datenschutz-berlin.de" target="_blank" rel="noopener">datenschutz-berlin.de</a>
+    </p>
+
+    <div class="divider"></div>
+
+    <p style="font-size:0.85rem; color: var(--muted);">Stand: Juni 2025</p>
+  </main>
+
+  <footer>
+    <span>© 2025 Andreas Rothe</span>
+    <span>
+      <a href="impressum.html">Impressum</a> &nbsp;·&nbsp;
+      <a href="datenschutz.html">Datenschutz</a>
+    </span>
+  </footer>
+
+</body>
+</html>
