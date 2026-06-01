@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anna Weiss – Executive Coaching & Change Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0e0e0c;
+      --white: #fafaf7;
+      --stone: #f4f3ee;
+      --muted: #8a8880;
+      --accent: #c8b89a;
+      --accent-dark: #9a8570;
+      --border: #e4e2da;
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --sans: 'DM Sans', system-ui, sans-serif;
+      --nav-h: 72px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--white);
+      color: var(--black);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: var(--nav-h);
+      background: rgba(250, 250, 247, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 6vw;
+    }
+    .nav-logo {
+      font-family: var(--serif);
+      font-size: 1.25rem;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      color: var(--black);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--black); }
+
+    /* ── SECTIONS ── */
+    section { padding: 6rem 6vw; }
+    section:first-of-type { padding-top: calc(var(--nav-h) + 5rem); }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100svh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      padding-top: calc(var(--nav-h) + 4rem);
+    }
+    .hero-text {}
+    .hero-eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 1.5rem;
+      font-weight: 400;
+    }
+    .hero-title {
+      font-family: var(--serif);
+      font-size: clamp(2.8rem, 5vw, 4.2rem);
+      font-weight: 300;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      margin-bottom: 1.5rem;
+    }
+    .hero-title em { font-style: italic; color: var(--accent-dark); }
+    .hero-sub {
+      font-size: 1rem;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 40ch;
+      margin-bottom: 2.5rem;
+      line-height: 1.8;
+    }
+    .btn-primary {
+      display: inline-block;
+      padding: 0.875rem 2rem;
+      background: var(--black);
+      color: var(--white);
+      font-family: var(--sans);
+      font-size: 0.8125rem;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 1px solid var(--black);
+      transition: background 0.25s, color 0.25s;
+    }
+    .btn-primary:hover { background: transparent; color: var(--black); }
+    .btn-ghost {
+      display: inline-block;
+      padding: 0.875rem 2rem;
+      background: transparent;
+      color: var(--black);
+      font-family: var(--sans);
+      font-size: 0.8125rem;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 1px solid var(--black);
+      transition: background 0.25s, color 0.25s;
+      margin-left: 1rem;
+    }
+    .btn-ghost:hover { background: var(--black); color: var(--white); }
+    .hero-image {
+      position: relative;
+      height: 560px;
+      background: var(--stone);
+      overflow: hidden;
+    }
+    .hero-image::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, #e8e4db 0%, #d4cfc4 100%);
+    }
+    .hero-image-label {
+      position: absolute;
+      bottom: 2rem; left: 2rem;
+      font-family: var(--serif);
+      font-size: 0.9rem;
+      font-style: italic;
+      color: var(--accent-dark);
+    }
+    .hero-stat {
+      position: absolute;
+      top: 2rem; right: 2rem;
+      text-align: right;
+    }
+    .hero-stat-num {
+      font-family: var(--serif);
+      font-size: 3rem;
+      font-weight: 300;
+      line-height: 1;
+      color: var(--black);
+    }
+    .hero-stat-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 6vw;
+    }
+
+    /* ── ÜBER MICH ── */
+    #ueber-mich {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 5rem;
+      align-items: start;
+    }
+    .section-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      padding-top: 0.5rem;
+      font-weight: 400;
+    }
+    .section-title {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 3.5vw, 3rem);
+      font-weight: 300;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+    }
+    .section-title em { font-style: italic; }
+    .about-body p {
+      color: #4a4944;
+      font-weight: 300;
+      margin-bottom: 1.2rem;
+      font-size: 1.0rem;
+    }
+    .about-credentials {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    .credential {
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      background: var(--stone);
+    }
+    .credential-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 0.4rem;
+      font-weight: 400;
+    }
+    .credential-text {
+      font-family: var(--serif);
+      font-size: 1rem;
+      color: var(--black);
+      font-weight: 400;
+    }
+
+    /* ── ANGEBOTE ── */
+    #angebote { background: var(--stone); }
+    .angebote-header { margin-bottom: 3.5rem; }
+    .angebote-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5px;
+      background: var(--border);
+    }
+    .angebot-card {
+      background: var(--white);
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .angebot-num {
+      font-family: var(--serif);
+      font-size: 2.5rem;
+      font-weight: 300;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 1.5rem;
+    }
+    .angebot-title {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-weight: 400;
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+    }
+    .angebot-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 300;
+      line-height: 1.8;
+      flex: 1;
+      margin-bottom: 1.5rem;
+    }
+    .angebot-link {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--black);
+      text-decoration: none;
+      border-bottom: 1px solid var(--black);
+      padding-bottom: 2px;
+      align-self: flex-start;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .angebot-link:hover { color: var(--accent-dark); border-color: var(--accent-dark); }
+
+    /* ── TESTIMONIALS ── */
+    #testimonials {}
+    .testi-header { margin-bottom: 3.5rem; }
+    .testi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+    .testi-card {
+      padding: 2.5rem;
+      border: 1px solid var(--border);
+    }
+    .testi-quote {
+      font-family: var(--serif);
+      font-size: 1.15rem;
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.7;
+      color: #2a2a28;
+      margin-bottom: 1.5rem;
+    }
+    .testi-author {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .testi-author span {
+      display: block;
+      color: var(--accent-dark);
+      margin-top: 0.2rem;
+    }
+
+    /* ── KONTAKT ── */
+    #kontakt { background: var(--black); color: var(--white); }
+    #kontakt .section-label { color: var(--accent); }
+    #kontakt .section-title { color: var(--white); }
+    .kontakt-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+    .kontakt-text p {
+      color: #a09e98;
+      font-weight: 300;
+      margin-bottom: 1rem;
+    }
+    .kontakt-info { margin-top: 2rem; }
+    .kontakt-info-item {
+      display: flex;
+      gap: 1rem;
+      align-items: baseline;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .kontakt-info-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      white-space: nowrap;
+      font-weight: 400;
+      min-width: 6rem;
+    }
+    .kontakt-info-val { color: #d0cec8; }
+    .kontakt-form {}
+    .form-row { margin-bottom: 1.25rem; }
+    .form-label {
+      display: block;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      font-weight: 400;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--white);
+      padding: 0.75rem 1rem;
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      font-weight: 300;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--accent);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: rgba(255,255,255,0.3); }
+    .form-select option { background: #1a1a18; color: var(--white); }
+    .form-textarea { resize: vertical; min-height: 120px; }
+    .btn-submit {
+      width: 100%;
+      padding: 1rem;
+      background: var(--accent);
+      color: var(--black);
+      border: none;
+      font-family: var(--sans);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 0.5rem;
+    }
+    .btn-submit:hover { background: #b8a88a; }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 2rem 6vw;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      background: var(--black);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.3);
+    }
+    footer a { color: inherit; text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+
+    /* ── PAGE NAVIGATION (multi-page feel) ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.7s ease both; }
+    .fade-up-2 { animation: fadeUp 0.7s 0.15s ease both; }
+    .fade-up-3 { animation: fadeUp 0.7s 0.3s ease both; }
+    .fade-up-4 { animation: fadeUp 0.7s 0.45s ease both; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      #hero { grid-template-columns: 1fr; min-height: auto; }
+      .hero-image { height: 320px; order: -1; }
+      #ueber-mich { grid-template-columns: 1fr; gap: 2rem; }
+      .angebote-grid { grid-template-columns: 1fr; gap: 1px; }
+      .testi-grid { grid-template-columns: 1fr; }
+      .kontakt-inner { grid-template-columns: 1fr; gap: 3rem; }
+      .about-credentials { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="#hero" class="nav-logo">Anna Weiss</a>
+    <ul class="nav-links">
+      <li><a href="#ueber-mich">Über mich</a></li>
+      <li><a href="#angebote">Angebote</a></li>
+      <li><a href="#testimonials">Referenzen</a></li>
+      <li><a href="#kontakt">Kontakt</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-text">
+      <p class="hero-eyebrow fade-up">Executive Coaching · Change Management</p>
+      <h1 class="hero-title fade-up-2">
+        Führung, die<br>
+        <em>Wirkung</em><br>
+        entfaltet.
+      </h1>
+      <p class="hero-sub fade-up-3">
+        Ich begleite Führungskräfte und Organisationen in komplexen Veränderungsprozessen – 
+        mit Klarheit, Tiefe und strategischem Fokus.
+      </p>
+      <div class="fade-up-4">
+        <a href="#kontakt" class="btn-primary">Erstgespräch vereinbaren</a>
+        <a href="#angebote" class="btn-ghost">Angebote</a>
+      </div>
+    </div>
+    <div class="hero-image fade-up-2">
+      <div class="hero-stat">
+        <div class="hero-stat-num">15+</div>
+        <div class="hero-stat-label">Jahre Erfahrung</div>
+      </div>
+      <div class="hero-image-label">Klarheit im Wandel.</div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ÜBER MICH -->
+  <section id="ueber-mich">
+    <div>
+      <p class="section-label">Über mich</p>
+    </div>
+    <div class="about-body">
+      <h2 class="section-title">
+        Ich glaube an Führung,<br>
+        die <em>Menschen bewegt.</em>
+      </h2>
+      <p>
+        Als Executive Coach und Beraterin für Change Management begleite ich seit über 15 Jahren Führungskräfte 
+        aus DAX-Konzernen, mittelständischen Unternehmen und internationalen Organisationen. Mein Ansatz verbindet 
+        systemisches Denken mit pragmatischer Umsetzungsstärke.
+      </p>
+      <p>
+        Ich war selbst in Führungsverantwortung – als Head of Strategy eines internationalen Unternehmens – 
+        und kenne die Anforderungen aus eigener Erfahrung. Dieses Verständnis bringt ich in jedes Coaching ein.
+      </p>
+      <p>
+        Meine Arbeit ist geprägt von tiefer Neugier für Menschen, konkreten Ergebnissen und einem 
+        klaren Blick auf das Wesentliche.
+      </p>
+      <div class="about-credentials">
+        <div class="credential">
+          <div class="credential-title">Ausbildung</div>
+          <div class="credential-text">Systemisches Coaching, ICF-zertifiziert</div>
+        </div>
+        <div class="credential">
+          <div class="credential-title">Studium</div>
+          <div class="credential-text">BWL & Psychologie, LMU München</div>
+        </div>
+        <div class="credential">
+          <div class="credential-title">Weiterbildung</div>
+          <div class="credential-text">Change Management, Prosci-Methodik</div>
+        </div>
+        <div class="credential">
+          <div class="credential-title">Sprachen</div>
+          <div class="credential-text">Deutsch, Englisch, Französisch</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ANGEBOTE -->
+  <section id="angebote">
+    <div class="angebote-header">
+      <p class="section-label">Angebote</p>
+      <h2 class="section-title">Was ich für Sie<br><em>leisten kann</em></h2>
+    </div>
+    <div class="angebote-grid">
+      <div class="angebot-card">
+        <div class="angebot-num">01</div>
+        <h3 class="angebot-title">Executive Coaching</h3>
+        <p class="angebot-desc">
+          Vertrauliche Einzelbegleitung für Führungskräfte in herausfordernden Phasen – 
+          bei Rollenwechseln, Konflikten oder strategischen Weichenstellungen. 
+          Format: 6–12 Sitzungen à 90 Minuten, auch online.
+        </p>
+        <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
+      </div>
+      <div class="angebot-card">
+        <div class="angebot-num">02</div>
+        <h3 class="angebot-title">Change Management</h3>
+        <p class="angebot-desc">
+          Strategische Begleitung von Transformationsprozessen – von der Konzeption bis zur 
+          Umsetzung. Ich helfe Ihnen, Wandel als Chance zu gestalten und Ihre Organisation 
+          mitzunehmen.
+        </p>
+        <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
+      </div>
+      <div class="angebot-card">
+        <div class="angebot-num">03</div>
+        <h3 class="angebot-title">Team- & Führungsentwicklung</h3>
+        <p class="angebot-desc">
+          Workshops und Entwicklungsprogramme für Führungsteams – von der Diagnose 
+          über Teamentwicklung bis zur nachhaltigen Stärkung Ihrer Führungskultur. 
+          Maßgeschneidert für Ihren Kontext.
+        </p>
+        <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- TESTIMONIALS -->
+  <section id="testimonials">
+    <div class="testi-header">
+      <p class="section-label">Referenzen</p>
+      <h2 class="section-title">Was Klienten<br><em>sagen</em></h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card">
+        <p class="testi-quote">
+          „Anna Weiss hat mir geholfen, in einer der schwierigsten Phasen meiner Karriere 
+          Klarheit zu gewinnen. Ihr Blick von außen war unbezahlbar – direkt, empathisch 
+          und immer lösungsorientiert."
+        </p>
+        <div class="testi-author">
+          Dr. Michael Schreiber
+          <span>CFO, internationaler Technologiekonzern</span>
+        </div>
+      </div>
+      <div class="testi-card">
+        <p class="testi-quote">
+          „Dank der Begleitung durch Anna Weiss ist unser Transformationsprojekt nicht nur 
+          on track, sondern hat auch das Vertrauen im Team massiv gestärkt. 
+          Eine echte Investition."
+        </p>
+        <div class="testi-author">
+          Susanne Mayer
+          <span>HR Director, mittelständisches Familienunternehmen</span>
+        </div>
+      </div>
+      <div class="testi-card">
+        <p class="testi-quote">
+          „Was mich beeindruckt hat: die Fähigkeit, komplexe Dynamiken schnell zu erfassen 
+          und auf den Punkt zu bringen. Ich komme immer wieder."
+        </p>
+        <div class="testi-author">
+          Thomas Berger
+          <span>Geschäftsführer, Beratungsunternehmen</span>
+        </div>
+      </div>
+      <div class="testi-card">
+        <p class="testi-quote">
+          „Unsere Führungsmannschaft hat sich in einem Jahr so weiterentwickelt wie in den 
+          fünf Jahren davor nicht. Der Unterschied ist spürbar – im Alltag, in den Zahlen, 
+          in der Stimmung."
+        </p>
+        <div class="testi-author">
+          Claudia Hofmann
+          <span>Vorstand, öffentliches Unternehmen</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KONTAKT -->
+  <section id="kontakt">
+    <div class="kontakt-inner">
+      <div class="kontakt-text">
+        <p class="section-label">Kontakt</p>
+        <h2 class="section-title">Lassen Sie uns<br><em>sprechen.</em></h2>
+        <p>
+          Ein erstes Gespräch ist unverbindlich und kostenlos. 
+          In 30 Minuten finden wir gemeinsam heraus, ob und wie ich Sie 
+          unterstützen kann.
+        </p>
+        <div class="kontakt-info">
+          <div class="kontakt-info-item">
+            <span class="kontakt-info-label">E-Mail</span>
+            <span class="kontakt-info-val">hallo@annaweiss.de</span>
+          </div>
+          <div class="kontakt-info-item">
+            <span class="kontakt-info-label">Telefon</span>
+            <span class="kontakt-info-val">+49 30 12345678</span>
+          </div>
+          <div class="kontakt-info-item">
+            <span class="kontakt-info-label">Standort</span>
+            <span class="kontakt-info-val">Berlin & deutschlandweit</span>
+          </div>
+          <div class="kontakt-info-item">
+            <span class="kontakt-info-label">Format</span>
+            <span class="kontakt-info-val">Präsenz & Online</span>
+          </div>
+        </div>
+      </div>
+      <div class="kontakt-form">
+        <div class="form-row">
+          <label class="form-label">Name</label>
+          <input class="form-input" type="text" placeholder="Ihr vollständiger Name" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">E-Mail</label>
+          <input class="form-input" type="email" placeholder="ihre@email.de" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Thema</label>
+          <select class="form-select form-input">
+            <option value="">Bitte wählen …</option>
+            <option>Executive Coaching</option>
+            <option>Change Management</option>
+            <option>Team- & Führungsentwicklung</option>
+            <option>Sonstiges</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Nachricht</label>
+          <textarea class="form-textarea form-input" placeholder="Kurze Beschreibung Ihres Anliegens …"></textarea>
+        </div>
+        <button class="btn-submit" onclick="alert('Vielen Dank! In der fertigen Version wird Ihre Anfrage hier gesendet.')">
+          Nachricht senden
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2025 Anna Weiss Coaching</span>
+    <span>
+      <a href="#">Impressum</a> &nbsp;·&nbsp;
+      <a href="#">Datenschutz</a>
+    </span>
+  </footer>
+
+</body>
+</html>
