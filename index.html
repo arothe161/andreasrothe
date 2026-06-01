@@ -1,5 +1,30 @@
 <!DOCTYPE html>
 <html lang="de">
+<!-- Klaro Cookie Consent -->
+<script defer src="https://cdn.kiprotect.com/klaro/v0.7/klaro.js"></script>
+<script>
+  var klaroConfig = {
+    acceptAll: true,
+    lang: 'de',
+    services: [
+      {
+        name: 'google-analytics',
+        title: 'Google Analytics',
+        purposes: ['analytics'],
+        cookies: [/^_ga/, '_gid'],
+        onAccept: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-XXXXXXXXXX');
+        `,
+        onDecline: `
+          window['ga-disable-G-XXXXXXXXXX'] = true;
+        `
+      }
+    ]
+  };
+</script>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -438,7 +463,8 @@
   </style>
 </head>
 <body>
-
+<!-- Google Analytics (wird nur nach Einwilligung geladen) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
   <nav>
     <a href="#hero" class="nav-logo">Andreas Rothe</a>
     <ul class="nav-links">
