@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impressum – Andreas Rothe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0e0e0c;
+      --white: #fafaf7;
+      --stone: #f4f3ee;
+      --muted: #8a8880;
+      --accent-dark: #9a8570;
+      --border: #e4e2da;
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --sans: 'DM Sans', system-ui, sans-serif;
+      --nav-h: 72px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--white);
+      color: var(--black);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: var(--nav-h);
+      background: rgba(250,250,247,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 6vw;
+    }
+    .nav-logo {
+      font-family: var(--serif);
+      font-size: 1.25rem;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      color: var(--black);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--black); }
+
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: calc(var(--nav-h) + 5rem) 6vw 6rem;
+    }
+    .eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 1rem;
+      font-weight: 400;
+    }
+    h1 {
+      font-family: var(--serif);
+      font-size: 2.8rem;
+      font-weight: 300;
+      line-height: 1.15;
+      margin-bottom: 3rem;
+    }
+    h2 {
+      font-family: var(--serif);
+      font-size: 1.3rem;
+      font-weight: 400;
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      color: var(--black);
+    }
+    p {
+      color: #4a4944;
+      font-weight: 300;
+      margin-bottom: 0.5rem;
+    }
+    a { color: var(--accent-dark); text-decoration: none; border-bottom: 1px solid var(--border); }
+    a:hover { border-color: var(--accent-dark); }
+    .divider { height: 1px; background: var(--border); margin: 3rem 0; }
+
+    footer {
+      padding: 2rem 6vw;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    footer a { color: inherit; border: none; }
+    footer a:hover { color: var(--black); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html" class="nav-logo">Andreas Rothe</a>
+    <ul class="nav-links">
+      <li><a href="index.html#ueber-mich">Über mich</a></li>
+      <li><a href="index.html#angebote">Angebote</a></li>
+      <li><a href="index.html#testimonials">Referenzen</a></li>
+      <li><a href="index.html#kontakt">Kontakt</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <p class="eyebrow">Rechtliches</p>
+    <h1>Impressum</h1>
+
+    <h2>Angaben gemäß § 5 TMG</h2>
+    <p>Andreas Rothe</p>
+    <p>John-Schehr-Str. 66</p>
+    <p>10409 Berlin</p>
+
+    <div class="divider"></div>
+
+    <h2>Kontakt</h2>
+    <p>E-Mail: <a href="mailto:hallo@andreasrothe.de">hallo@andreasrothe.de</a></p>
+
+    <div class="divider"></div>
+
+    <h2>Berufsbezeichnung</h2>
+    <p>Executive Coach &amp; Berater für Change Management</p>
+    <p>Berufsbezeichnung verliehen in: Deutschland</p>
+
+    <div class="divider"></div>
+
+    <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+    <p>Andreas Rothe</p>
+    <p>John-Schehr-Str. 66</p>
+    <p>10409 Berlin</p>
+
+    <div class="divider"></div>
+
+    <h2>Haftung für Inhalte</h2>
+    <p>Als Diensteanbieter bin ich gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG bin ich als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.</p>
+    <p>Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch erst ab dem Zeitpunkt der Kenntnis einer konkreten Rechtsverletzung möglich. Bei Bekanntwerden von entsprechenden Rechtsverletzungen werde ich diese Inhalte umgehend entfernen.</p>
+
+    <h2>Haftung für Links</h2>
+    <p>Mein Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte ich keinen Einfluss habe. Deshalb kann ich für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.</p>
+
+    <h2>Urheberrecht</h2>
+    <p>Die durch den Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.</p>
+  </main>
+
+  <footer>
+    <span>© 2025 Andreas Rothe</span>
+    <span>
+      <a href="impressum.html">Impressum</a> &nbsp;·&nbsp;
+      <a href="#">Datenschutz</a>
+    </span>
+  </footer>
+
+</body>
+</html>
