@@ -24,15 +24,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const existingNav = document.querySelector('nav');
     const headerContainer = document.createElement('div');
     headerContainer.innerHTML = headerContent;
+    const newNav = headerContainer.querySelector('nav');
     
-    if (existingNav) {
-      existingNav.replaceWith(headerContainer.querySelector('nav'));
-    } else {
-      document.body.insertBefore(headerContainer.querySelector('nav'), document.body.firstChild);
+    if (existingNav && newNav) {
+      existingNav.replaceWith(newNav);
     }
-    
-    // Execute any scripts in the loaded header
-    executeScripts(headerContainer);
     
     // Load footer
     const footerResponse = await fetch(footerPath);
@@ -40,15 +36,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const existingFooter = document.querySelector('footer');
     const footerContainer = document.createElement('div');
     footerContainer.innerHTML = footerContent;
+    const newFooter = footerContainer.querySelector('footer');
     
-    if (existingFooter) {
-      existingFooter.replaceWith(footerContainer.querySelector('footer'));
-    } else {
-      document.body.appendChild(footerContainer.querySelector('footer'));
+    if (existingFooter && newFooter) {
+      existingFooter.replaceWith(newFooter);
+      // Execute scripts only after footer is inserted into DOM
+      executeScripts(footerContainer);
     }
-    
-    // Execute any scripts in the loaded footer
-    executeScripts(footerContainer);
   } catch (error) {
     console.warn('Could not load global header/footer:', error);
   }
