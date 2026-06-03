@@ -160,12 +160,14 @@
   </main>
 
   <footer>
-    <span>© 2025 Andreas Rothe</span>
+    <span>© <span id="year"></span> Andreas Rothe</span>
     <span>
       <a href="impressum.html">Impressum</a> &nbsp;·&nbsp;
       <a href="#">Datenschutz</a>
     </span>
   </footer>
-
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
