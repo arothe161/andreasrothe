@@ -8,6 +8,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     const headerPath = isRootPage ? './header.html' : '../header.html';
     const footerPath = isRootPage ? './footer.html' : '../footer.html';
     
+    // Helper function to execute scripts in a container
+    function executeScripts(container) {
+      const scripts = container.querySelectorAll('script');
+      scripts.forEach(script => {
+        if (script.innerHTML) {
+          eval(script.innerHTML);
+        }
+      });
+    }
+    
     // Load header
     const headerResponse = await fetch(headerPath);
     const headerContent = await headerResponse.text();
@@ -20,6 +30,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
       document.body.insertBefore(headerContainer.querySelector('nav'), document.body.firstChild);
     }
+    
+    // Execute any scripts in the loaded header
+    executeScripts(headerContainer);
     
     // Load footer
     const footerResponse = await fetch(footerPath);
@@ -35,12 +48,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // Execute any scripts in the loaded footer
-    const scripts = footerContainer.querySelectorAll('script');
-    scripts.forEach(script => {
-      if (script.innerHTML) {
-        eval(script.innerHTML);
-      }
-    });
+    executeScripts(footerContainer);
   } catch (error) {
     console.warn('Could not load global header/footer:', error);
   }
