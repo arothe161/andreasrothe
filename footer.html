@@ -1,10 +1,23 @@
 <footer id="global-footer">
-  <span>© <span id="year"></span> Andreas Rothe</span>
+  <span>© <span class="year-footer"></span> Andreas Rothe</span>
   <span>
     <a href="/impressum.html">Impressum</a> &nbsp;·&nbsp;
     <a href="/datenschutz.html">Datenschutz</a>
   </span>
 </footer>
 <script>
-  document.getElementById('year').textContent = new Date().getFullYear();
+  // Set the current year in all year elements
+  (function() {
+    const year = new Date().getFullYear();
+    // Set in footer
+    const footerYear = document.querySelector('#global-footer .year-footer');
+    if (footerYear) {
+      footerYear.textContent = year;
+    }
+    // Also set in any element with id="year" (for compatibility)
+    const yearElement = document.getElementById('year');
+    if (yearElement) {
+      yearElement.textContent = year;
+    }
+  })();
 </script>
