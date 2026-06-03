@@ -76,8 +76,21 @@
       color: var(--black);
       text-decoration: none;
       margin-right: 2rem;
+      flex-shrink: 0;
     }
-    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links { 
+      display: flex; 
+      gap: 2rem; 
+      list-style: none;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+      padding-right: 1rem;
+    }
+    .nav-links::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-links { -ms-overflow-style: none; scrollbar-width: none; }
     .nav-links a {
       font-size: 0.8125rem;
       font-weight: 400;
@@ -86,6 +99,8 @@
       color: var(--muted);
       text-decoration: none;
       transition: color 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .nav-links a:hover { color: var(--black); }
 
