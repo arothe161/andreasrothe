@@ -33,6 +33,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
       document.body.appendChild(footerContainer.querySelector('footer'));
     }
+    
+    // Execute any scripts in the loaded footer
+    const scripts = footerContainer.querySelectorAll('script');
+    scripts.forEach(script => {
+      if (script.innerHTML) {
+        eval(script.innerHTML);
+      }
+    });
   } catch (error) {
     console.warn('Could not load global header/footer:', error);
   }
