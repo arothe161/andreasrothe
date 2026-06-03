@@ -3,10 +3,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   try {
     // Determine the correct paths based on current location
     const currentPath = window.location.pathname;
-    const isRootPage = currentPath === '/' || currentPath.endsWith('/index.html');
-    
-    const headerPath = isRootPage ? './header.html' : '../header.html';
-    const footerPath = isRootPage ? './footer.html' : '../footer.html';
+    const headerPath = './header.html';
+    const footerPath = './footer.html';
     
     // Helper function to execute scripts in a container
     function executeScripts(container) {
