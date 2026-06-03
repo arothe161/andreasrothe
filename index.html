@@ -16,10 +16,10 @@
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'G-XXXXXXXXXX');
+          gtag('config', 'GTM-M3L8VQPB');
         `,
         onDecline: `
-          window['ga-disable-G-XXXXXXXXXX'] = true;
+          window['ga-disable-GTM-M3L8VQPB'] = true;
         `
       }
     ]
@@ -28,7 +28,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Andreas Rothe – Executive Coaching & Change Management</title>
+  <title>Andreas Rothe – Team Coaching & Individual Executinve Coaching</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -75,8 +75,8 @@
       letter-spacing: 0.04em;
       color: var(--black);
       text-decoration: none;
-      margin-right: 2rem;
-      flex-shrink: 0;
+      text-align: center;
+      #flex-shrink: 0;
     }
     .nav-links { 
       display: flex; 
@@ -110,7 +110,7 @@
 
     /* ── HERO ── */
     #hero {
-      min-height: 100svh;
+      min-height: 50svh;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 4rem;
@@ -692,6 +692,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
       </div>
       <div class="kontakt-form">
+        <form name="kontakt" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <input type="hidden" name="form-name" value="kontakt" />
+        <p hidden><input name="bot-field" /></p>
         <div class="form-row">
           <label class="form-label">Name</label>
           <input class="form-input" type="text" placeholder="Ihr vollständiger Name" />
@@ -714,20 +717,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <label class="form-label">Nachricht</label>
           <textarea class="form-textarea form-input" placeholder="Kurze Beschreibung Ihres Anliegens …"></textarea>
         </div>
-        <button class="btn-submit" onclick="alert('Vielen Dank! In der fertigen Version wird Ihre Anfrage hier gesendet.')">
+        <button type="submit" class="btn-submit">
           Nachricht senden
         </button>
-      </div>
+      </form>
     </div>
   </section>
 
   <footer>
-    <span>© 2026 Andreas Rothe Coaching</span>
+    <span>© <span id="year"></span> Andreas Rothe</span>
     <span>
       <a href="/impressum.html">Impressum</a> &nbsp;·&nbsp;
       <a href="/datenschutz.html">Datenschutz</a>
     </span>
   </footer>
-
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
