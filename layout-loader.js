@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       const yearEl = document.getElementById('year');
       if (yearEl) yearEl.textContent = new Date().getFullYear();
       }
-    }
   } catch (error) {
     console.warn('Could not load global header/footer:', error);
   }
