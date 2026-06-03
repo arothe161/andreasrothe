@@ -38,8 +38,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     if (existingFooter && newFooter) {
       existingFooter.replaceWith(newFooter);
-      // Execute scripts only after footer is inserted into DOM
-      executeScripts(footerContainer);
+      const yearEl = document.getElementById('year');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+      }
     }
   } catch (error) {
     console.warn('Could not load global header/footer:', error);
