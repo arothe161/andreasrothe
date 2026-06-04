@@ -121,6 +121,7 @@
       text-decoration: none;
       border: 1px solid var(--black);
       transition: background 0.25s, color 0.25s;
+      margin-right: 1rem;
     }
     .btn-primary:hover { background: transparent; color: var(--black); }
     .btn-ghost {
@@ -136,7 +137,7 @@
       text-decoration: none;
       border: 1px solid var(--black);
       transition: background 0.25s, color 0.25s;
-      margin-left: 1rem;
+      margin-top: 1rem;
     }
     .btn-ghost:hover { background: var(--black); color: var(--white); }
     .hero-image {
