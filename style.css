@@ -440,5 +440,90 @@
       .testi-grid { grid-template-columns: 1fr; }
       .kontakt-inner { grid-template-columns: 1fr; gap: 3rem; }
       .about-credentials { grid-template-columns: 1fr; }
+    /* ── PAGES: IMPRESSUM & DATENSCHUTZ ── */
+       main {
+         max-width: 680px;
+         margin: 0 auto;
+         padding: calc(var(--nav-h) + 5rem) 6vw 6rem;
+       }
+       
+       .eyebrow {
+         font-size: 0.75rem;
+         letter-spacing: 0.15em;
+         text-transform: uppercase;
+         color: var(--accent-dark);
+         margin-bottom: 1rem;
+         font-weight: 400;
+       }
+       
+       main h1 {
+         font-family: var(--serif);
+         font-size: 2.8rem;
+         font-weight: 300;
+         line-height: 1.15;
+         margin-bottom: 3rem;
+       }
+       
+       main h2 {
+         font-family: var(--serif);
+         font-size: 1.4rem;
+         font-weight: 400;
+         margin-top: 2.5rem;
+         margin-bottom: 0.75rem;
+         color: var(--black);
+       }
+       
+       main h3 {
+         font-family: var(--sans);
+         font-size: 0.9rem;
+         font-weight: 500;
+         letter-spacing: 0.05em;
+         text-transform: uppercase;
+         color: var(--accent-dark);
+         margin-top: 1.5rem;
+         margin-bottom: 0.5rem;
+       }
+       
+       main p {
+         color: #4a4944;
+         font-weight: 300;
+         margin-bottom: 0.75rem;
+       }
+       
+       main ul {
+         color: #4a4944;
+         font-weight: 300;
+         margin: 0.5rem 0 0.75rem 1.5rem;
+       }
+       
+       main ul li { 
+         margin-bottom: 0.3rem; 
+       }
+       
+       main a {
+         color: var(--accent-dark);
+         text-decoration: none;
+         border-bottom: 1px solid var(--border);
+       }
+       
+       main a:hover { 
+         border-color: var(--accent-dark); 
+       }
+       
+       main .divider { 
+         height: 1px;
+         background: var(--border);
+         margin: 2.5rem 0;
+       }
+       
+       .info-box {
+         background: var(--stone);
+         border-left: 3px solid var(--accent-dark);
+         padding: 1rem 1.25rem;
+         margin: 1.5rem 0;
+         font-size: 0.9rem;
+         color: var(--muted);
+         font-weight: 300;
+       }
     }
 
