@@ -518,7 +518,7 @@
       font-weight: 300;
     }
 
-    /* ── RESPONSIVE ── */
+    /* ── RESPONSIVE
     @media (max-width: 900px) {
       #hero { grid-template-columns: 1fr; min-height: auto; }
       .hero-image { height: 320px; order: -1; }
@@ -526,7 +526,7 @@
       .angebote-grid { grid-template-columns: 1fr; gap: 1px; }
       .testi-grid { grid-template-columns: 1fr; }
       .kontakt-inner { grid-template-columns: 1fr; gap: 3rem; }
-      .about-credentials { grid-template-columns: 1fr; }
+      .about-credentials { grid-template-columns: 1fr; } ── */
     /* ── PAGES: IMPRESSUM & DATENSCHUTZ ── */
        main {
          max-width: 680px;
