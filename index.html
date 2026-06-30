@@ -266,37 +266,119 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
         </div>
       </div>
-      <div class="kontakt-form">
-        <form name="kontakt" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-        <input type="hidden" name="form-name" value="kontakt" />
-        <p hidden><input name="bot-field" /></p>
+<!--
+  ANLEITUNG:
+  1. Ersetze "DEINE-FORM-ID" unten durch deine echte Formspree-Endpoint-ID
+     (z.B. https://formspree.io/f/abcd1234)
+  2. Diesen kompletten Block (Form + Script) in der index.html anstelle
+     des bisherigen Kontaktformulars einsetzen (innerhalb von .kontakt-form)
+  3. Fertig — kein Redirect mehr, die Erfolgs-/Fehlermeldung erscheint
+     direkt unter dem Formular.
+-->
+    <div class="kontakt-form">
+      <form id="kontakt-form">
         <div class="form-row">
           <label class="form-label">Name</label>
-          <input class="form-input" type="text" placeholder="Ihr vollständiger Name" />
+          <input
+            class="form-input"
+            type="text"
+            name="name"
+            placeholder="Ihr vollständiger Name"
+            required
+          />
         </div>
         <div class="form-row">
           <label class="form-label">E-Mail</label>
-          <input class="form-input" type="email" placeholder="ihre@email.de" />
+          <input
+            class="form-input"
+            type="email"
+            name="email"
+            placeholder="ihre@email.de"
+            required
+          />
         </div>
         <div class="form-row">
           <label class="form-label">Thema</label>
-          <select class="form-select form-input">
+          <select class="form-select form-input" name="thema">
             <option value="">Bitte wählen …</option>
             <option>Executive Coaching</option>
             <option>Change Management</option>
-            <option>Team- & Führungsentwicklung</option>
+            <option>Team- &amp; Führungsentwicklung</option>
             <option>Sonstiges</option>
           </select>
         </div>
         <div class="form-row">
           <label class="form-label">Nachricht</label>
-          <textarea class="form-textarea form-input" placeholder="Kurze Beschreibung Ihres Anliegens …"></textarea>
+          <textarea
+            class="form-textarea form-input"
+            name="nachricht"
+            placeholder="Kurze Beschreibung Ihres Anliegens …"
+            required
+          ></textarea>
         </div>
-        <button type="submit" class="btn-submit">
+    
+        <!-- Betreff der E-Mail, die du erhältst -->
+        <input type="hidden" name="_subject" value="Neue Kontaktanfrage über andreas-rothe.de" />
+    
+        <!-- Honeypot gegen Spam (Formspree-eigenes Feature) -->
+        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" />
+    
+        <button type="submit" class="btn-submit" id="kontakt-submit-btn">
           Nachricht senden
         </button>
+    
+        <p id="kontakt-form-status" style="margin-top: 1rem; font-size: 0.9rem; display: none;"></p>
       </form>
     </div>
+    
+    <script>
+    (function () {
+      var form = document.getElementById('kontakt-form');
+      var status = document.getElementById('kontakt-form-status');
+      var btn = document.getElementById('kontakt-submit-btn');
+      var FORM_ENDPOINT = 'https://formspree.io/f/xrewaobq';
+    
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+    
+        btn.disabled = true;
+        btn.textContent = 'Wird gesendet …';
+        status.style.display = 'none';
+    
+        fetch(FORM_ENDPOINT, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'Accept': 'application/json' }
+        })
+          .then(function (response) {
+            if (response.ok) {
+              form.reset();
+              status.textContent = 'Vielen Dank für Ihre Nachricht! Ich melde mich zeitnah bei Ihnen.';
+              status.style.color = 'var(--accent)';
+              status.style.display = 'block';
+            } else {
+              return response.json().then(function (data) {
+                throw new Error(
+                  data && data.errors
+                    ? data.errors.map(function (err) { return err.message; }).join(', ')
+                    : 'Komischer Fehler'
+                );
+              });
+            }
+          })
+          .catch(function () {
+            status.textContent = 'Leider ist etwas schiefgelaufen. Bitte versuchen Sie es erneut oder schreiben Sie mir direkt an herr.rothe@t-online.de.';
+            status.style.color = '#e57373';
+            status.style.display = 'block';
+          })
+          .finally(function () {
+            btn.disabled = false;
+            btn.textContent = 'Nachricht senden';
+          });
+      });
+    })();
+    </script>
+
   </section>
   <footer></footer>
   <script src="layout-loader.js"></script>
