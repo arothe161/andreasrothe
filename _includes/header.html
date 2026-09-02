@@ -8,14 +8,19 @@
   </ul>
 
   <div class="lang-switch">
-    {%- comment -%} compute counterpart path {%- endcomment -%}
+    {%- assign p = page.url | default: '/' -%}
     {%- if page.lang == 'de' -%}
-      {%- assign other_prefix = '/en' -%}
-      <a href="{{ other_prefix | append: page.url | relative_url }}">EN</a>
+      {%- if p == '/' or p == '' -%}
+        <a href="{{ '/en/' | relative_url }}">EN</a>
+      {%- else -%}
+        <a href="{{ '/en' | append: p | relative_url }}">EN</a>
+      {%- endif -%}
     {%- else -%}
-      {%- assign de_prefix = '' -%}
-      {%- assign target = page.url | replace: '^/en','' -%}
-      <a href="{{ target | relative_url }}">DE</a>
+      {%- assign t = p | remove_first: '/en' -%}
+      {%- if t == '' -%}
+        {%- assign t = '/' -%}
+      {%- endif -%}
+      <a href="{{ t | relative_url }}">DE</a>
     {%- endif -%}
   </div>
 </nav>
