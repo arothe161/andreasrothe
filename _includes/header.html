@@ -1,79 +1,40 @@
-<nav id="global-nav">
-  <a href="{{ page.lang == 'de' ? '/' : '/en/' | relative_url }}" class="nav-logo">Andreas Rothe</a>
+<header>
+  <nav>
+    <a href="{% if page.lang == 'de' %}{{ '/' | relative_url }}{% else %}{{ '/en/' | relative_url }}{% endif %}" class="nav-logo">ANDREAS ROTHE</a>
+    
+    <button class="nav-toggle" id="navToggle" aria-label="Menü öffnen" aria-expanded="false">
+      <span class="hamburger-bar"></span>
+      <span class="hamburger-bar"></span>
+      <span class="hamburger-bar"></span>
+    </button>
 
-  <button class="nav-toggle" id="nav-toggle" aria-label="Menü öffnen" aria-expanded="false" aria-controls="nav-menu">
-    <span class="hamburger-bar"></span>
-    <span class="hamburger-bar"></span>
-    <span class="hamburger-bar"></span>
-  </button>
+    <div class="nav-menu" id="navMenu">
+      <ul class="nav-links">
+        <li><a href="{% if page.lang == 'de' %}{{ '/#angebote' | relative_url }}{% else %}{{ '/en/#angebote' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_services }}</a></li>
+        <li><a href="{% if page.lang == 'de' %}{{ '/#ueber-mich' | relative_url }}{% else %}{{ '/en/#ueber-mich' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_about }}</a></li>
+        <li><a href="{% if page.lang == 'de' %}{{ '/#testimonials' | relative_url }}{% else %}{{ '/en/#testimonials' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_testimonials }}</a></li>
+        <li><a href="{% if page.lang == 'de' %}{{ '/#kontakt' | relative_url }}{% else %}{{ '/en/#kontakt' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_contact }}</a></li>
+      </ul>
 
-  <div class="nav-menu" id="nav-menu">
-    <ul class="nav-links">
-      {%- if page.lang == 'de' -%}
-        <li><a href="{{ '/#ueber-mich' | relative_url }}">{{ site.data.de.nav_about }}</a></li>
-        <li><a href="{{ '/#angebote' | relative_url }}">{{ site.data.de.nav_offers }}</a></li>
-        <li><a href="{{ '/#testimonials' | relative_url }}">{{ site.data.de.nav_refs }}</a></li>
-        <li><a href="{{ '/#kontakt' | relative_url }}">{{ site.data.de.nav_contact }}</a></li>
-      {%- else -%}
-        <li><a href="{{ '/en/#ueber-mich' | relative_url }}">{{ site.data.en.nav_about }}</a></li>
-        <li><a href="{{ '/en/#angebote' | relative_url }}">{{ site.data.en.nav_offers }}</a></li>
-        <li><a href="{{ '/en/#testimonials' | relative_url }}">{{ site.data.en.nav_refs }}</a></li>
-        <li><a href="{{ '/en/#kontakt' | relative_url }}">{{ site.data.en.nav_contact }}</a></li>
-      {%- endif -%}
-    </ul>
-
-    <div class="lang-switch">
-      {%- if page.lang == 'de' -%}
-        {%- if page.url == '/' or page.url == '' -%}
-          <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
+      <div class="lang-switch">
+        {%- if page.url contains '/fuehrungskraefte-coaching' -%}
+          <a href="{{ '/en/leadership-coaching/' | relative_url }}" class="lang-icon-link" title="Switch to English version" aria-label="Switch to English version">
+            <img src="{{ '/assets/images/flag-en.svg' | relative_url }}" alt="English" class="lang-flag-icon">
+          </a>
+        {%- elsif page.url contains '/leadership-coaching' -%}
+          <a href="{{ '/fuehrungskraefte-coaching/' | relative_url }}" class="lang-icon-link" title="Zur deutschen Version wechseln" aria-label="Zur deutschen Version wechseln">
+            <img src="{{ '/assets/images/flag-de.svg' | relative_url }}" alt="Deutsch" class="lang-flag-icon">
+          </a>
+        {%- elsif page.lang == 'de' -%}
+          <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="Switch to English version" aria-label="Switch to English version">
+            <img src="{{ '/assets/images/flag-en.svg' | relative_url }}" alt="English" class="lang-flag-icon">
+          </a>
         {%- else -%}
-          {%- assign en_target = page.url | prepend: '/en' -%}
-          <a href="{{ en_target | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
+          <a href="{{ '/' | relative_url }}" class="lang-icon-link" title="Zur deutschen Version wechseln" aria-label="Zur deutschen Version wechseln">
+            <img src="{{ '/assets/images/flag-de.svg' | relative_url }}" alt="Deutsch" class="lang-flag-icon">
+          </a>
         {%- endif -%}
-      {%- else -%}
-        {%- assign de_target = page.url | replace_first: '/en/', '/' | replace_first: '/en', '/' -%}
-        <a href="{{ de_target | relative_url }}" class="lang-icon-link" title="zur deutschen Version"><img src="{{ '/assets/icons/flag-de.svg' | relative_url }}" alt="zur deutschen Version" class="lang-flag-icon" width="22" height="22"></a>
-      {%- endif -%}
+      </div>
     </div>
-  </div>
-</nav>
-
-<script>
-  (function() {
-    var toggle = document.getElementById('nav-toggle');
-    var menu = document.getElementById('nav-menu');
-    if (!toggle || !menu) return;
-
-    toggle.addEventListener('click', function() {
-      var expanded = toggle.getAttribute('aria-expanded') === 'true';
-      toggle.setAttribute('aria-expanded', !expanded);
-      toggle.classList.toggle('active');
-      menu.classList.toggle('open');
-      document.body.classList.toggle('nav-open', !expanded);
-    });
-
-    // Menü schließen beim Klick auf Nav-Links
-    var links = menu.querySelectorAll('a');
-    links.forEach(function(link) {
-      link.addEventListener('click', function(e) {
-        var href = this.getAttribute('href');
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.classList.remove('active');
-        menu.classList.remove('open');
-        document.body.classList.remove('nav-open');
-
-        // Falls Ankerlink auf derselben Seite: weich hinscrollen
-        if (href && href.indexOf('#') !== -1) {
-          var hash = href.substring(href.indexOf('#'));
-          var targetEl = document.querySelector(hash);
-          if (targetEl) {
-            e.preventDefault();
-            setTimeout(function() {
-              targetEl.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-          }
-        }
-      });
-    });
-  })();
-</script>
+  </nav>
+</header>
