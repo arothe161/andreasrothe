@@ -1,0 +1,21 @@
+<nav id="global-nav">
+  <a href="{{ '/' | relative_url }}" class="nav-logo">Andreas Rothe</a>
+  <ul class="nav-links">
+    <li><a href="{{ '/#ueber-mich' | relative_url }}">{{ site.data[page.lang].nav_about }}</a></li>
+    <li><a href="{{ '/#angebote' | relative_url }}">{{ site.data[page.lang].nav_offers }}</a></li>
+    <li><a href="{{ '/#testimonials' | relative_url }}">{{ site.data[page.lang].nav_refs }}</a></li>
+    <li><a href="{{ '/#kontakt' | relative_url }}">{{ site.data[page.lang].nav_contact }}</a></li>
+  </ul>
+
+  <div class="lang-switch">
+    {%- comment -%} compute counterpart path {%- endcomment -%}
+    {%- if page.lang == 'de' -%}
+      {%- assign other_prefix = '/en' -%}
+      <a href="{{ other_prefix | append: page.url | relative_url }}">EN</a>
+    {%- else -%}
+      {%- assign de_prefix = '' -%}
+      {%- assign target = page.url | replace: '^/en','' -%}
+      <a href="{{ target | relative_url }}">DE</a>
+    {%- endif -%}
+  </div>
+</nav>
