@@ -5,9 +5,6 @@ on:
     branches:
       - staging
 
-permissions:
-  contents: write
-
 concurrency:
   group: staging-deploy
   cancel-in-progress: true
@@ -19,11 +16,14 @@ jobs:
       - name: Code auschecken
         uses: actions/checkout@v4
 
-      - name: Auf QS-Branch deployen
+      - name: In Staging-Repository deployen
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          deploy_key: ${{ secrets.STAGING_DEPLOY_TOKEN }}
+          external_repository: arothe161/andreasrothe-staging
+          publish_branch: main
           publish_dir: ./
-          publish_branch: gh-pages-staging
           force_orphan: true
-          exclude_assets: '.github,CNAME'
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'QS-Deployment aus andreasrothe (staging-Branch)'
