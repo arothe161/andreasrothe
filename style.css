@@ -39,10 +39,10 @@ img, svg, video {
 
 /* ── NAV ── */
 nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
   display: flex; justify-content: space-between; align-items: center;
   padding: 0 4rem; height: var(--nav-h);
-  background: rgba(250,249,246,0.92);
+  background: rgba(250,249,246,0.96);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -56,7 +56,8 @@ nav {
   text-decoration: none;
   text-align: center;
   flex-shrink: 0;
-  z-index: 102;
+  position: relative;
+  z-index: 1002;
 }
 
 .nav-menu {
@@ -116,12 +117,14 @@ nav {
   border: none;
   cursor: pointer;
   padding: 0.5rem;
-  z-index: 102;
+  position: relative;
+  z-index: 1002;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: 5px;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
 }
 
 .hamburger-bar {
@@ -598,50 +601,53 @@ footer a:hover { color: var(--accent); }
   .nav-menu {
     position: fixed;
     top: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    max-width: 320px;
-    background: var(--white);
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: #faf9f6;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: 2.5rem;
-    padding: 5rem 2rem 3rem;
-    border-left: 1px solid var(--border);
-    box-shadow: -10px 0 30px rgba(0,0,0,0.08);
-    transform: translateX(100%);
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 101;
+    padding: 2rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 1001;
   }
 
   .nav-menu.open {
-    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
   }
 
   .nav-links {
     flex-direction: column;
     align-items: center;
-    gap: 1.8rem;
+    gap: 2rem;
     text-align: center;
   }
 
   .nav-links a {
-    font-size: 1.1rem;
-    letter-spacing: 0.12em;
+    font-size: 1.25rem;
+    letter-spacing: 0.15em;
+    font-weight: 400;
   }
 
   .lang-switch {
     margin-top: 1rem;
-    padding-top: 1.5rem;
+    padding-top: 2rem;
     border-top: 1px solid var(--border);
-    width: 100%;
+    width: 120px;
     justify-content: center;
   }
 
   .lang-flag-icon {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
   }
 
   section { padding: 4rem 6vw; }
