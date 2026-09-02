@@ -16,6 +16,9 @@ jobs:
       - name: Code auschecken
         uses: actions/checkout@v4
 
+      - name: Staging CNAME setzen
+        run: echo "staging.andreas-rothe.de" > CNAME
+
       - name: In Staging-Repository deployen
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -25,7 +28,6 @@ jobs:
           publish_dir: ./
           force_orphan: true
           enable_jekyll: true
-          cname: staging.andreas-rothe.de
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'QS-Deployment aus andreasrothe (staging-Branch)'
