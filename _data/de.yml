@@ -1,0 +1,48 @@
+# German copy for site
+
+hero_title: "Team Development · Executive Coaching · Change Management"
+hero_eyebrow: "für Unternehemen und Einzelpersonen"
+hero_quote: "Eines der besten Anzeichen eines kontinuierlich lernenden Teams ist der sichtbare Ideenkonflikt. In herausragenden Teams wird mit diesem Konflikt produktiv umgegangen."
+hero_quote_author: "Peter Sange"
+hero_experience_num: "15+"
+hero_experience_label: "Jahre Erfahrung"
+hero_image_label: "Klarheit im Wandel."
+
+nav_about: "Über mich"
+nav_offers: "Angebote"
+nav_refs: "Referenzen"
+nav_contact: "Kontakt"
+
+about_heading: "Ich glaube an Führung, die Menschen wachsen lässt."
+about_p_1: "Ich habe 15 Jahre Führungserfahrung in sich schnell verändernden Berufsumfeldern in Start-Ups, Scale-Ups und in DAX-Konzernen."
+about_p_2: "Dort habe ich viele Teams aufgebaut und produktiv gemacht. Ich habe unzählige Individuen begleitet und weiter entwickelt."
+about_p_3: "Meine Arbeit ist geprägt von tiefer Neugier für Menschen, konkreten Ergebnissen und einem klaren Blick auf das Wesentliche."
+
+cred_experience_title: "Erfahrung"
+cred_experience_text: "Manager von kleinen und großen Teams bei Zalando, Shop-Apotheke und Mister Spex."
+cred_study_title: "Studium"
+cred_study_text: "Romanistik, Anglistik & Psychologie, Universität Potsdam"
+cred_training_title: "Weiterbildung"
+cred_training_text: "Change Management, Verhandlungsmanagement"
+cred_languages_title: "Sprachen"
+cred_languages_text: "Deutsch, Englisch"
+
+offers_heading: "Was ich für Sie leisten kann"
+offer_1_title: "Executive Coaching"
+offer_1_desc: "Vertrauliche Einzelbegleitung für Führungskräfte in herausfordernden Phasen – bei Rollenwechseln, Konflikten oder strategischen Weichenstellungen. Format: 6–12 Sitzungen à 90 Minuten, auch online."
+offer_2_title: "Change Management"
+offer_2_desc: "Strategische Begleitung von Transformationsprozessen – von der Konzeption bis zur Umsetzung. Ich helfe Ihnen, Wandel als Chance zu gestalten und Ihre Organisation mitzunehmen."
+offer_3_title: "Team- & Führungsentwicklung"
+offer_3_desc: "Workshops und Entwicklungsprogramme für Führungsteams – von der Diagnose über Teamentwicklung bis zur nachhaltigen Stärkung Ihrer Führungskultur. Maßgeschneidert für Ihren Kontext."
+
+testimonials_heading: "Was andere über mich sagen"
+contact_heading: "Lassen Sie uns sprechen."
+contact_sub: "...aber noch ist es nicht soweit. Bis dahin, hinterlassen Sie einfach eine Nachricht und ich melde mich bei ihnen."
+contact_location_label: "Standort"
+contact_location_val: "Berlin & deutschlandweit"
+contact_format_label: "Format"
+contact_format_val: "Präsenz & Online"
+
+footer_name: "Andreas Rothe"
+footer_impressum: "Impressum"
+footer_privacy: "Datenschutz"

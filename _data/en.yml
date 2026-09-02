@@ -1,0 +1,48 @@
+# English translations (professional, warm tone)
+
+hero_title: "Team Development · Executive Coaching · Change Management"
+hero_eyebrow: "for organisations and individuals"
+hero_quote: "One of the best signs of a continuously learning team is visible idea conflict. Exceptional teams work with that conflict productively."
+hero_quote_author: "Peter Sange"
+hero_experience_num: "15+"
+hero_experience_label: "Years of experience"
+hero_image_label: "Clarity in change."
+
+nav_about: "About"
+nav_offers: "Services"
+nav_refs: "References"
+nav_contact: "Contact"
+
+about_heading: "I believe in leadership that helps people grow."
+about_p_1: "I bring 15 years of leadership experience from fast-changing environments across start-ups, scale-ups and large listed companies."
+about_p_2: "There I built and scaled teams and supported many individuals in their professional development."
+about_p_3: "My work is characterised by deep curiosity about people, tangible results and a clear focus on what matters."
+
+cred_experience_title: "Experience"
+cred_experience_text: "Leadership roles at Zalando, Shop-Apotheke and Mister Spex."
+cred_study_title: "Education"
+cred_study_text: "Romance Studies, English Studies & Psychology, University of Potsdam"
+cred_training_title: "Further training"
+cred_training_text: "Change Management, Negotiation Management"
+cred_languages_title: "Languages"
+cred_languages_text: "German, English"
+
+offers_heading: "What I can do for you"
+offer_1_title: "Executive Coaching"
+offer_1_desc: "Confidential one-to-one coaching for leaders facing demanding transitions—role changes, conflicts or strategic decisions. Format: 6–12 sessions of 90 minutes, available online."
+offer_2_title: "Change Management"
+offer_2_desc: "Strategic guidance through transformation— from concept to implementation. I help you shape change as an opportunity and bring your organisation along."
+offer_3_title: "Team & Leadership Development"
+offer_3_desc: "Workshops and development programmes for leadership teams—from diagnosis and team development to sustainably strengthening your leadership culture. Tailored to your context."
+
+testimonials_heading: "What others say"
+contact_heading: "Let’s talk."
+contact_sub: "...but it’s not time yet. Until then, leave a message and I will get back to you."
+contact_location_label: "Location"
+contact_location_val: "Berlin & nationwide"
+contact_format_label: "Format"
+contact_format_val: "On-site & online"
+
+footer_name: "Andreas Rothe"
+footer_impressum: "Imprint"
+footer_privacy: "Privacy"
