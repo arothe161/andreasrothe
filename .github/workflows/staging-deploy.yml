@@ -19,7 +19,7 @@ jobs:
       - name: In Staging-Repository deployen
         uses: peaceiris/actions-gh-pages@v4
         with:
-          deploy_key: ${{ secrets.STAGING_DEPLOY_TOKEN }}
+          personal_token: ${{ secrets.STAGING_DEPLOY_TOKEN }}
           external_repository: arothe161/andreasrothe-staging
           publish_branch: main
           publish_dir: ./
