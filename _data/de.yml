@@ -1,9 +1,11 @@
 # German copy for site
 
-hero_title: "Team Development · Executive Coaching · Change Management"
-hero_eyebrow: "für Unternehemen und Einzelpersonen"
-hero_quote: "Eines der besten Anzeichen eines kontinuierlich lernenden Teams ist der sichtbare Ideenkonflikt. In herausragenden Teams wird mit diesem Konflikt produktiv umgegangen."
-hero_quote_author: "Peter Sange"
+hero_title: "Coaching, Weiterbildung und Lehre"
+hero_eyebrow: ""
+hero_quote: "Executive Coaching & Transformation für Einzelpersonen, Start-Ups, Scale-Ups und Behörden · Interim Leadership · Akademische Lehre und Seminare"
+#hero_quote_author: "Peter Sange"
+#hero_quote: "Eines der besten Anzeichen eines kontinuierlich lernenden Teams ist der sichtbare Ideenkonflikt. In herausragenden Teams wird mit diesem Konflikt produktiv umgegangen."
+#hero_quote_author: "Peter Sange"
 hero_experience_num: "15+"
 hero_experience_label: "Jahre Erfahrung"
 hero_image_label: "Klarheit im Wandel."
