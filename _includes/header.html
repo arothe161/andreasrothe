@@ -8,7 +8,7 @@
   </ul>
 
   <div class="lang-switch">
-    {%- if page.lang == 'de' -%}.
+    {%- if page.lang == 'de' -%}
       {%- if page.url == '/' or page.url == '' -%}
         <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
       {%- else -%}
