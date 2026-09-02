@@ -25,12 +25,42 @@
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
-    {%- comment -%} hreflang and canonical calculation {%- endcomment -%}
-    {%- assign canonical_base = site.url | append: site.baseurl -%}
-    {%- assign canonical = canonical_base | append: page.url -%}
+    {%- comment -%} Robust hreflang / canonical calculation with baseurl handling {%- endcomment -%}
+    {%- assign base = site.url | append: site.baseurl -%}
+    {%- assign page_path = page.url -%}
+    {%- comment -%} Ensure page_path starts with a slash
+    {%- endcomment -%}
+    {%- unless page_path contains '/' -%}
+      {%- assign page_path = '/' | append: page_path -%}
+    {%- endunless -%}
+
+    {%- comment -%} Canonical URL = base + page_path
+    {%- endcomment -%}
+    {%- assign canonical = base | append: page_path -%}
+    {%- comment -%} Build language-specific alternates: de_path and en_path
+    {%- endcomment -%}
+    {%- if page.lang == 'en' -%}
+      {%- assign de_path = page_path | remove_first: '/en' -%}
+      {%- if de_path == '' -%}
+        {%- assign de_path = '/' -%}
+      {%- endif -%}
+      {%- assign en_path = page_path -%}
+    {%- else -%}
+      {%- assign de_path = page_path -%}
+      {%- if de_path == '' -%}
+        {%- assign de_path = '/' -%}
+      {%- endif -%}
+      {%- assign en_path = '/en' | append: page_path -%}
+    {%- endif -%}
+
+    {%- comment -%} Compose full alternate URLs and normalize double slashes
+    {%- endcomment -%}
+    {%- assign de_url = base | append: de_path | replace: '//', '/' | replace: 'http:/', 'http://' | replace: 'https:/', 'https://' -%}
+    {%- assign en_url = base | append: en_path | replace: '//', '/' | replace: 'http:/', 'http://' | replace: 'https:/', 'https://' -%}
+
     <link rel="canonical" href="{{ canonical }}">
-    <link rel="alternate" hreflang="de" href="{{ canonical | replace: '/en','' }}">
-    <link rel="alternate" hreflang="en" href="{{ canonical | prepend: '/en' | replace: '//en','/en' }}">
+    <link rel="alternate" hreflang="de" href="{{ de_url }}">
+    <link rel="alternate" hreflang="en" href="{{ en_url }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,7 +80,7 @@
 
     {% include footer.html %}
 
-    {%- comment -%} Klaro cookie + Google Analytics preserved, but lang-config pulled from data files where appropriate {%- endcomment -%}
+    {%- comment -%} Klaro cookie + Google Analytics preserved; language set via page.lang {%- endcomment -%}
     <script defer src="https://cdn.kiprotect.com/klaro/v0.7/klaro.js"></script>
     <script>
       var klaroConfig = {
