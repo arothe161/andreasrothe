@@ -8,16 +8,16 @@
   </ul>
 
   <div class="lang-switch">
-    {%- if page.lang == 'de' -%}
+    {%- if page.lang == 'de' -%}.
       {%- if page.url == '/' or page.url == '' -%}
-        <a href="{{ '/en/' | relative_url }}">EN</a>
+        <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
       {%- else -%}
         {%- assign en_target = page.url | prepend: '/en' -%}
-        <a href="{{ en_target | relative_url }}">EN</a>
+        <a href="{{ en_target | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
       {%- endif -%}
     {%- else -%}
       {%- assign de_target = page.url | replace_first: '/en/', '/' | replace_first: '/en', '/' -%}
-      <a href="{{ de_target | relative_url }}">DE</a>
+      <a href="{{ de_target | relative_url }}" class="lang-icon-link" title="zur deutschen Version"><img src="{{ '/assets/icons/flag-de.svg' | relative_url }}" alt="zur deutschen Version" class="lang-flag-icon" width="22" height="22"></a>
     {%- endif -%}
   </div>
 </nav>
