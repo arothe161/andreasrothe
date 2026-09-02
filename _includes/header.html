@@ -1,23 +1,59 @@
 <nav id="global-nav">
   <a href="{{ page.lang == 'de' ? '/' : '/en/' | relative_url }}" class="nav-logo">Andreas Rothe</a>
-  <ul class="nav-links">
-    <li><a href="{{ (page.lang == 'de' ? '/#ueber-mich' : '/en/#ueber-mich') | relative_url }}">{{ site.data[page.lang].nav_about }}</a></li>
-    <li><a href="{{ (page.lang == 'de' ? '/#angebote' : '/en/#angebote') | relative_url }}">{{ site.data[page.lang].nav_offers }}</a></li>
-    <li><a href="{{ (page.lang == 'de' ? '/#testimonials' : '/en/#testimonials') | relative_url }}">{{ site.data[page.lang].nav_refs }}</a></li>
-    <li><a href="{{ (page.lang == 'de' ? '/#kontakt' : '/en/#kontakt') | relative_url }}">{{ site.data[page.lang].nav_contact }}</a></li>
-  </ul>
 
-  <div class="lang-switch">
-    {%- if page.lang == 'de' -%}
-      {%- if page.url == '/' or page.url == '' -%}
-        <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
+  <button class="nav-toggle" id="nav-toggle" aria-label="Menü öffnen" aria-expanded="false" aria-controls="nav-menu">
+    <span class="hamburger-bar"></span>
+    <span class="hamburger-bar"></span>
+    <span class="hamburger-bar"></span>
+  </button>
+
+  <div class="nav-menu" id="nav-menu">
+    <ul class="nav-links">
+      <li><a href="{{ (page.lang == 'de' ? '/#ueber-mich' : '/en/#ueber-mich') | relative_url }}">{{ site.data[page.lang].nav_about }}</a></li>
+      <li><a href="{{ (page.lang == 'de' ? '/#angebote' : '/en/#angebote') | relative_url }}">{{ site.data[page.lang].nav_offers }}</a></li>
+      <li><a href="{{ (page.lang == 'de' ? '/#testimonials' : '/en/#testimonials') | relative_url }}">{{ site.data[page.lang].nav_refs }}</a></li>
+      <li><a href="{{ (page.lang == 'de' ? '/#kontakt' : '/en/#kontakt') | relative_url }}">{{ site.data[page.lang].nav_contact }}</a></li>
+    </ul>
+
+    <div class="lang-switch">
+      {%- if page.lang == 'de' -%}
+        {%- if page.url == '/' or page.url == '' -%}
+          <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
+        {%- else -%}
+          {%- assign en_target = page.url | prepend: '/en' -%}
+          <a href="{{ en_target | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
+        {%- endif -%}
       {%- else -%}
-        {%- assign en_target = page.url | prepend: '/en' -%}
-        <a href="{{ en_target | relative_url }}" class="lang-icon-link" title="English version"><img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English version" class="lang-flag-icon" width="22" height="22"></a>
+        {%- assign de_target = page.url | replace_first: '/en/', '/' | replace_first: '/en', '/' -%}
+        <a href="{{ de_target | relative_url }}" class="lang-icon-link" title="zur deutschen Version"><img src="{{ '/assets/icons/flag-de.svg' | relative_url }}" alt="zur deutschen Version" class="lang-flag-icon" width="22" height="22"></a>
       {%- endif -%}
-    {%- else -%}
-      {%- assign de_target = page.url | replace_first: '/en/', '/' | replace_first: '/en', '/' -%}
-      <a href="{{ de_target | relative_url }}" class="lang-icon-link" title="zur deutschen Version"><img src="{{ '/assets/icons/flag-de.svg' | relative_url }}" alt="zur deutschen Version" class="lang-flag-icon" width="22" height="22"></a>
-    {%- endif -%}
+    </div>
   </div>
 </nav>
+
+<script>
+  (function() {
+    var toggle = document.getElementById('nav-toggle');
+    var menu = document.getElementById('nav-menu');
+    if (!toggle || !menu) return;
+
+    toggle.addEventListener('click', function() {
+      var expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', !expanded);
+      toggle.classList.toggle('active');
+      menu.classList.toggle('open');
+      document.body.classList.toggle('nav-open', !expanded);
+    });
+
+    // Menü schließen beim Klick auf Nav-Links
+    var links = menu.querySelectorAll('a');
+    links.forEach(function(link) {
+      link.addEventListener('click', function() {
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.classList.remove('active');
+        menu.classList.remove('open');
+        document.body.classList.remove('nav-open');
+      });
+    });
+  })();
+</script>
