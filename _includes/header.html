@@ -1,26 +1,23 @@
 <nav id="global-nav">
-  <a href="{{ '/' | relative_url }}" class="nav-logo">Andreas Rothe</a>
+  <a href="{{ page.lang == 'de' ? '/' : '/en/' | relative_url }}" class="nav-logo">Andreas Rothe</a>
   <ul class="nav-links">
-    <li><a href="{{ '/#ueber-mich' | relative_url }}">{{ site.data[page.lang].nav_about }}</a></li>
-    <li><a href="{{ '/#angebote' | relative_url }}">{{ site.data[page.lang].nav_offers }}</a></li>
-    <li><a href="{{ '/#testimonials' | relative_url }}">{{ site.data[page.lang].nav_refs }}</a></li>
-    <li><a href="{{ '/#kontakt' | relative_url }}">{{ site.data[page.lang].nav_contact }}</a></li>
+    <li><a href="{{ (page.lang == 'de' ? '/#ueber-mich' : '/en/#ueber-mich') | relative_url }}">{{ site.data[page.lang].nav_about }}</a></li>
+    <li><a href="{{ (page.lang == 'de' ? '/#angebote' : '/en/#angebote') | relative_url }}">{{ site.data[page.lang].nav_offers }}</a></li>
+    <li><a href="{{ (page.lang == 'de' ? '/#testimonials' : '/en/#testimonials') | relative_url }}">{{ site.data[page.lang].nav_refs }}</a></li>
+    <li><a href="{{ (page.lang == 'de' ? '/#kontakt' : '/en/#kontakt') | relative_url }}">{{ site.data[page.lang].nav_contact }}</a></li>
   </ul>
 
   <div class="lang-switch">
-    {%- assign p = page.url | default: '/' -%}
     {%- if page.lang == 'de' -%}
-      {%- if p == '/' or p == '' -%}
+      {%- if page.url == '/' or page.url == '' -%}
         <a href="{{ '/en/' | relative_url }}">EN</a>
       {%- else -%}
-        <a href="{{ '/en' | append: p | relative_url }}">EN</a>
+        {%- assign en_target = page.url | prepend: '/en' -%}
+        <a href="{{ en_target | relative_url }}">EN</a>
       {%- endif -%}
     {%- else -%}
-      {%- assign t = p | remove_first: '/en' -%}
-      {%- if t == '' -%}
-        {%- assign t = '/' -%}
-      {%- endif -%}
-      <a href="{{ t | relative_url }}">DE</a>
+      {%- assign de_target = page.url | replace_first: '/en/', '/' | replace_first: '/en', '/' -%}
+      <a href="{{ de_target | relative_url }}">DE</a>
     {%- endif -%}
   </div>
 </nav>
