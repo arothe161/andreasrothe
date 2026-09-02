@@ -4,7 +4,7 @@ lang: de
 permalink: /
 extra_head: |
   <title>{{ site.data.de.hero_title }} – {{ site.data.de.footer_name }}</title>
-  <meta name="description" content="Executive Coaching und Change Management für Führungskräfte. Ich begleite Sie in komplexen Veränderungsprozessen rund um New Work, AI und bei Konflikten.">
+  <meta name="description" content="Executive Coaching und Change Management für Führungskräfte. Ich begleite Sie in komplexen Veränderungsprozessen mit Klarheit und strategischem Fokus.">
 ---
 
 <section id="hero">
@@ -22,35 +22,6 @@ extra_head: |
       <div class="hero-stat-label">{{ site.data.de.hero_experience_label }}</div>
     </div>
     <div class="hero-image-label">{{ site.data.de.hero_image_label }}</div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<section id="angebote">
-  <div class="angebote-header">
-    <p class="section-label">{{ site.data.de.nav_offers }}</p>
-    <h2 class="section-title">{{ site.data.de.offers_heading }}</h2>
-  </div>
-  <div class="angebote-grid">
-    <div class="angebot-card">
-      <div class="angebot-num">01</div>
-      <h3 class="angebot-title">{{ site.data.de.offer_1_title }}</h3>
-      <p class="angebot-desc">{{ site.data.de.offer_1_desc }}</p>
-      <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
-    </div>
-    <div class="angebot-card">
-      <div class="angebot-num">02</div>
-      <h3 class="angebot-title">{{ site.data.de.offer_2_title }}</h3>
-      <p class="angebot-desc">{{ site.data.de.offer_2_desc }}</p>
-      <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
-    </div>
-    <div class="angebot-card">
-      <div class="angebot-num">03</div>
-      <h3 class="angebot-title">{{ site.data.de.offer_3_title }}</h3>
-      <p class="angebot-desc">{{ site.data.de.offer_3_desc }}</p>
-      <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
-    </div>
   </div>
 </section>
 
@@ -89,6 +60,35 @@ extra_head: |
 
 <div class="divider"></div>
 
+<section id="angebote">
+  <div class="angebote-header">
+    <p class="section-label">{{ site.data.de.nav_offers }}</p>
+    <h2 class="section-title">{{ site.data.de.offers_heading }}</h2>
+  </div>
+  <div class="angebote-grid">
+    <div class="angebot-card">
+      <div class="angebot-num">01</div>
+      <h3 class="angebot-title">{{ site.data.de.offer_1_title }}</h3>
+      <p class="angebot-desc">{{ site.data.de.offer_1_desc }}</p>
+      <a href="{{ '/fuehrungskraefte-coaching/' | relative_url }}" class="angebot-link">Mehr erfahren →</a>
+    </div>
+    <div class="angebot-card">
+      <div class="angebot-num">02</div>
+      <h3 class="angebot-title">{{ site.data.de.offer_2_title }}</h3>
+      <p class="angebot-desc">{{ site.data.de.offer_2_desc }}</p>
+      <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
+    </div>
+    <div class="angebot-card">
+      <div class="angebot-num">03</div>
+      <h3 class="angebot-title">{{ site.data.de.offer_3_title }}</h3>
+      <p class="angebot-desc">{{ site.data.de.offer_3_desc }}</p>
+      <a href="#kontakt" class="angebot-link">Mehr erfahren →</a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
 <section id="testimonials">
   <div class="testi-header">
     <p class="section-label">{{ site.data.de.nav_refs }}</p>
@@ -96,10 +96,10 @@ extra_head: |
   </div>
   <div class="testi-grid">
     <div class="testi-card">
-      <p class="testi-quote">„Andreas hat mir geholfen, mich beruflich weiter zu entwickeln und den nächsten Schritt zu wagen – direkt, empathisch und lösungsorientiert."</p>
+      <p class="testi-quote">„Andreas hat mir geholfen, mich beruflich weiter zu entwickeln und den nächsten Schritt zu wagen – direkt, empathisch und lösungsorientiert.“</p>
     </div>
     <div class="testi-card">
-      <p class="testi-quote">„Im Team von Andreas herrscht ein offener und von Vertaruen geprägter Umgang."</p>
+      <p class="testi-quote">„Im Team von Andreas herrscht ein offener und von Vertrauen geprägter Umgang.“</p>
     </div>
   </div>
 </section>
@@ -123,7 +123,6 @@ extra_head: |
     </div>
 
     <div class="kontakt-form">
-      <!-- existing Formspree form preserved -->
       <form id="kontakt-form" action="https://formspree.io/f/xrewaobq" method="POST">
         <div class="form-row">
           <label class="form-label">Name</label>
@@ -137,9 +136,9 @@ extra_head: |
           <label class="form-label">Thema</label>
           <select class="form-select form-input" name="thema">
             <option value="">Bitte wählen …</option>
-            <option>Executive Coaching</option>
-            <option>Change Management</option>
-            <option>Team- &amp; Führungsentwicklung</option>
+            <option>Führungskräfte-Coaching</option>
+            <option>Interim Leadership</option>
+            <option>Lehre & Workshops</option>
             <option>Sonstiges</option>
           </select>
         </div>
