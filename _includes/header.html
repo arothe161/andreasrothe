@@ -10,8 +10,8 @@
 
     <div class="nav-menu" id="navMenu">
       <ul class="nav-links">
-        <li><a href="{% if page.lang == 'de' %}{{ '/#ueber-mich' | relative_url }}{% else %}{{ '/en/#ueber-mich' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_about }}</a></li>
         <li><a href="{% if page.lang == 'de' %}{{ '/#angebote' | relative_url }}{% else %}{{ '/en/#angebote' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_services }}</a></li>
+        <li><a href="{% if page.lang == 'de' %}{{ '/#ueber-mich' | relative_url }}{% else %}{{ '/en/#ueber-mich' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_about }}</a></li>
         <li><a href="{% if page.lang == 'de' %}{{ '/#testimonials' | relative_url }}{% else %}{{ '/en/#testimonials' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_testimonials }}</a></li>
         <li><a href="{% if page.lang == 'de' %}{{ '/#kontakt' | relative_url }}{% else %}{{ '/en/#kontakt' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_contact }}</a></li>
       </ul>
@@ -19,11 +19,11 @@
       <div class="lang-switch">
         {% if page.lang == 'de' %}
           <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="Switch to English version" aria-label="Switch to English version">
-            <img src="{{ '/assets/images/flag-en.svg' | relative_url }}" alt="English" class="lang-flag-icon">
+            <img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English" class="lang-flag-icon">
           </a>
         {% else %}
           <a href="{{ '/' | relative_url }}" class="lang-icon-link" title="Zur deutschen Version wechseln" aria-label="Zur deutschen Version wechseln">
-            <img src="{{ '/assets/images/flag-de.svg' | relative_url }}" alt="Deutsch" class="lang-flag-icon">
+            <img src="{{ '/assets/icons/flag-de.svg' | relative_url }}" alt="Deutsch" class="lang-flag-icon">
           </a>
         {% endif %}
       </div>
