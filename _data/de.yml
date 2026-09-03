@@ -9,20 +9,20 @@ nav_lang_flag: "/assets/images/flag-en.svg"
 nav_lang_title: "Switch to English version"
 
 # Hero
-hero_eyebrow: "Executive & Leadership Coach · für Einzelpersonen, Unternehmen und Behörden"
+hero_eyebrow: "Zertifizierter Systemischer Coach · für Einzelpersonen, Unternehmen und Behörden"
 hero_title_line1: "Führungskräfte Coaching · Interim Leadership · Lehre"
-hero_sub: "Ich bereite Führungskräfte, Gründer und Teams darauf vor, klare Entscheidungen zu treffen, Transformationen zu führen und nachhaltig zu wachsen."
+hero_sub: "Ich bereite Führungskräfte, Gründer und Teams in Unternehmen und Behörden darauf vor, klare Entscheidungen zu treffen, Transformationen zu führen und nachhaltig zu agieren."
 hero_cta: "Kennenlerngespräch vereinbaren"
 hero_stat_num: "15+"
-hero_stat_label: "Jahre Erfahrung in Führung & Skalierung"
-hero_image_label: "Zertifizierter Systemischer Coach"
+<!--hero_stat_label: "Jahre Erfahrung in Führung & Skalierung"-->
+hero_image_label: "Jahre Erfahrung in Führung & Skalierung"
 
 # Über mich
 about_label: "Über mich"
 about_title_line1: "Klarheit durch"
 about_title_em: "Erfahrung."
-about_p1: "Als ehemaliger Führungskraft in schnell wachsenden Technologieunternehmen kenne ich die Herausforderungen des operativen und strategischen Führungsalltags aus eigener Erfahrung."
-about_p2: "Mein Coaching verbindet unternehmerisches Verständnis mit systemischer Methodenkompetenz. Kein theoretisches Lehrbuchwissen, sondern ein vertrauensvoller Sparringspartner auf Augenhöhe."
+about_p1: "Als langjährige Führungskraft in schnell wachsenden Technologieunternehmen kenne ich die Herausforderungen des operativen und strategischen Führungsalltags aus eigener Erfahrung."
+about_p2: "In Kombination mit der Ausbildung als Systemischer Coach, verbinde ich unternehmerisches Verständnis mit systemischer Methodenkompetenz. Kein theoretisches Lehrbuchwissen, sondern ein vertrauensvoller Sparringspartner auf Augenhöhe."
 about_p3: "Ich unterstütze neue und Erfahrene Führungskräfte dabei, Ihre Führungswirkung zu stärken, komplexe Schnittstellen zu steuern und auch in Phasen hoher Unsicherheit handlungsfähig und fokussiert zu bleiben."
 about_cred1_title: "Rolle"
 about_cred1_text: "15+ Jahre Führungserfahrung, bei Zalando, Redcare und Mister Spex."
