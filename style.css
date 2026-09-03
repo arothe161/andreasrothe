@@ -37,6 +37,12 @@ img, svg, video {
   display: block;
 }
 
+/* Desktop: Rand um Hero-Foto entfernen, Position bleibt */
+.hero-image:has(.hero-image-photo) {
+  padding: 0;
+  gap: 0;
+}
+
 /* ── NAV ── */
 nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
@@ -605,6 +611,12 @@ footer a:hover { color: var(--accent); }
    RESPONSIVE — Tablet / Mobile
    ══════════════════════════════════════════ */
 @media (max-width: 900px) {
+  /* Mobile: Hero-Foto randlos, volle Breite */
+.hero-image:has(.hero-image-photo) {
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  width: calc(100% + 3rem);
+}
   nav {
     padding: 0 1.5rem;
   }
