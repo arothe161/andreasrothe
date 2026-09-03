@@ -14,7 +14,7 @@ hero_title_line1: "Führungskräfte Coaching · Interim Leadership · Lehre"
 hero_sub: "Ich bereite Führungskräfte, Gründer und Teams in Unternehmen und Behörden darauf vor, klare Entscheidungen zu treffen, Transformationen zu führen und nachhaltig zu agieren."
 hero_cta: "Kennenlerngespräch vereinbaren"
 hero_stat_num: "15+"
-<!--hero_stat_label: "Jahre Erfahrung in Führung & Skalierung"-->
+#hero_stat_label: "Jahre Erfahrung in Führung & Skalierung"
 hero_image_label: "Jahre Erfahrung in Führung & Skalierung"
 
 # Über mich
