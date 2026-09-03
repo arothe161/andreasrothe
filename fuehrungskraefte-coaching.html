@@ -5,6 +5,16 @@ permalink: /fuehrungskraefte-coaching/
 extra_head: |
   <title>Führungskräfte-Coaching, Transformation & Teamentwicklung – {{ site.data.de.footer_name }}</title>
   <meta name="description" content="Individuelles Führungskräfte-Coaching, strategische Transformationsbegleitung und nachhaltige Teamentwicklung für Leader, Gründer und Organisationen.">
+  <style>
+    .hero-image--photo::before { display: none; }
+    .hero-image--photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    @media (max-width: 900px) {
+      .hero-image.hero-image--photo { height: min(100vw - 12vw, 400px) !important; }
+    }
+    @media (max-width: 600px) {
+      .hero-image.hero-image--photo { height: min(100vw - 10vw, 400px) !important; }
+    }
+  </style>
 ---
 
 <!-- Sektion 1: Führungskräfte-Coaching -->
@@ -32,8 +42,8 @@ extra_head: |
       <a href="{{ '/#kontakt' | relative_url }}" class="btn-submit" style="text-decoration: none; display: inline-block;">Erstgespräch anfragen →</a>
     </div>
   </div>
-  <div class="hero-image" style="height: 440px;">
-    <img src="{{ '/assets/road-to-success-web.webp' | relative_url }}" alt="Bergstraße als Sinnbild für den Weg zum Erfolg" style="width: 100%; height: 100%; object-fit: cover;">
+  <div class="hero-image hero-image--photo" style="height: 440px;">
+    <img src="{{ '/assets/road-to-success-web.webp' | relative_url }}" alt="Bergstraße als Sinnbild für den Weg zum Erfolg">
   </div>
 </section>
 
