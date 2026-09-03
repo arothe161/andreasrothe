@@ -594,10 +594,6 @@ footer a:hover { color: var(--accent); }
    RESPONSIVE — Tablet / Mobile
    ══════════════════════════════════════════ */
 @media (max-width: 900px) {
-  /* Test: Hero-Box auf mobilen Geräten ausblenden */
-  .hero-image {
-    display: none;
-  }
   nav {
     padding: 0 1.5rem;
   }
@@ -667,7 +663,7 @@ footer a:hover { color: var(--accent); }
     gap: 3rem;
     padding-top: calc(var(--nav-h) + 2rem);
   }
-  .hero-image { height: 320px; order: -1; }
+  .hero-image { height: 160px; order: -1; }
   .hero-sub { max-width: none; }
 
   #ueber-mich { grid-template-columns: 1fr; gap: 2rem; }
