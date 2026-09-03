@@ -10,8 +10,8 @@
 
     <div class="nav-menu" id="navMenu">
       <ul class="nav-links">
-        <li><a href="{% if page.lang == 'de' %}{{ '/#ueber-mich' | relative_url }}{% else %}{{ '/en/#ueber-mich' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_about }}</a></li>
         <li><a href="{% if page.lang == 'de' %}{{ '/#angebote' | relative_url }}{% else %}{{ '/en/#angebote' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_services }}</a></li>
+        <li><a href="{% if page.lang == 'de' %}{{ '/#ueber-mich' | relative_url }}{% else %}{{ '/en/#ueber-mich' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_about }}</a></li>
         <li><a href="{% if page.lang == 'de' %}{{ '/#testimonials' | relative_url }}{% else %}{{ '/en/#testimonials' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_testimonials }}</a></li>
         <li><a href="{% if page.lang == 'de' %}{{ '/#kontakt' | relative_url }}{% else %}{{ '/en/#kontakt' | relative_url }}{% endif %}">{{ site.data[page.lang].nav_contact }}</a></li>
       </ul>
