@@ -594,6 +594,10 @@ footer a:hover { color: var(--accent); }
    RESPONSIVE — Tablet / Mobile
    ══════════════════════════════════════════ */
 @media (max-width: 900px) {
+  /* Test: Hero-Box auf mobilen Geräten ausblenden */
+  .hero-image {
+    display: none;
+  }
   nav {
     padding: 0 1.5rem;
   }
