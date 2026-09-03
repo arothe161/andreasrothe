@@ -160,12 +160,12 @@ section {
 
 /* ── HERO & SPLIT SECTIONS ── */
 #hero, .lp-split-section {
-  min-height: 88vh;
+  min-height: 60vh;
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
   gap: 5rem;
   align-items: center;
-  padding-top: calc(var(--nav-h) + 4rem);
+  padding-top: calc(var(--nav-h) + 2rem);
 }
 
 .hero-text, .lp-split-text { min-width: 0; }
@@ -197,7 +197,7 @@ section {
 .hero-image {
   background: var(--stone);
   border: 1px solid var(--border);
-  height: 480px;
+  height: 400px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
