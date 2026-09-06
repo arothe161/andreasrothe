@@ -170,6 +170,11 @@ section {
   grid-template-columns: 1.15fr 0.85fr;
   gap: 5rem;
   align-items: center;
+}
+
+/* Nur die erste Split-Sektion braucht Abstand für die fixe Navigation */
+#hero,
+.lp-split-section:first-of-type {
   padding-top: calc(var(--nav-h) + 2rem);
 }
 
@@ -680,11 +685,16 @@ footer a:hover { color: var(--accent); }
   section:first-of-type { padding-top: calc(var(--nav-h) + 3rem); }
 
   #hero, .lp-split-section {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    gap: 3rem;
-    padding-top: calc(var(--nav-h) + 2rem);
+  grid-template-columns: 1fr;
+  min-height: auto;
+  gap: 3rem;
   }
+
+/* Nur die erste Split-Sektion braucht auf Mobilgeräten Abstand zur festen Navigation */
+#hero,
+.lp-split-section:first-of-type {
+  padding-top: calc(var(--nav-h) + 2rem);
+}
   .hero-image { height: 160px; order: -1; }
   .hero-sub { max-width: none; }
 
