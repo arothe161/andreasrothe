@@ -154,7 +154,7 @@ nav {
 
 /* ── SECTIONS ── */
 section {
-  padding: 2.5rem 12vw 3.5rem;
+  padding: 1rem 12vw 2rem;
   max-width: 100%;
 }
 .divider {
@@ -211,7 +211,7 @@ section {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 2.5rem;
+  padding: 1rem;
   position: relative;
   overflow: hidden;
 }
@@ -681,7 +681,7 @@ footer a:hover { color: var(--accent); }
     height: 36px;
   }
 
-  section { padding: 2rem 6vw 3rem; }
+  section { padding: 0rem 6vw 1rem; }
   section:first-of-type { padding-top: calc(var(--nav-h) + 3rem); }
 
   #hero, .lp-split-section {
@@ -723,7 +723,7 @@ footer a:hover { color: var(--accent); }
 
 @media (max-width: 600px) {
   :root { --nav-h: 64px; }
-  section { padding: 3.5rem 5vw; }
+  section { padding: 1rem 5vw; }
   .divider { margin: 0 5vw; }
 
   .hero-title { font-size: clamp(2rem, 8vw, 2.6rem); }
@@ -733,7 +733,7 @@ footer a:hover { color: var(--accent); }
   .section-title { font-size: clamp(1.6rem, 6vw, 2.2rem); }
   .about-credentials { grid-template-columns: 1fr; }
 
-  .angebot-card { flex-basis: 90%; padding: 2rem 1.5rem; }
+  .angebot-card { flex-basis: 90%; padding: 1rem 1.5rem; }
   .testi-card { padding: 1.75rem; }
 
   .page-container { padding: calc(var(--nav-h) + 3rem) 5vw 4rem; }
