@@ -1,5 +1,5 @@
-/* Nur Coaching-Seiten: Hero-Bild ohne Rahmen */
-.coaching-page #hero .hero-image {
+/* Nur auf Coaching-Seiten: Bildfläche ohne Rahmen, Schatten oder Innenabstand */
+.coaching-page .lp-image-photo {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
@@ -7,40 +7,42 @@
   overflow: hidden;
 }
 
-.coaching-page #hero .hero-image::before {
-  display: none !important;
-}
-
-.coaching-page #hero .hero-image-photo {
+/* Falls der sichtbare Rahmen direkt am <img> gesetzt ist */
+.coaching-page .lp-image-photo img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   border: none !important;
+  outline: none !important;
   box-shadow: none !important;
 }
 
-/* Desktop und Tablet */
+/* Desktop und Tablet: bisherige obere Begrenzung */
 @media (min-width: 901px) {
-  .coaching-page #hero .hero-image {
-    height: 420px;
-    max-height: 420px;
+  .coaching-page .lp-image-photo {
+    height: 420px !important;
+    max-height: 420px !important;
   }
 }
 
-/* Mobile bis einschließlich 900 px */
+/* Mobil: Bildhöhe exakt 200 px */
 @media (max-width: 900px) {
-  .coaching-page #hero .hero-image {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+  .coaching-page .lp-image-photo {
+    order: -1;
     width: 100% !important;
     height: 200px !important;
+    min-height: 200px !important;
     max-height: 200px !important;
-    order: -1;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 
-  .coaching-page #hero .hero-image-photo {
+  .coaching-page .lp-image-photo img {
+    width: 100%;
     height: 200px !important;
+    min-height: 200px !important;
     max-height: 200px !important;
+    object-fit: cover;
   }
 }
