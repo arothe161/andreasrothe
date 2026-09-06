@@ -1,0 +1,13 @@
+<footer id="global-footer">
+  <span>© <span id="year"></span> Andreas Rothe · Leadership Coach und Trainer</span>
+  <span>
+    <a href="/de/impressum/">Impressum</a> &nbsp;·&nbsp;
+    <a href="/de/datenschutz/">Datenschutz</a>
+  </span>
+</footer>
+<script>
+  const year = document.getElementById('year');
+  if (year) {
+    year.textContent = String(new Date().getFullYear());
+  }
+</script>

@@ -1,0 +1,33 @@
+name: Deploy Staging (QS)
+
+on:
+  push:
+    branches:
+      - staging
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Staging CNAME setzen
+        run: echo "staging.andreas-rothe.de" > CNAME
+
+      - name: In Staging-Repository deployen
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.STAGING_DEPLOY_TOKEN }}
+          external_repository: arothe161/andreasrothe-staging
+          publish_branch: main
+          publish_dir: ./
+          force_orphan: true
+          enable_jekyll: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'QS-Deployment aus andreasrothe (staging-Branch)'
