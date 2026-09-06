@@ -5,4 +5,9 @@
     <a href="{{ page.lang == 'de' ? '/datenschutz/' : '/en/datenschutz/' | relative_url }}">{{ site.data[page.lang].footer_privacy }}</a>
   </span>
 </footer>
-<script>document.getElementById('year')?.textContent = new Date().getFullYear();</script>
+<script>
+  const year = document.getElementById('year');
+  if (year) {
+    year.textContent = String(new Date().getFullYear());
+  }
+</script>
