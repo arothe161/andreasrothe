@@ -39,6 +39,19 @@
 
 /* Mobil bis einschließlich 900 px: Bildhöhe 200 px */
 @media (max-width: 900px) {
+  /* Die Hero-Sektion darf auf Mobilgeräten keinen seitlichen Innenabstand haben */
+  .coaching-page .lp-split-section:first-of-type {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Textbereich erhält seinen normalen seitlichen Abstand zurück */
+  .coaching-page .lp-split-section:first-of-type .lp-split-text {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  /* Das Hero-Bild füllt die gesamte Breite des Viewports */
   .coaching-page .hero-image.hero-image--photo {
     order: -1;
     width: 100% !important;
@@ -48,6 +61,11 @@
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
+
+  .coaching-page .hero-image.hero-image--photo > img {
+    height: 200px !important;
+  }
+}
 
   .coaching-page .hero-image.hero-image--photo > img {
     height: 200px !important;
