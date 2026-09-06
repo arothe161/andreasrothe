@@ -9,9 +9,9 @@ nav_lang_flag: "/assets/images/flag-en.svg"
 nav_lang_title: "Switch to English version"
 
 # Hero
-hero_eyebrow: "Zertifizierter Systemischer Coach · für Einzelpersonen, Unternehmen und Behörden"
+hero_eyebrow: "Langjährig erfahrene Führungskraft und  Zertifizierter Systemischer Coach"
 hero_title_line1: "Führungskräfte Coaching · Interim Leadership · Lehre"
-hero_sub: "Ich bereite Führungskräfte, Gründer und Teams in Unternehmen und Behörden darauf vor, klare Entscheidungen zu treffen, Transformationen zu führen und nachhaltig zu agieren."
+hero_sub: "Coaching für Einzelpersonen, Unternehmen und BehördenIch bereite Führungskräfte, Gründer und Teams in Unternehmen und Behörden darauf vor, klare Entscheidungen zu treffen, Transformationen zu führen und nachhaltig zu agieren."
 hero_cta: "Kennenlerngespräch vereinbaren"
 hero_stat_num: "15+"
 #hero_stat_label: "Jahre Erfahrung in Führung & Skalierung"
@@ -19,8 +19,8 @@ hero_image_label: "Jahre Erfahrung in Führung bei Zalando, Redcare (Shop Apothe
 
 # Über mich
 about_label: "Über mich"
-about_title_line1: "Klarheit durch"
-about_title_em: "Erfahrung."
+about_title_line1: "Meine Erfahrung für"
+about_title_em: "Ihren Erfolg"
 about_p1: "Als langjährige Führungskraft in schnell wachsenden Technologieunternehmen kenne ich die Herausforderungen des operativen und strategischen Führungsalltags aus eigener Erfahrung."
 about_p2: "In Kombination mit der Ausbildung als Systemischer Coach, verbinde ich unternehmerisches Verständnis mit systemischer Methodenkompetenz. Kein theoretisches Lehrbuchwissen, sondern ein vertrauensvoller Sparringspartner auf Augenhöhe."
 about_p3: "Ich unterstütze neue und Erfahrene Führungskräfte dabei, Ihre Führungswirkung zu stärken, komplexe Schnittstellen zu steuern und auch in Phasen hoher Unsicherheit handlungsfähig und fokussiert zu bleiben."
@@ -34,12 +34,12 @@ about_cred4_title: "Sprachen"
 about_cred4_text: "Deutsch & Englisch"
 
 # Angebote
-angebote_label: "Services"
+angebote_label: "Leistungen"
 angebote_title_line1: ""
 angebote_title_em: ""
 
 angebot_1_title: "Führungskräfte-Coaching"
-angebot_1_desc: "Leadership-Coaching für Gründer & C-Level in Start-ups, Unternehmen und Behörden, Begleitung in Transformationsprozessen, Team-Workshops zu New Work und Zusammenarbeit"
+angebot_1_desc: "Training, Fortbildung und Coaching für Führungskräfte in Unternehmen und Behörden, Begleitung in Transformationsprozessen, Team-Workshops zu New Work und Zusammenarbeit"
 
 angebot_2_title: "Interim Leadership"
 angebot_2_desc: "Temporäre Führung von Analysten, Product Teams und crossfunktionalen Teams und Organisationen – als Elternzeitvertretung oder wenn schnell Führungskapazität benötigt wird."
@@ -70,7 +70,7 @@ contact_p: "Vereinbaren Sie ein unverbindliches Erstgespräch (30 Min.). Wir bes
 contact_email_label: "E-Mail"
 contact_email_val: "mail@andreas-rothe.de"
 contact_phone_label: "Telefon"
-contact_phone_val: "+49 30 1234567"
+contact_phone_val: "+49 176 45634567"
 contact_location_label: "Standort"
 contact_location_val: "Berlin & Remote weltweit"
 
@@ -88,6 +88,6 @@ contact_form_msg_ph: "Worum geht es in Ihrem Anliegen?"
 contact_form_submit: "Nachricht senden"
 
 # Footer
-footer_name: "Andreas Rothe · Executive & Leadership Coach"
+footer_name: "Andreas Rothe · Leadership Coach und Trainer"
 footer_impressum: "Impressum"
 footer_privacy: "Datenschutz"
