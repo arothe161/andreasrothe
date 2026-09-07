@@ -1,8 +1,13 @@
 <footer id="global-footer">
-  <span>© <span id="year"></span> Andreas Rothe · Leadership Coach und Trainer</span>
+  <span>©  <span id="year"></span> Andreas Rothe · {% if page.lang == "en" %}Leadership Coach and Trainer{% else %}Leadership Coach und Trainer{% endif %}</span>
   <span>
+    {% if page.lang == "en" %}
+    <a href="/en/impressum/">Imprint</a> &nbsp;·&nbsp;
+    <a href="/en/privacy/">Privacy</a>
+    {% else %}
     <a href="/impressum/">Impressum</a> &nbsp;·&nbsp;
     <a href="/datenschutz/">Datenschutz</a>
+    {% endif %}
   </span>
 </footer>
 <script>
