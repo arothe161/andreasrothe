@@ -1,6 +1,7 @@
 # Navigation
 nav_about: "Über mich"
-nav_services: "Angebote"
+nav_services: "Services"
+nav_coaching: "Coaching Angebote"
 nav_testimonials: "Referenzen"
 nav_contact: "Kontakt"
 nav_lang: "EN"
