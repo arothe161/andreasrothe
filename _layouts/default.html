@@ -45,6 +45,14 @@
   <link rel="alternate" hreflang="x-default" href="{{ de_url }}">
 {%- endif -%}
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ '/style.css' | relative_url }}">
+    {% if page.url == '/fuehrungskraefte-coaching/' or page.url == '/en/leadership-coaching/' %}
+    <link rel="stylesheet" href="{{ '/assets/css/coaching.css' | relative_url }}">
+    {% endif %}
+
     {% if page.extra_head %}
       {{ page.extra_head }}
     {% endif %}
