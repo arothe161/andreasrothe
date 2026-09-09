@@ -7,12 +7,13 @@ baseurl: ""
 
 plugins:
   - jekyll-seo-tag
+  - jekyll-sitemap
 
 # Globale SEO-Einstellungen für jekyll-seo-tag
 seo:
   type: Person
   name: Andreas Rothe
-  logo: /assets/ar-coaching-logo.png          # optional, wenn du ein Logo hast
+  logo: /assets/ar-coaching-logo.png
   social:
     name: Andreas Rothe
     links:
