@@ -32,7 +32,7 @@ description: Coaching for individuals, companies and public-sector organisations
 <!-- SERVICES -->
 <section id="angebote">
   <div class="angebote-header">
-    <h2 class="section-label">{{ site.data.en.angebote_label }}</h2>
+    <h2 class="hero-eyebrow">{{ site.data.en.angebote_label }}</h2>
     <!-- <h3 class="section-title">
       {{ site.data.en.angebote_title_line1 }}<br>
       <em>{{ site.data.en.angebote_title_em }}</em>
@@ -79,16 +79,14 @@ description: Coaching for individuals, companies and public-sector organisations
 </section>
 
 <!-- ABOUT -->
-<section id="ueber-mich">
-  <div class="about-label-col">
-    <h2 class="section-label">{{ site.data.en.about_label }}</h2>
-    <h3 class="section-title">
+<section id="ueber-mich" class="lp-split-section">
+  <div class="lp-split-text">
+    <h2 class="hero-eyebrow">{{ site.data.en.about_label }}</h2>
+    <h3 class="hero-title">
       {{ site.data.en.about_title_line1 }}<br>
       <em>{{ site.data.en.about_title_em }}</em>
     </h3>
-  </div>
-  <div class="about-body">
-    <p>{{ site.data.en.about_p1 }}</p>
+    <p class="hero-sub">{{ site.data.en.about_p1 }}</p>
     <p>{{ site.data.en.about_p2 }}</p>
     <p>{{ site.data.en.about_p3 }}</p>
     <div class="about-credentials">
@@ -110,8 +108,14 @@ description: Coaching for individuals, companies and public-sector organisations
       </div>
     </div>
   </div>
+  <div class="hero-image">
+    <img
+src="{{ '/assets/DEIN-PORTRAIT.webp' | relative_url }}"
+alt="Andreas Rothe, Coach"
+class="hero-image-photo"
+>
+  </div>
 </section>
-
 <div class="divider"></div>
 
 <!-- TESTIMONIALS -->
