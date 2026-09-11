@@ -77,52 +77,15 @@ description: Coaching für Einzelpersonen, Teams, Unternehmen und Behörden. Ich
   </div>
 </section>
 
-<!-- Über mich -->
-<section id="ueber-mich">
-  <div class="lp-split-text">
-	<h2 class="section-label">{{ site.data.de.about_label }}</h2>
-    <h3 class="section-title">{{ site.data.de.about_title_line1 }}</h3>
-    <p class="hero-sub" style="margin-bottom: 1.5rem;">{{ site.data.de.about_p1 }}</p>
-    <p class="hero-sub" style="margin-bottom: 1.5rem;">{{ site.data.de.about_p2 }}</p>
-    <p class="hero-sub" style="margin-bottom: 1.5rem;">{{ site.data.de.about_p3 }}</p>
-    <div class="about-credentials">
-      <div class="credential">
-        <div class="credential-title">{{ site.data.de.about_cred1_title }}</div>
-        <div class="credential-text">{{ site.data.de.about_cred1_text }}</div>
-      </div>
-      <div class="credential">
-        <div class="credential-title">{{ site.data.de.about_cred2_title }}</div>
-        <div class="credential-text">{{ site.data.de.about_cred2_text }}</div>
-      </div>
-      <div class="credential">
-        <div class="credential-title">{{ site.data.de.about_cred3_title }}</div>
-        <div class="credential-text">{{ site.data.de.about_cred3_text }}</div>
-      </div>
-      <div class="credential">
-        <div class="credential-title">{{ site.data.de.about_cred4_title }}</div>
-        <div class="credential-text">{{ site.data.de.about_cred4_text }}</div>
-      </div>
-    </div>
-    <div style="margin-top: 2.5rem;">
-      <a href="{{ '/#kontakt' | relative_url }}" class="btn-submit" style="text-decoration: none; display: inline-block;">Lassen sie uns reden</a>
-    </div>
-  </div>
-	<div class="hero-image hero-image--photo" style="height: 440px;">
-		<img src="{{ '/assets/andreas-web.jpg' | relative_url }}" alt="Portrait von Andreas Rothe">
-	</div>
-</section>
-
 <!-- ÜBER MICH -->
-<section id="ueber-mich-old">
-  <div class="about-label-col">
-    <h2 class="section-label">{{ site.data.de.about_label }}</h2>
-    <h3 class="section-title">
+<section id="ueber-mich" class="lp-split-section">
+  <div class="lp-split-text">
+    <p class="hero-eyebrow">{{ site.data.de.about_label }}</p>
+    <h2 class="hero-title">
       {{ site.data.de.about_title_line1 }}<br>
       <em>{{ site.data.de.about_title_em }}</em>
-    </h3>
-  </div>
-  <div class="about-body">
-    <p>{{ site.data.de.about_p1 }}</p>
+    </h2>
+    <p class="hero-sub">{{ site.data.de.about_p1 }}</p>
     <p>{{ site.data.de.about_p2 }}</p>
     <p>{{ site.data.de.about_p3 }}</p>
     <div class="about-credentials">
@@ -143,6 +106,12 @@ description: Coaching für Einzelpersonen, Teams, Unternehmen und Behörden. Ich
         <div class="credential-text">{{ site.data.de.about_cred4_text }}</div>
       </div>
     </div>
+  </div>
+  <div class="hero-image">
+    <img
+src="{{ '/assets/andreas_web.webp' | relative_url }}"
+alt="Andreas Rothe, Coach für Führungskräfte und Teams"
+class="hero-image-photo">
   </div>
 </section>
 

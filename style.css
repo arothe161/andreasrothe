@@ -267,13 +267,6 @@ section {
   text-transform: uppercase;
   color: var(--muted);
 }
-
-/* ── ÜBER MICH ── */
-#ueber-mich {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 5rem;
-  align-items: start;
 }
 .section-label {
   font-size: 0.75rem;
@@ -698,7 +691,7 @@ footer a:hover { color: var(--accent); }
   .hero-image { height: 160px; order: -1; }
   .hero-sub { max-width: none; }
 
-  #ueber-mich { grid-template-columns: 1fr; gap: 2rem; }
+ /* #ueber-mich { grid-template-columns: 1fr; gap: 2rem; }*/
   .about-credentials { grid-template-columns: 1fr 1fr; }
 
   .angebote-grid {
