@@ -31,7 +31,7 @@ description: Coaching für Einzelpersonen, Teams, Unternehmen und Behörden. Ich
 <!-- ANGEBOTE -->
 <section id="angebote">
   <div class="angebote-header">
-    <h2 class="section-label">{{ site.data.de.angebote_label }}</h2>
+    <h2 class="hero-eyebrow">{{ site.data.de.angebote_label }}</h2>
   <!--  <h3 class="section-title">
       {{ site.data.de.angebote_title_line1 }}<br>
       <em>{{ site.data.de.angebote_title_em }}</em>
@@ -78,16 +78,14 @@ description: Coaching für Einzelpersonen, Teams, Unternehmen und Behörden. Ich
 </section>
 
 <!-- ÜBER MICH -->
-<section id="ueber-mich">
-  <div class="about-label-col">
-    <h2 class="section-label">{{ site.data.de.about_label }}</h2>
-    <h3 class="section-title">
+<section id="ueber-mich" class="lp-split-section">
+  <div class="lp-split-text">
+    <h2 class="hero-eyebrow">{{ site.data.de.about_label }}</h2>
+    <h3 class="hero-title">
       {{ site.data.de.about_title_line1 }}<br>
       <em>{{ site.data.de.about_title_em }}</em>
     </h3>
-  </div>
-  <div class="about-body">
-    <p>{{ site.data.de.about_p1 }}</p>
+    <p class="hero-sub">{{ site.data.de.about_p1 }}</p>
     <p>{{ site.data.de.about_p2 }}</p>
     <p>{{ site.data.de.about_p3 }}</p>
     <div class="about-credentials">
@@ -108,6 +106,13 @@ description: Coaching für Einzelpersonen, Teams, Unternehmen und Behörden. Ich
         <div class="credential-text">{{ site.data.de.about_cred4_text }}</div>
       </div>
     </div>
+  </div>
+  <div class="hero-image">
+    <img
+src="{{ '/assets/andreas_web.webp' | relative_url }}"
+alt="Andreas Rothe, Coach für Führungskräfte und Teams"
+class="hero-image-photo"
+>
   </div>
 </section>
 
