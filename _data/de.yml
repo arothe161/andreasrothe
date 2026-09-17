@@ -51,8 +51,8 @@ angebot_3_title: "Lehre"
 angebot_3_desc: "Gastdozenturen und Gastvorträge an Hochschulen rund um Karriereplanung, moderne Arbeitsweisen und Transformation."
 
 angebot_1_link_more: "Mehr zum Coaching →"
-angebot_1_link_more: "Jetzt Gespräch vereinbaren →"
-angebot_1_link_more: "Anfrage Lehrangebot →"
+angebot_2_link_more: "Jetzt Gespräch vereinbaren →"
+angebot_3_link_more: "Anfrage Lehrangebot →"
 
 # Testimonials
 testi_label: "Referenzen"
