@@ -610,13 +610,18 @@ footer a:hover { color: var(--accent); }
    ══════════════════════════════════════════ */
 @media (max-width: 900px) {
   /* Mobile: Hero-Foto randlos, volle Breite */
-.hero-image:has(.hero-image-photo) {
-  margin-left: -1.5rem;
-  margin-right: -1.5rem;
-  width: calc(100% + 3rem);
-}
+  .hero-image:has(.hero-image-photo) {
+	margin-left: -1.5rem;
+	margin-right: -1.5rem;
+	width: calc(100% + 3rem);
+  }
+  
   nav {
     padding: 0 1.5rem;
+  }
+
+  .angebote-header {
+    margin-top: 1.5rem;
   }
 
   .nav-toggle {
