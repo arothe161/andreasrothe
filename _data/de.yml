@@ -24,9 +24,11 @@ about_title_line1: "Meine Erfahrung für"
 about_title_em: "Ihren Erfolg"
 about_p1: "Als langjährige Führungskraft in schnell wachsenden Technologieunternehmen kenne ich die Herausforderungen des operativen und strategischen Führungsalltags aus eigener Erfahrung."
 about_p2: "In Kombination mit der Ausbildung als Systemischer Coach, verbinde ich unternehmerisches Verständnis mit systemischer Methodenkompetenz. Kein theoretisches Lehrbuchwissen, sondern ein vertrauensvoller Sparringspartner auf Augenhöhe."
-about_p3: "Ich unterstütze neue und erfahrene Führungskräfte dabei, Ihre Führungswirkung zu stärken, komplexe Schnittstellen zu steuern und auch in Phasen hoher Unsicherheit handlungsfähig und fokussiert zu bleiben."
+about_p3: "Ich unterstütze neue und erfahrene Führungskräfte, Ihre Führungswirkung zu stärken, komplexe Schnittstellen zu steuern und auch in Phasen hoher Unsicherheit handlungsfähig und fokussiert zu bleiben."
 about_cred1_title: "Rolle"
 about_cred1_text: "15+ Jahre Führungserfahrung, bei Zalando, Redcare und Mister Spex."
+about_cred5_title: "Coaching"
+about_cred5_text: "Weiterbildung Systemischer Coach"
 about_cred2_title: "Fokus"
 about_cred2_text: "Leadership, Skalierung, Transformation"
 about_cred3_title: "Format"
@@ -48,7 +50,9 @@ angebot_2_desc: "Temporäre Führung von Analysten, Product Teams und crossfunkt
 angebot_3_title: "Lehre"
 angebot_3_desc: "Gastdozenturen und Gastvorträge an Hochschulen rund um Karriereplanung, moderne Arbeitsweisen und Transformation."
 
-angebot_link_more: "Mehr zu meinem Coaching →"
+angebot_1_link_more: "Mehr zum Coaching →"
+angebot_1_link_more: "Jetzt Gespräch vereinbaren →"
+angebot_1_link_more: "Anfrage Lehrangebot →"
 
 # Testimonials
 testi_label: "Referenzen"
