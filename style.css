@@ -320,7 +320,8 @@ section {
   max-width: 100%;
 }
 .angebote-header {
-  margin-bottom: 3.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 .angebote-grid {
   display: grid;
