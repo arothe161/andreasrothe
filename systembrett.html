@@ -13,8 +13,7 @@ permalink: /systembrett/
   (Text links, Bild rechts), genau wie dort. CSS-Selektor
   ".hero-image:has(.hero-image-photo)" in style.css blendet das dekorative
   Streifen-Pattern automatisch aus, sobald ein .hero-image-photo als Kind
-  vorhanden ist - keine zusaetzliche Klasse noetig, entspricht dem
-  bestehenden Markup-Muster von #ueber-mich und #hero.
+  vorhanden ist.
 -->
 
 <section id="systembrett-intro" class="lp-split-section">
@@ -50,29 +49,38 @@ permalink: /systembrett/
 <div class="divider"></div>
 
 <!--
-  Brett-Sektion: eigene Klasse "systembrett-section" statt generischer
-  <section> ohne Klasse, damit wir gezielt per Media Query das seitliche
-  Padding auf Mobile aufheben koennen, ohne das globale section-Padding
-  fuer alle anderen Bereiche der Seite zu veraendern.
+  Brett-Sektion: eigene Klasse "systembrett-section". style.css definiert
+  fuer "section" GLEICH DREI Padding-Stufen: Basis (1rem 12vw 2rem),
+  @media max-width:900px (0rem 6vw 1rem) UND @media max-width:600px
+  (1rem 5vw). Alle drei muessen fuer diese Sektion explizit auf 0
+  seitliches Padding gesetzt werden, sonst gewinnt auf kleinen Handy-
+  Bildschirmen (<600px) die engste Regel und es bleibt Rand-Padding uebrig -
+  genau das Problem aus den Chrome-DevTools.
 -->
 <section id="systembrett-app" class="systembrett-section">
   <div id="systembrett-root"></div>
 </section>
 
 <style>
-  /* Nur fuer diese Seite: Brett-Sektion bekommt auf kleinen Bildschirmen
-     kein seitliches Padding mehr, damit das Systembrett die volle
-     Bildschirmbreite nutzen kann. Das globale section-Padding (12vw)
-     bleibt fuer alle anderen Bereiche (Intro-Text, Header, Footer etc.)
-     unveraendert bestehen. */
   .systembrett-section {
     padding-top: 0;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   @media (max-width: 900px) {
     .systembrett-section {
-      padding-left: 0;
-      padding-right: 0;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      padding-top: 0 !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .systembrett-section {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      padding-top: 0 !important;
     }
   }
 </style>
