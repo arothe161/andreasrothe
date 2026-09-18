@@ -106,5 +106,19 @@
         gtag('config', 'G-S21PR4HHCM');
       }
     </script>
+	<script>
+		document.addEventListener('click', function (e) {
+		  const link = e.target.closest('a');
+		  if (!link) return;
+		  if (typeof gtag !== 'function') return; // kein Consent = kein Tracking
+
+		  gtag('event', 'link_click', {
+			link_url: link.href,
+			link_text: link.textContent.trim(),
+			link_class: link.className || '(none)',
+			page_location: window.location.href
+		  });
+		}, true);
+		</script>
   </body>
 </html>
