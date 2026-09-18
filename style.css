@@ -694,7 +694,7 @@ footer a:hover { color: var(--accent); }
 .lp-split-section:first-of-type {
   padding-top: calc(var(--nav-h) + 2rem);
 }
-  .hero-image { height: 160px; order: -1; }
+  .hero-image { height: 240px; order: -1; }
   .hero-sub { max-width: none; }
 
  /* #ueber-mich { grid-template-columns: 1fr; gap: 2rem; }*/
@@ -726,7 +726,8 @@ footer a:hover { color: var(--accent); }
   .divider { margin: 0 5vw; }
 
   .hero-title { font-size: clamp(2rem, 8vw, 2.6rem); }
-  .hero-image { height: 240px; }
+  .hero-image { height: 200px; }
+  .hero-image-portrait { height: 240px; }
   .hero-stat-num { font-size: 2.2rem; }
 
   .section-title { font-size: clamp(1.6rem, 6vw, 2.2rem); }
