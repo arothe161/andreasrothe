@@ -1,19 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett - Prototyp-Komponente (v15)
+ * Virtuelles Systembrett - Prototyp-Komponente (v16)
  * ---------------------------------------------------
- * Aenderungen gegenueber v14:
- * 1. Bugfix "Formen sind immer Rechtecke": Der Fehler lag NICHT im
- *    Rendering-Code (AnchorShapeDiv), sondern in
- *    handleAddAnchorFromSidebar: createAnchor() wurde ohne das "shape"-
- *    Argument aufgerufen. Dadurch landete ein Zufallswert (fuer die
- *    Position) im shape-Feld statt "circle"/"rect"/"triangle", und die
- *    Form fiel beim Rendern immer auf das ungeformte Rechteck zurueck.
- *    Jetzt wird "shape" korrekt als erstes Argument durchgereicht.
- * 2. Neue Funktion: Druecken der Entf-Taste (Delete) oder Backspace
- *    loescht das aktuell ausgewaehlte Element (Figur, Form oder Post-it),
- *    sofern kein Text-Eingabefeld fokussiert ist.
+ * Aenderung gegenueber v15:
+ * - Bugfix "helles Kaestchen/Schatten um Figuren-Icons (auch in der
+ *   Galerie)": Die Ursache war der CSS-Filter "drop-shadow(...)", der auf
+ *   dem GESAMTEN <svg>-Wrapper-Element lag. Bei einem SVG mit
+ *   "overflow: visible" und einer viewBox, die groesser ist als der
+ *   sichtbare Inhalt, kann der Browser den Filter-Effektbereich als eigene,
+ *   sichtbare Bounding-Box mit Hintergrund/Schatten rendern - das erzeugte
+ *   das helle, teils rotiert wirkende Kaestchen um jede Figur, unabhaengig
+ *   vom Kontext (Board oder Galerie).
+ *
+ *   Fix: Der Schatten wird jetzt ueber einen echten SVG-<filter> mit
+ *   feDropShadow erzeugt, der in <defs> definiert und gezielt nur auf die
+ *   <g>-Gruppe mit den tatsaechlichen Formen (circle/rect/polygon)
+ *   angewendet wird - nicht mehr auf das gesamte <svg>-Element. Dadurch
+ *   bleibt der Filter-Effektbereich eng an der tatsaechlichen Figur, ohne
+ *   sichtbare Bounding-Box drumherum.
  *
  * Abhaengigkeiten: nur React + Tailwind CSS (keine externen Libraries noetig)
  */
@@ -131,6 +136,9 @@ const getInitialZoom = () => {
 };
 
 // ---------- SVG-Definitionen ----------
+// Der Figuren-Schatten ist jetzt ein echter SVG-<filter> (feDropShadow),
+// nicht mehr ein CSS-filter auf dem gesamten <svg>-Element. Das verhindert
+// die zuvor sichtbare, ungewollte Bounding-Box um jede Figur.
 
 const WoodDefs: React.FC = () => (
   <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
@@ -156,6 +164,9 @@ const WoodDefs: React.FC = () => (
                   0 0 0 0 0.20
                   0 0 0 0.22 0"
         />
+      </filter>
+      <filter id="figureShadow" x="-40%" y="-40%" width="180%" height="180%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000000" floodOpacity="0.35" />
       </filter>
 
       {(Object.keys(COLOR_STYLES) as ColorKey[]).map((key) => {
@@ -274,17 +285,21 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
       viewBox={`${-half} ${-half} ${size} ${size}`}
       className="overflow-visible pointer-events-none select-none"
       style={{
-        filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.35))",
         outline: "none",
         border: "none",
         background: "transparent",
         display: "block",
       }}
     >
-      <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
-        {renderBase()}
-        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
-        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
+      {/* Schatten jetzt als SVG-feDropShadow-Filter NUR auf dieser Gruppe,
+          nicht mehr als CSS-filter auf dem gesamten <svg>-Element. Das
+          verhindert die zuvor sichtbare Bounding-Box um die Figur. */}
+      <g filter="url(#figureShadow)">
+        <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
+          {renderBase()}
+          <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
+          <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
+        </g>
       </g>
       {selected && (
         <circle cx={0} cy={0} r={half + 4} fill="none" stroke="#111827" strokeWidth={1.5} strokeDasharray="4 3" />
@@ -1313,10 +1328,6 @@ const Systembrett: React.FC = () => {
     setSelected({ id: fig.id, kind: "figure" });
   };
 
-  // BUGFIX: "shape" wird jetzt korrekt als erstes Argument an createAnchor
-  // uebergeben. Vorher fehlte dieses Argument, wodurch der Zufallswert fuer
-  // die x-Position versehentlich im shape-Feld landete und die Form beim
-  // Rendern immer auf das ungeformte Rechteck zurueckfiel.
   const handleAddAnchorFromSidebar = (shape: AnchorShape) => {
     const anchor = createAnchor(shape, 40 + Math.random() * 15, 40 + Math.random() * 15);
     setAnchors((prev) => [...prev, anchor]);
@@ -1351,9 +1362,6 @@ const Systembrett: React.FC = () => {
     e.dataTransfer.dropEffect = "copy";
   };
 
-  // BUGFIX: auch hier wird "template.value" jetzt korrekt als "shape"-Argument
-  // an createAnchor uebergeben (war vorher schon korrekt, hier zur Konsistenz
-  // mit dem Sidebar-Fix nochmal geprueft).
   const handleBoardDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const template = draggedTemplateRef.current;
@@ -1442,9 +1450,6 @@ const Systembrett: React.FC = () => {
   const handleZoomOut = () => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100));
   const handleZoomReset = () => setZoom(getInitialZoom());
 
-  // Tastatur-Handler: Copy/Paste (Strg/Cmd+C/V) UND jetzt neu Loeschen
-  // (Entf/Backspace) fuer das aktuell ausgewaehlte Element. Reagiert nicht,
-  // solange ein Text-Eingabefeld fokussiert ist.
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
       const el = target as HTMLElement | null;
