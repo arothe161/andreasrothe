@@ -1,0 +1,89 @@
+---
+layout: default
+fullwidth: true
+lang: de
+title: Virtuelles Systembrett online nutzen – Systemische Aufstellungen für Coaching und Führung
+description: Virtuelles Systembrett für systemische Aufstellungen im Coaching und in der Führungskräfteentwicklung. Figuren frei positionieren, drehen und beschriften – direkt im Browser, ohne Installation.
+permalink: /systembrett/
+---
+
+<!--
+  Struktur 1:1 analog zum "Ueber mich"-Bereich der Startseite (index.html,
+  Abschnitt #ueber-mich): echtes Zwei-Spalten-Grid via .lp-split-section
+  (Text links, Bild rechts), genau wie dort. CSS-Selektor
+  ".hero-image:has(.hero-image-photo)" in style.css blendet das dekorative
+  Streifen-Pattern automatisch aus, sobald ein .hero-image-photo als Kind
+  vorhanden ist.
+-->
+
+<section id="systembrett-intro" class="lp-split-section">
+  <div class="lp-split-text">
+    <p class="hero-eyebrow">{{ site.data.de.systembrett_eyebrow }}</p>
+
+    <h1 class="hero-title">
+      {{ site.data.de.systembrett_title_line1 }} <em>{{ site.data.de.systembrett_title_em }}</em>
+    </h1>
+
+    <p class="hero-sub">
+      {{ site.data.de.systembrett_p1 }}
+    </p>
+
+    <p class="hero-sub">
+      {{ site.data.de.systembrett_p2 }}
+    </p>
+
+    <a href="#systembrett-app" class="angebot-link">
+      {{ site.data.de.systembrett_cta }}
+    </a>
+  </div>
+
+  <div class="hero-image">
+    <img
+      src="{{ '/assets/systembrett-online.png' | relative_url }}"
+      alt="Virtuelles Systembrett für systemische Aufstellungen im Coaching"
+      class="hero-image-photo"
+    >
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!--
+  Brett-Sektion: eigene Klasse "systembrett-section". style.css definiert
+  fuer "section" GLEICH DREI Padding-Stufen: Basis (1rem 12vw 2rem),
+  @media max-width:900px (0rem 6vw 1rem) UND @media max-width:600px
+  (1rem 5vw). Alle drei muessen fuer diese Sektion explizit auf 0
+  seitliches Padding gesetzt werden, sonst gewinnt auf kleinen Handy-
+  Bildschirmen (<600px) die engste Regel und es bleibt Rand-Padding uebrig -
+  genau das Problem aus den Chrome-DevTools.
+-->
+<section id="systembrett-app" class="systembrett-section">
+  <div id="systembrett-root"></div>
+</section>
+
+<style>
+  .systembrett-section {
+	padding-top:0;
+    padding-left: 12vw;
+    padding-right: 0;
+  }
+
+  @media (max-width: 900px) {
+    .systembrett-section {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      padding-top: 0 !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .systembrett-section {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      padding-top: 0 !important;
+    }
+  }
+</style>
+
+<link rel="stylesheet" href="{{ '/assets/systembrett/systembrett.css' | relative_url }}">
+<script type="module" src="{{ '/assets/systembrett/systembrett.js' | relative_url }}"></script>

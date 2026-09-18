@@ -96,3 +96,11 @@ contact_form_submit: "Nachricht senden"
 footer_name: "Andreas Rothe · Leadership Coach und Trainer"
 footer_impressum: "Impressum"
 footer_privacy: "Datenschutz"
+
+# Systembrett
+systembrett_eyebrow: "Systembrett Online"
+systembrett_title_line1: "Systemische Aufstellungen"
+systembrett_title_em: "virtuell"
+systembrett_p1: "Führungsfragen, Rollenkonflikte oder Teamdynamiken lassen sich oft schwer in Worte fassen – auf dem virtuellen Systembrett werden sie räumlich erkennbar. Sie positionieren Figuren frei auf der Fläche, drehen ihre Blickrichtung und halten Zwischenstände fest, ohne dass ein physisches Brett vor Ort sein muss."
+systembrett_p2: "Entstanden aus meiner Coaching-Praxis mit Führungskräften und Teams, funktioniert das Brett direkt im Browser: Figuren, Bodenformen und Notizen lassen sich anlegen, verschieben, skalieren und benennen – für die Aufstellung im Einzelsetting genauso wie begleitend in Präsenzsitzungen."
+systembrett_cta: "Zum Systembrett online →"
