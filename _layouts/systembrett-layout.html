@@ -13,12 +13,14 @@
   {% include header.html %}
 
   <!--
-    Bewusst KEIN einschränkender Haupt-Container (z.B. .container, .content,
-    max-width-Wrapper) wie im normalen default.html-Layout. Das Systembrett
-    bringt seinen eigenen Layout-Container mit (volle Breite, eigenes Padding)
-    und soll nicht durch Textseiten-Styles eingeengt werden.
+    Falls dein Header per CSS auf "position: fixed" oder "sticky" gesetzt ist,
+    braucht der nachfolgende Inhalt einen passenden Abstand nach oben, damit
+    er nicht darunter verschwindet. Passe den Wert an die tatsächliche Höhe
+    deines Headers an (Standard-Navigationsleisten liegen meist zwischen
+    64px und 96px) — im Zweifel im Browser die Header-Höhe per Inspektor
+    nachmessen und hier eintragen.
   -->
-  <main style="width: 100%;">
+  <main style="width: 100%; padding-top: 80px;">
     {{ content }}
   </main>
 
