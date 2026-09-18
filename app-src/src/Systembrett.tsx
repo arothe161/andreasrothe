@@ -1,22 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett – Prototyp-Komponente (v7)
+ * Virtuelles Systembrett – Prototyp-Komponente (v8)
  * ---------------------------------------------------
- * Änderungen gegenüber v6:
- * 1. Galerie und Konfigurationsfenster teilen sich jetzt dieselbe Spalte
- *    und werden nie gleichzeitig angezeigt: Ist eine Figur/ein Anker/ein
- *    Post-it ausgewählt, ersetzt das passende Panel die Galerie komplett.
- *    Schließt man das Panel, kommt die Galerie automatisch zurück.
- * 2. Bodenanker (und Post-its) werden nicht mehr über ihren Mittelpunkt
- *    positioniert/gezogen, sondern über die linke obere Ecke. Beim
- *    Pointer-Down wird der Versatz zwischen Klickpunkt und aktueller
- *    Ecke gemerkt, damit das Element beim Ziehen nicht unter den Cursor
- *    "springt".
- * 3. Neue Elementklasse "Post-it": beschriftbare, gelbe (oder farbige)
- *    Notizzettel, frei platzier- und größenveränderbar, direkt auf dem
- *    Zettel beschriftbar (Mehrzeilen-Text, Doppelklick zum Bearbeiten).
- *    Ebenenreihenfolge bleibt: Board → Bodenanker → Post-its → Figuren.
+ * Änderungen gegenüber v7:
+ * 1. Zoom-Funktion für das Brett: +/- Buttons und Prozentanzeige über dem
+ *    Brett skalieren die maximale Board-Breite zwischen 50% und 150% der
+ *    neuen Standardgröße (650px). Der Zoom verändert direkt die tatsächliche
+ *    Pixel-Breite des Board-Containers (nicht CSS-transform), damit der
+ *    ResizeObserver weiterhin korrekte Werte liefert und Drag/Resize/Rotation
+ *    exakt bleiben. Dadurch ragt das Brett auf normalen Bildschirmen nicht
+ *    mehr unten aus dem sichtbaren Bereich.
+ * 2. Responsives Layout: Ab der Tailwind-"lg"-Breakpoint (≥1024px) stehen
+ *    Galerie/Konfigurationsfenster und Brett nebeneinander wie bisher.
+ *    Darunter (Tablet/Mobile) wird auf eine vertikale Anordnung umgeschaltet:
+ *    Brett zuerst (oben), Galerie/Konfigurationsfenster darunter – über
+ *    Flex-Direction-Wechsel und "order"-Utilities gelöst.
  *
  * Abhängigkeiten: nur React + Tailwind CSS (keine externen Libraries nötig)
  */
@@ -48,7 +47,7 @@ interface Anchor {
   shape: AnchorShape;
   label: string;
   x: number; // % relativ zur Board-Breite (linke obere Ecke)
-  y: number; // % relativ zur Board-Höhe (linke obere Ecke)
+  y: number;
   widthPct: number;
   heightPct: number;
   color: AnchorColorKey;
@@ -64,8 +63,6 @@ interface Note {
   heightPct: number;
   color: NoteColorKey;
 }
-
-type BoardItem = Figure | Anchor | Note;
 
 // ---------- Konstanten ----------
 
@@ -119,8 +116,14 @@ const ANCHOR_SHAPE_LABELS: Record<AnchorShape, string> = {
   triangle: "Bodenanker (Dreieck)",
 };
 
-const BOARD_MAX_PX = 840;
-const PANEL_WIDTH = "w-64";
+// Zoom-Konfiguration: Standardgröße 650px, Bereich 50%-150% in 10%-Schritten
+const BOARD_BASE_PX = 650;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 1.5;
+const ZOOM_STEP = 0.1;
+const ZOOM_DEFAULT = 1;
+
+const PANEL_WIDTH = "w-64"; // einheitliche Breite für Galerie + Konfigurationsfenster (Desktop)
 
 let idCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${Date.now()}-${idCounter++}`;
@@ -268,7 +271,6 @@ const AnchorPreviewSvg: React.FC<{ shape: AnchorShape; color: AnchorColorKey; si
   </div>
 );
 
-// Kleine Post-it-Vorschau für die Galerie
 const NotePreview: React.FC<{ color: NoteColorKey; size: number }> = ({ color, size }) => (
   <div
     style={{
@@ -283,6 +285,43 @@ const NotePreview: React.FC<{ color: NoteColorKey; size: number }> = ({ color, s
       <div className="h-0.5 bg-black/10 rounded" />
       <div className="h-0.5 bg-black/10 rounded w-4/5" />
     </div>
+  </div>
+);
+
+// ---------- Zoom-Kontrolle ----------
+
+interface ZoomControlProps {
+  zoom: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onReset: () => void;
+}
+
+const ZoomControl: React.FC<ZoomControlProps> = ({ zoom, onZoomIn, onZoomOut, onReset }) => (
+  <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1">
+    <button
+      onClick={onZoomOut}
+      disabled={zoom <= ZOOM_MIN + 1e-9}
+      title="Verkleinern"
+      className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+    >
+      −
+    </button>
+    <button
+      onClick={onReset}
+      title="Zoom zurücksetzen (100%)"
+      className="text-xs text-gray-500 w-12 text-center hover:text-gray-800"
+    >
+      {Math.round(zoom * 100)}%
+    </button>
+    <button
+      onClick={onZoomIn}
+      disabled={zoom >= ZOOM_MAX - 1e-9}
+      title="Vergrößern"
+      className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+    >
+      +
+    </button>
   </div>
 );
 
@@ -309,7 +348,7 @@ const Gallery: React.FC<GalleryProps> = ({
   const anchorTemplates: AnchorShape[] = ["rect", "circle", "triangle"];
 
   return (
-    <div className={`${PANEL_WIDTH} shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm`}>
+    <div className="w-full lg:w-64 shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Figuren</h2>
         <p className="text-xs text-gray-400 mb-3">Ziehen oder klicken, um aufs Brett zu setzen</p>
@@ -386,7 +425,7 @@ interface FigurePanelProps {
 
 const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, onClose }) => {
   return (
-    <div className={`${PANEL_WIDTH} shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm`}>
+    <div className="w-full lg:w-64 shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Figur</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
@@ -469,7 +508,7 @@ interface AnchorPanelProps {
 
 const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, onClose }) => {
   return (
-    <div className={`${PANEL_WIDTH} shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm`}>
+    <div className="w-full lg:w-64 shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Bodenanker</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
@@ -533,7 +572,7 @@ interface NotePanelProps {
 
 const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose }) => {
   return (
-    <div className={`${PANEL_WIDTH} shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm`}>
+    <div className="w-full lg:w-64 shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Post-it</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
@@ -590,7 +629,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
   );
 };
 
-// ---------- Figur auf dem Brett (zentrumsbasiert, unverändert) ----------
+// ---------- Figur auf dem Brett (zentrumsbasiert) ----------
 
 interface BoardFigureProps {
   figure: Figure;
@@ -771,11 +810,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
   );
 };
 
-// ---------- Generischer Hook: Ecken-basiertes Ziehen + Resize ----------
-// Wird von Bodenankern und Post-its geteilt. Fixpunkt beim Ziehen ist die
-// linke obere Ecke: der Versatz zwischen Klickpunkt und aktueller Ecke wird
-// beim Pointer-Down gemerkt und während des gesamten Zugs konstant gehalten,
-// damit das Element nicht unter den Cursor springt.
+// ---------- Generischer Hook: Ecken-basiertes Ziehen ----------
 
 function useCornerDrag(
   x: number,
@@ -817,7 +852,7 @@ function useCornerDrag(
   return { dragging, handlePointerDown, handlePointerMove, handlePointerUp };
 }
 
-// ---------- Bodenanker auf dem Brett (Ecke = Fixpunkt) ----------
+// ---------- Bodenanker auf dem Brett ----------
 
 interface BoardAnchorProps {
   anchor: Anchor;
@@ -911,7 +946,7 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
   );
 };
 
-// ---------- Post-it auf dem Brett (Ecke = Fixpunkt, direkt beschriftbar) ----------
+// ---------- Post-it auf dem Brett ----------
 
 interface BoardNoteProps {
   note: Note;
@@ -1034,6 +1069,7 @@ const Systembrett: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selected, setSelected] = useState<Selectable>(null);
   const [splitBoard, setSplitBoard] = useState(false);
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
   const draggedTemplateRef = useRef<{ kind: "figure" | "anchor" | "note"; value?: ShapeType | AnchorShape } | null>(null);
 
   const { ref: boardRef, size: boardSizePx } = useElementSize<HTMLDivElement>();
@@ -1208,53 +1244,31 @@ const Systembrett: React.FC = () => {
     if (selected?.id === id) setSelected(null);
   };
 
+  const handleZoomIn = () => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 100) / 100));
+  const handleZoomOut = () => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100));
+  const handleZoomReset = () => setZoom(ZOOM_DEFAULT);
+
   const hasSelection = selected !== null;
+  const boardMaxPx = Math.round(BOARD_BASE_PX * zoom);
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 p-6 flex justify-center">
-      <div className="flex gap-4 items-start max-w-6xl w-full">
-        {/* Linke Spalte: entweder Galerie ODER Konfigurationsfenster —
-            nie beides gleichzeitig, da der Nutzer sie nicht parallel braucht. */}
-        <div className={`${PANEL_WIDTH} shrink-0`}>
-          {!hasSelection && (
-            <Gallery
-              onAddFigure={handleAddFigureFromSidebar}
-              onAddAnchor={handleAddAnchorFromSidebar}
-              onAddNote={handleAddNoteFromSidebar}
-              onDragStartTemplate={handleTemplateDragStart}
-              splitBoard={splitBoard}
-              onToggleSplit={() => setSplitBoard((s) => !s)}
-            />
-          )}
+    <div className="w-full min-h-screen bg-gray-50 p-4 sm:p-6 flex justify-center">
+      {/*
+        Responsive Grundlayout:
+        - Mobil/Tablet (< lg): flex-col, Brett zuerst (order-1), Galerie/Panel
+          danach (order-2) — erreicht über die Reihenfolge im DOM plus
+          "flex-col-reverse" wäre eine Alternative, hier stattdessen explizite
+          Order-Klassen für Klarheit.
+        - Ab lg (≥1024px): flex-row wie bisher, Galerie/Panel links, Brett
+          rechts, ursprüngliche DOM-Reihenfolge zählt (order wird zurückgesetzt).
+      */}
+      <div className="flex flex-col lg:flex-row gap-4 items-center lg:items-start max-w-6xl w-full">
+        {/* Arbeitsfläche: steht auf Mobile ZUERST (order-1), auf Desktop rechts (lg:order-2) */}
+        <div className="order-1 lg:order-2 w-full flex flex-col items-center gap-2">
+          <div style={{ width: "100%", maxWidth: `${boardMaxPx}px` }} className="flex justify-end">
+            <ZoomControl zoom={zoom} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onReset={handleZoomReset} />
+          </div>
 
-          {selectedFigure && (
-            <FigurePanel
-              figure={selectedFigure}
-              onChange={handleUpdateFigure}
-              onDelete={handleDeleteFigure}
-              onClose={() => setSelected(null)}
-            />
-          )}
-          {selectedAnchor && (
-            <AnchorPanel
-              anchor={selectedAnchor}
-              onChange={handleUpdateAnchor}
-              onDelete={handleDeleteAnchor}
-              onClose={() => setSelected(null)}
-            />
-          )}
-          {selectedNote && (
-            <NotePanel
-              note={selectedNote}
-              onChange={handleUpdateNote}
-              onDelete={handleDeleteNote}
-              onClose={() => setSelected(null)}
-            />
-          )}
-        </div>
-
-        {/* Arbeitsfläche */}
-        <div className="flex-1 min-w-0 flex justify-center">
           <div
             ref={boardRef}
             onDragOver={handleBoardDragOver}
@@ -1262,7 +1276,7 @@ const Systembrett: React.FC = () => {
             onClick={() => setSelected(null)}
             className="relative w-full rounded-xl bg-amber-50 border-2 border-amber-200 shadow-inner overflow-hidden"
             style={{
-              maxWidth: `${BOARD_MAX_PX}px`,
+              maxWidth: `${boardMaxPx}px`,
               aspectRatio: "1 / 1",
               backgroundImage:
                 "repeating-linear-gradient(45deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 12px)",
@@ -1317,6 +1331,45 @@ const Systembrett: React.FC = () => {
               />
             ))}
           </div>
+        </div>
+
+        {/* Galerie/Konfigurationsfenster: auf Mobile darunter (order-2), auf Desktop links (lg:order-1) */}
+        <div className="order-2 lg:order-1 w-full lg:w-64 shrink-0">
+          {!hasSelection && (
+            <Gallery
+              onAddFigure={handleAddFigureFromSidebar}
+              onAddAnchor={handleAddAnchorFromSidebar}
+              onAddNote={handleAddNoteFromSidebar}
+              onDragStartTemplate={handleTemplateDragStart}
+              splitBoard={splitBoard}
+              onToggleSplit={() => setSplitBoard((s) => !s)}
+            />
+          )}
+
+          {selectedFigure && (
+            <FigurePanel
+              figure={selectedFigure}
+              onChange={handleUpdateFigure}
+              onDelete={handleDeleteFigure}
+              onClose={() => setSelected(null)}
+            />
+          )}
+          {selectedAnchor && (
+            <AnchorPanel
+              anchor={selectedAnchor}
+              onChange={handleUpdateAnchor}
+              onDelete={handleDeleteAnchor}
+              onClose={() => setSelected(null)}
+            />
+          )}
+          {selectedNote && (
+            <NotePanel
+              note={selectedNote}
+              onChange={handleUpdateNote}
+              onDelete={handleDeleteNote}
+              onClose={() => setSelected(null)}
+            />
+          )}
         </div>
       </div>
     </div>
