@@ -1,26 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett – Prototyp-Komponente (v9)
+ * Virtuelles Systembrett – Prototyp-Komponente (v11)
  * ---------------------------------------------------
- * Änderungen gegenüber v8:
- * 1. Neue Figuren-Farbpalette: Gelb (Standard), Grün, Rot, Blau (ersetzt die
- *    bisherige "Holz/Blau/Rot/Gelb"-Kombination).
- * 2. Figuren wirken räumlicher: radialer Glanz-Gradient (Licht von oben
- *    links) plus weicher Drop-Shadow simulieren ein leicht gewölbtes,
- *    physisches Holzstück statt einer flachen Fläche.
- * 3. Figuren haben eine dezente Holzmaserung: ein SVG-Filter
- *    (feTurbulence + feColorMatrix) erzeugt ein organisches Streifenmuster,
- *    das als halbtransparenter Overlay über der Farbfläche liegt.
- * 4. Das Brett wirkt räumlicher: Inset-Shadow (vertiefte Spielfläche) plus
- *    weicher Rand-Schatten.
- * 5. Neue Kiefernholz-Optik fürs Brett: hellerer, warmer Holzton mit
- *    sichtbarer Maserung (gleicher SVG-Filter-Ansatz wie bei Figuren, nur
- *    großflächiger) und ein durchgezogener, dunkler Rahmen mit Abstand zum
- *    äußeren Rand – angelehnt an das Referenzbild eines physischen
- *    Systembretts.
- * 6. Post-it-Text ist jetzt horizontal UND vertikal zentriert (vorher nur
- *    linksbündiger Blocktext).
+ * Änderung gegenüber v10:
+ * - Bugfix "Springen" beim Aus-/Abwählen einer Figur: Der äußere,
+ *   zentrumsbasiert positionierte Container (position:absolute + 
+ *   transform: translate(-50%,-50%)) hatte VORHER eine variable Höhe,
+ *   je nachdem ob der Label-Bereich sichtbar war oder nicht. Da die
+ *   Zentrierung sich auf die aktuelle Boxhöhe bezieht, verschob das
+ *   Erscheinen/Verschwinden des Labels die Figur selbst um die halbe
+ *   Höhendifferenz nach oben/unten.
+ *   Fix: Der äußere Container hat jetzt eine FESTE Höhe (nur die Figur-
+ *   Fläche selbst). Der Label-/Editier-Bereich hängt als absolut
+ *   positioniertes Element UNTERHALB der Figur (top: 100% + Abstand) und
+ *   beeinflusst die Höhe des zentrierten Containers nicht mehr — die
+ *   Figur bleibt beim Auswählen exakt an ihrer Position.
+ *
+ * Alle übrigen Punkte aus v10 unverändert: Zoom-Regler fix oben links,
+ * scrollbares Brett bei manuellem Zoom, frei skalierbare Figuren, Copy/Paste
+ * für Figuren & Anker, Bugfix für unsichtbare Kreis-/Dreieck-Anker.
  *
  * Abhängigkeiten: nur React + Tailwind CSS (keine externen Libraries nötig)
  */
@@ -29,7 +28,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type ShapeType = "circle" | "square" | "triangle";
 type ColorKey = "yellow" | "green" | "red" | "blue";
-type SizeKey = "small" | "large";
 type AnchorShape = "rect" | "circle" | "triangle";
 type AnchorColorKey = "blue" | "red" | "yellow" | "green" | "gray";
 type NoteColorKey = "yellow" | "pink" | "green" | "blue";
@@ -43,7 +41,7 @@ interface Figure {
   y: number;
   rotation: number;
   color: ColorKey;
-  size: SizeKey;
+  sizePct: number;
 }
 
 interface Anchor {
@@ -69,9 +67,10 @@ interface Note {
   color: NoteColorKey;
 }
 
+type ClipboardItem = { kind: "figure"; data: Figure } | { kind: "anchor"; data: Anchor };
+
 // ---------- Konstanten ----------
 
-// Neue Palette: Gelb ist Standard, dazu Grün, Rot, Blau
 const COLOR_STYLES: Record<ColorKey, { base: string; light: string; dark: string; label: string }> = {
   yellow: { base: "#eab308", light: "#fde68a", dark: "#92600a", label: "Gelb" },
   green: { base: "#65a30d", light: "#bef264", dark: "#3f6212", label: "Grün" },
@@ -94,12 +93,11 @@ const NOTE_COLOR_STYLES: Record<NoteColorKey, { bg: string; label: string }> = {
   blue: { bg: "#bfdbfe", label: "Blau" },
 };
 
-const ANCHOR_OPACITY = 0.16;
+const ANCHOR_OPACITY = 0.28;
 
-const FIGURE_SIZE_PCT: Record<SizeKey, number> = {
-  small: 6,
-  large: 9.5,
-};
+const FIGURE_MIN_PCT = 4;
+const FIGURE_MAX_PCT = 20;
+const FIGURE_DEFAULT_PCT = 9.5;
 
 const ANCHOR_MIN_PCT = 6;
 const ANCHOR_MAX_PCT = 60;
@@ -124,18 +122,16 @@ const ANCHOR_SHAPE_LABELS: Record<AnchorShape, string> = {
 
 const BOARD_BASE_PX = 650;
 const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 1.5;
+const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
 const ZOOM_DEFAULT = 1;
+const PASTE_OFFSET_PCT = 4;
 
 let idCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${Date.now()}-${idCounter++}`;
 
-// ---------- SVG-Definitionen: Holzmaserungs-Filter + Gradients ----------
-// Einmalig im DOM vorhanden, wird von allen Figuren/dem Brett per url(#...)
-// referenziert. feTurbulence erzeugt organisches Rauschen, feColorMatrix
-// färbt es in gedämpften Brauntönen und macht es halbtransparent, sodass es
-// als Maserungs-Overlay über der jeweiligen Grundfarbe liegt.
+// ---------- SVG-Definitionen ----------
+
 const WoodDefs: React.FC = () => (
   <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
     <defs>
@@ -206,7 +202,7 @@ function useElementSize<T extends HTMLElement>() {
   return { ref, size };
 }
 
-// ---------- Figuren-Icon (räumlich, mit Holzmaserung) ----------
+// ---------- Figuren-Icon ----------
 
 interface ShapeSvgProps {
   type: ShapeType;
@@ -229,8 +225,8 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
       case "circle":
         return (
           <>
-            <circle cx={0} cy={0} r={half - 2} fill={`url(#${gradientId})`} stroke={c.dark} strokeWidth={1.5} />
-            <circle cx={0} cy={0} r={half - 2} fill={c.base} filter="url(#woodGrainFine)" opacity={0.5} />
+            <circle cx={0} cy={0} r={half - 2} fill={`url(#${gradientId})`} style={{ fill: `url(#${gradientId})` }} stroke={c.dark} strokeWidth={1.5} />
+            <circle cx={0} cy={0} r={half - 2} fill={c.base} style={{ fill: c.base }} filter="url(#woodGrainFine)" opacity={0.5} />
           </>
         );
       case "square":
@@ -242,6 +238,7 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
               width={size - 4}
               height={size - 4}
               fill={`url(#${gradientId})`}
+              style={{ fill: `url(#${gradientId})` }}
               stroke={c.dark}
               strokeWidth={1.5}
               rx={4}
@@ -252,6 +249,7 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
               width={size - 4}
               height={size - 4}
               fill={c.base}
+              style={{ fill: c.base }}
               filter="url(#woodGrainFine)"
               opacity={0.5}
               rx={4}
@@ -269,8 +267,8 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
           .join(" ");
         return (
           <>
-            <polygon points={pts} fill={`url(#${gradientId})`} stroke={c.dark} strokeWidth={1.5} />
-            <polygon points={pts} fill={c.base} filter="url(#woodGrainFine)" opacity={0.5} />
+            <polygon points={pts} fill={`url(#${gradientId})`} style={{ fill: `url(#${gradientId})` }} stroke={c.dark} strokeWidth={1.5} />
+            <polygon points={pts} fill={c.base} style={{ fill: c.base }} filter="url(#woodGrainFine)" opacity={0.5} />
           </>
         );
       }
@@ -287,8 +285,8 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
     >
       <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
         {renderBase()}
-        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
-        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
+        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} style={{ fill: selected ? "#111827" : c.dark }} />
+        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} style={{ fill: selected ? "#111827" : c.dark }} />
       </g>
       {selected && (
         <circle cx={0} cy={0} r={half + 4} fill="none" stroke="#111827" strokeWidth={1.5} strokeDasharray="4 3" />
@@ -297,7 +295,7 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
   );
 };
 
-// ---------- Bodenanker-Icon (ohne Rahmen) ----------
+// ---------- Bodenanker-Icon ----------
 
 interface AnchorSvgProps {
   shape: AnchorShape;
@@ -311,11 +309,39 @@ const AnchorSvg: React.FC<AnchorSvgProps> = ({ shape, color, selected }) => {
   const renderBase = () => {
     switch (shape) {
       case "circle":
-        return <ellipse cx={50} cy={50} rx={48} ry={48} fill={c.fill} fillOpacity={ANCHOR_OPACITY} />;
+        return (
+          <ellipse
+            cx={50}
+            cy={50}
+            rx={48}
+            ry={48}
+            fill={c.fill}
+            style={{ fill: c.fill, fillOpacity: ANCHOR_OPACITY }}
+            fillOpacity={ANCHOR_OPACITY}
+          />
+        );
       case "rect":
-        return <rect x={2} y={2} width={96} height={96} fill={c.fill} fillOpacity={ANCHOR_OPACITY} rx={4} />;
+        return (
+          <rect
+            x={2}
+            y={2}
+            width={96}
+            height={96}
+            fill={c.fill}
+            style={{ fill: c.fill, fillOpacity: ANCHOR_OPACITY }}
+            fillOpacity={ANCHOR_OPACITY}
+            rx={4}
+          />
+        );
       case "triangle":
-        return <polygon points="50,2 98,96 2,96" fill={c.fill} fillOpacity={ANCHOR_OPACITY} />;
+        return (
+          <polygon
+            points="50,2 98,96 2,96"
+            fill={c.fill}
+            style={{ fill: c.fill, fillOpacity: ANCHOR_OPACITY }}
+            fillOpacity={ANCHOR_OPACITY}
+          />
+        );
     }
   };
 
@@ -487,6 +513,9 @@ const Gallery: React.FC<GalleryProps> = ({
           <input type="checkbox" checked={splitBoard} onChange={onToggleSplit} className="accent-gray-700" />
           In zwei Hälften teilen
         </label>
+        <p className="text-xs text-gray-400 mt-3">
+          Tipp: Ausgewählte Figuren/Anker lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren.
+        </p>
       </div>
     </div>
   );
@@ -516,7 +545,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       </div>
 
       <p className="text-xs text-gray-400 -mt-2 text-center">
-        Drehung: {Math.round(figure.rotation)}° — am Ringgriff der Figur ziehen
+        Drehung: {Math.round(figure.rotation)}° — am Ringgriff ziehen · Größe: am Eck-Griff ziehen
       </p>
 
       <div>
@@ -542,25 +571,6 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
               }`}
               style={{ backgroundColor: COLOR_STYLES[key].base }}
             />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-500 block mb-2">Größe</label>
-        <div className="flex gap-2">
-          {(["small", "large"] as SizeKey[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => onChange(figure.id, { size: key })}
-              className={`flex-1 text-sm rounded-md border px-2 py-1 transition-colors ${
-                figure.size === key
-                  ? "bg-gray-800 text-white border-gray-800"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              {key === "small" ? "Klein" : "Groß"}
-            </button>
           ))}
         </div>
       </div>
@@ -707,7 +717,12 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
   );
 };
 
-// ---------- Figur auf dem Brett (zentrumsbasiert) ----------
+// ---------- Figur auf dem Brett ----------
+// WICHTIG (Bugfix): Der äußere, zentrierte Container hat jetzt eine FESTE
+// Höhe (= Größe der Figur). Der Label-/Editier-Bereich liegt als absolut
+// positioniertes Element unterhalb davon (top: 100% + Abstand), sodass er
+// die Höhe des transformierten Containers nicht mehr beeinflusst. Dadurch
+// "springt" die Figur beim Aus-/Abwählen nicht mehr.
 
 interface BoardFigureProps {
   figure: Figure;
@@ -717,6 +732,7 @@ interface BoardFigureProps {
   onRename: (id: string, label: string) => void;
   onMove: (id: string, xPct: number, yPct: number) => void;
   onRotate: (id: string, rotation: number) => void;
+  onResize: (id: string, sizePct: number) => void;
   boardRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -728,15 +744,18 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
   onRename,
   onMove,
   onRotate,
+  onResize,
   boardRef,
 }) => {
   const [editingLabel, setEditingLabel] = useState(false);
   const [draft, setDraft] = useState(figure.label);
   const [dragging, setDragging] = useState(false);
   const [rotating, setRotating] = useState(false);
+  const [resizing, setResizing] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
+  const resizeStartRef = useRef<{ startX: number; startY: number; sizePct: number } | null>(null);
 
-  const size = (FIGURE_SIZE_PCT[figure.size] / 100) * Math.max(boardSizePx.width, 1);
+  const size = (figure.sizePct / 100) * Math.max(boardSizePx.width, 1);
 
   const commitRename = () => {
     setEditingLabel(false);
@@ -792,6 +811,30 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
     (e.target as Element).releasePointerCapture(e.pointerId);
   };
 
+  const handleResizeStart = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    onSelect(figure.id);
+    setResizing(true);
+    resizeStartRef.current = { startX: e.clientX, startY: e.clientY, sizePct: figure.sizePct };
+    (e.target as Element).setPointerCapture(e.pointerId);
+  };
+
+  const handleResizeMove = (e: React.PointerEvent) => {
+    if (!resizing || !resizeStartRef.current) return;
+    const rect = boardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const { startX, startY, sizePct } = resizeStartRef.current;
+    const dPct = ((e.clientX - startX + (e.clientY - startY)) / 2 / rect.width) * 100;
+    const newSize = Math.min(FIGURE_MAX_PCT, Math.max(FIGURE_MIN_PCT, sizePct + dPct));
+    onResize(figure.id, newSize);
+  };
+
+  const handleResizeEnd = (e: React.PointerEvent) => {
+    setResizing(false);
+    resizeStartRef.current = null;
+    (e.target as Element).releasePointerCapture(e.pointerId);
+  };
+
   const handleLabelToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     setDraft(figure.label);
@@ -813,77 +856,101 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
         position: "absolute",
         left: `${figure.x}%`,
         top: `${figure.y}%`,
+        width: size,
+        height: size,
         transform: "translate(-50%, -50%)",
         cursor: dragging ? "grabbing" : "grab",
         touchAction: "none",
-        zIndex: dragging || rotating ? 30 : isSelected ? 20 : 10,
+        zIndex: dragging || rotating || resizing ? 30 : isSelected ? 20 : 10,
       }}
-      className="flex flex-col items-center select-none"
+      className="select-none"
     >
+      {/* Diese innere Box hat exakt size x size — die Zentrierung oben
+          bezieht sich also immer auf eine konstante Höhe, unabhängig davon,
+          ob unten ein Label angezeigt wird. */}
       <div style={{ position: "relative", width: size, height: size }}>
         <ShapeSvg type={figure.type} color={figure.color} size={size} rotation={figure.rotation} selected={isSelected} />
 
         {isSelected && !editingLabel && (
+          <>
+            <div
+              onPointerDown={handleRotateStart}
+              onPointerMove={handleRotateMove}
+              onPointerUp={handleRotateEnd}
+              title="Ziehen, um die Blickrichtung zu drehen"
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                width: 16,
+                height: 16,
+                marginLeft: -8,
+                marginTop: -8,
+                transform: `rotate(${figure.rotation}deg) translateY(-${handleDistance}px)`,
+                touchAction: "none",
+                cursor: rotating ? "grabbing" : "grab",
+                zIndex: 40,
+              }}
+              className="rounded-full bg-white border-2 border-gray-700 shadow flex items-center justify-center"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-gray-700" />
+            </div>
+
+            <div
+              onPointerDown={handleResizeStart}
+              onPointerMove={handleResizeMove}
+              onPointerUp={handleResizeEnd}
+              title="Ziehen, um die Größe zu ändern"
+              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
+              style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
+            />
+          </>
+        )}
+
+        {/* Label-/Editier-Bereich: absolut UNTERHALB der Figur verankert
+            (top: 100% der inneren Box + fixer Abstand), NICHT mehr Teil des
+            normalen Flex-Flows. Beeinflusst dadurch die Höhe des äußeren,
+            zentrierten Containers nicht — kein Sprung mehr beim Auswählen. */}
+        {isSelected && (
           <div
-            onPointerDown={handleRotateStart}
-            onPointerMove={handleRotateMove}
-            onPointerUp={handleRotateEnd}
-            title="Ziehen, um die Blickrichtung zu drehen"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              width: 16,
-              height: 16,
-              marginLeft: -8,
-              marginTop: -8,
-              transform: `rotate(${figure.rotation}deg) translateY(-${handleDistance}px)`,
-              touchAction: "none",
-              cursor: rotating ? "grabbing" : "grab",
-              zIndex: 40,
-            }}
-            className="rounded-full bg-white border-2 border-gray-700 shadow flex items-center justify-center"
+            className="absolute left-1/2 -translate-x-1/2 flex justify-center"
+            style={{ top: "100%", marginTop: 6, width: "max-content" }}
+            onPointerDown={(e) => e.stopPropagation()}
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-700" />
+            {editingLabel ? (
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitRename();
+                  if (e.key === "Escape") {
+                    setDraft(figure.label);
+                    setEditingLabel(false);
+                  }
+                }}
+                placeholder="Name…"
+                className="text-xs text-center border border-gray-300 rounded px-1 py-0.5 w-24 bg-white shadow-sm"
+              />
+            ) : figure.label ? (
+              <span
+                onDoubleClick={handleLabelToggle}
+                className="text-xs text-gray-700 bg-white/80 rounded px-1.5 py-0.5 whitespace-nowrap shadow-sm cursor-text"
+              >
+                {figure.label}
+              </span>
+            ) : (
+              <button
+                onClick={handleLabelToggle}
+                className="text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-1.5 py-0.5 bg-white/70 hover:text-gray-600 hover:border-gray-400"
+              >
+                + Label
+              </button>
+            )}
           </div>
         )}
       </div>
-
-      {isSelected && (
-        <div className="mt-1" onPointerDown={(e) => e.stopPropagation()}>
-          {editingLabel ? (
-            <input
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitRename();
-                if (e.key === "Escape") {
-                  setDraft(figure.label);
-                  setEditingLabel(false);
-                }
-              }}
-              placeholder="Name…"
-              className="text-xs text-center border border-gray-300 rounded px-1 py-0.5 w-24 bg-white shadow-sm"
-            />
-          ) : figure.label ? (
-            <span
-              onDoubleClick={handleLabelToggle}
-              className="text-xs text-gray-700 bg-white/80 rounded px-1.5 py-0.5 whitespace-nowrap shadow-sm cursor-text"
-            >
-              {figure.label}
-            </span>
-          ) : (
-            <button
-              onClick={handleLabelToggle}
-              className="text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-1.5 py-0.5 bg-white/70 hover:text-gray-600 hover:border-gray-400"
-            >
-              + Label
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 };
@@ -1024,7 +1091,7 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
   );
 };
 
-// ---------- Post-it auf dem Brett (Text jetzt horizontal + vertikal zentriert) ----------
+// ---------- Post-it auf dem Brett ----------
 
 interface BoardNoteProps {
   note: Note;
@@ -1114,7 +1181,7 @@ const BoardNote: React.FC<BoardNoteProps> = ({ note, isSelected, onSelect, onMov
             onChange={(e) => onEditText(note.id, e.target.value)}
             onBlur={() => setEditing(false)}
             onPointerDown={(e) => e.stopPropagation()}
-            className="w-full h-full bg-transparent resize-none outline-none text-[11px] text-gray-800 leading-tight text-center flex items-center justify-center"
+            className="w-full h-full bg-transparent resize-none outline-none text-[11px] text-gray-800 leading-tight text-center"
             style={{ textAlign: "center" }}
           />
         ) : (
@@ -1150,6 +1217,7 @@ const Systembrett: React.FC = () => {
   const [splitBoard, setSplitBoard] = useState(false);
   const [zoom, setZoom] = useState(ZOOM_DEFAULT);
   const draggedTemplateRef = useRef<{ kind: "figure" | "anchor" | "note"; value?: ShapeType | AnchorShape } | null>(null);
+  const clipboardRef = useRef<ClipboardItem | null>(null);
 
   const { ref: boardRef, size: boardSizePx } = useElementSize<HTMLDivElement>();
 
@@ -1169,7 +1237,7 @@ const Systembrett: React.FC = () => {
       y: clampPercent(yPct),
       rotation: 0,
       color: "yellow",
-      size: "large",
+      sizePct: FIGURE_DEFAULT_PCT,
     }),
     []
   );
@@ -1284,6 +1352,10 @@ const Systembrett: React.FC = () => {
     setFigures((prev) => prev.map((f) => (f.id === id ? { ...f, rotation } : f)));
   };
 
+  const handleResizeFigure = (id: string, sizePct: number) => {
+    setFigures((prev) => prev.map((f) => (f.id === id ? { ...f, sizePct } : f)));
+  };
+
   const handleMoveAnchor = (id: string, xPct: number, yPct: number) => {
     setAnchors((prev) => prev.map((a) => (a.id === id ? { ...a, x: xPct, y: yPct } : a)));
   };
@@ -1327,115 +1399,159 @@ const Systembrett: React.FC = () => {
   const handleZoomOut = () => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100));
   const handleZoomReset = () => setZoom(ZOOM_DEFAULT);
 
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c";
+      const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v";
+
+      if (isCopy && !isEditableTarget(e.target)) {
+        if (selectedFigure) {
+          clipboardRef.current = { kind: "figure", data: selectedFigure };
+        } else if (selectedAnchor) {
+          clipboardRef.current = { kind: "anchor", data: selectedAnchor };
+        }
+      }
+
+      if (isPaste && !isEditableTarget(e.target) && clipboardRef.current) {
+        e.preventDefault();
+        const item = clipboardRef.current;
+        if (item.kind === "figure") {
+          const newFig: Figure = {
+            ...item.data,
+            id: nextId("fig"),
+            x: clampPercent(item.data.x + PASTE_OFFSET_PCT),
+            y: clampPercent(item.data.y + PASTE_OFFSET_PCT),
+          };
+          setFigures((prev) => [...prev, newFig]);
+          setSelected({ id: newFig.id, kind: "figure" });
+          clipboardRef.current = { kind: "figure", data: newFig };
+        } else {
+          const newAnchor: Anchor = {
+            ...item.data,
+            id: nextId("anchor"),
+            x: clampPercent(item.data.x + PASTE_OFFSET_PCT),
+            y: clampPercent(item.data.y + PASTE_OFFSET_PCT),
+          };
+          setAnchors((prev) => [...prev, newAnchor]);
+          setSelected({ id: newAnchor.id, kind: "anchor" });
+          clipboardRef.current = { kind: "anchor", data: newAnchor };
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedFigure, selectedAnchor]);
+
   const hasSelection = selected !== null;
   const boardMaxPx = Math.round(BOARD_BASE_PX * zoom);
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 p-4 sm:p-6 flex justify-center">
+    <div className="w-full min-h-screen bg-gray-50">
       <WoodDefs />
-      <div className="flex flex-col lg:flex-row gap-4 items-center lg:items-start max-w-6xl w-full">
-        {/* Arbeitsfläche: steht auf Mobile ZUERST (order-1), auf Desktop rechts (lg:order-2) */}
-        <div className="order-1 lg:order-2 w-full flex flex-col items-center gap-2">
-          <div style={{ width: "100%", maxWidth: `${boardMaxPx}px` }} className="flex justify-end">
-            <ZoomControl zoom={zoom} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onReset={handleZoomReset} />
-          </div>
+      <div className="w-full p-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-start justify-center">
+        <div className="order-1 lg:order-2 w-full lg:flex-1 flex flex-col items-center gap-2 min-w-0">
+          <div className="w-full overflow-auto rounded-xl" style={{ maxHeight: "85vh" }}>
+            <div className="relative inline-block p-2">
+              <div className="sticky top-2 left-2 z-50 inline-block mb-2">
+                <ZoomControl zoom={zoom} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onReset={handleZoomReset} />
+              </div>
 
-          {/*
-            Kiefernholz-Brett: linearGradient für warmen Holzton, SVG-Filter
-            für Maserung als Overlay, plus Inset-Shadow für eine leicht
-            vertiefte Spielfläche (räumlicher Eindruck) und ein durchgezogener
-            dunkler Rahmen mit Abstand zum äußeren Rand (angelehnt an das
-            Referenzbild eines physischen Systembretts).
-          */}
-          <div
-            className="relative w-full rounded-xl overflow-hidden"
-            style={{
-              maxWidth: `${boardMaxPx}px`,
-              aspectRatio: "1 / 1",
-              background: "linear-gradient(135deg, #f3d9ae 0%, #e8c58c 50%, #dfb877 100%)",
-              boxShadow: "inset 0 2px 10px rgba(120, 80, 30, 0.25), inset 0 0 40px rgba(120, 80, 30, 0.12), 0 8px 20px rgba(0,0,0,0.15)",
-            }}
-          >
-            {/* Maserungs-Overlay als eigenes SVG, deckt die ganze Fläche ab */}
-            <svg width="100%" height="100%" className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "multiply" }}>
-              <rect x="0" y="0" width="100%" height="100%" fill="#c9985f" filter="url(#woodGrainBoard)" opacity={0.55} />
-            </svg>
+              <div
+                className="relative rounded-xl overflow-hidden"
+                style={{
+                  width: `${boardMaxPx}px`,
+                  height: `${boardMaxPx}px`,
+                  background: "linear-gradient(135deg, #f3d9ae 0%, #e8c58c 50%, #dfb877 100%)",
+                  boxShadow:
+                    "inset 0 2px 10px rgba(120, 80, 30, 0.25), inset 0 0 40px rgba(120, 80, 30, 0.12), 0 8px 20px rgba(0,0,0,0.15)",
+                }}
+              >
+                <svg width="100%" height="100%" className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "multiply" }}>
+                  <rect x="0" y="0" width="100%" height="100%" fill="#c9985f" filter="url(#woodGrainBoard)" opacity={0.55} />
+                </svg>
 
-            {/* Durchgezogener, dunkler Rahmen mit Abstand zum Rand (wie im Referenzbild) */}
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: "6%",
-                top: "6%",
-                right: "6%",
-                bottom: "6%",
-                border: "3px solid #8b5a2b",
-                borderRadius: "2px",
-                boxShadow: "0 1px 2px rgba(255,255,255,0.3) inset",
-              }}
-            />
-
-            <div
-              ref={boardRef}
-              onDragOver={handleBoardDragOver}
-              onDrop={handleBoardDrop}
-              onClick={() => setSelected(null)}
-              className="absolute"
-              style={{ left: "6%", top: "6%", right: "6%", bottom: "6%" }}
-            >
-              {splitBoard && (
-                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-amber-800/40 -translate-x-1/2 pointer-events-none z-0" />
-              )}
-
-              {figures.length === 0 && anchors.length === 0 && notes.length === 0 && (
-                <p className="absolute inset-0 flex items-center justify-center text-amber-800/40 text-sm pointer-events-none z-10 text-center px-6">
-                  Figuren, Bodenanker oder Post-its aus der Galerie hierher ziehen
-                </p>
-              )}
-
-              {anchors.map((a) => (
-                <BoardAnchor
-                  key={a.id}
-                  anchor={a}
-                  isSelected={selected?.id === a.id}
-                  onSelect={(id) => setSelected({ id, kind: "anchor" })}
-                  onMove={handleMoveAnchor}
-                  onResize={handleResizeAnchor}
-                  boardRef={boardRef}
+                <div
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: "6%",
+                    top: "6%",
+                    right: "6%",
+                    bottom: "6%",
+                    border: "3px solid #8b5a2b",
+                    borderRadius: "2px",
+                    boxShadow: "0 1px 2px rgba(255,255,255,0.3) inset",
+                  }}
                 />
-              ))}
 
-              {notes.map((n) => (
-                <BoardNote
-                  key={n.id}
-                  note={n}
-                  isSelected={selected?.id === n.id}
-                  onSelect={(id) => setSelected({ id, kind: "note" })}
-                  onMove={handleMoveNote}
-                  onResize={handleResizeNote}
-                  onEditText={handleEditNoteText}
-                  boardRef={boardRef}
-                />
-              ))}
+                <div
+                  ref={boardRef}
+                  onDragOver={handleBoardDragOver}
+                  onDrop={handleBoardDrop}
+                  onClick={() => setSelected(null)}
+                  className="absolute"
+                  style={{ left: "6%", top: "6%", right: "6%", bottom: "6%" }}
+                >
+                  {splitBoard && (
+                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-amber-800/40 -translate-x-1/2 pointer-events-none z-0" />
+                  )}
 
-              {figures.map((fig) => (
-                <BoardFigure
-                  key={fig.id}
-                  figure={fig}
-                  boardSizePx={boardSizePx}
-                  isSelected={selected?.id === fig.id}
-                  onSelect={(id) => setSelected({ id, kind: "figure" })}
-                  onRename={handleRenameFigure}
-                  onMove={handleMoveFigure}
-                  onRotate={handleRotateFigure}
-                  boardRef={boardRef}
-                />
-              ))}
+                  {figures.length === 0 && anchors.length === 0 && notes.length === 0 && (
+                    <p className="absolute inset-0 flex items-center justify-center text-amber-800/40 text-sm pointer-events-none z-10 text-center px-6">
+                      Figuren, Bodenanker oder Post-its aus der Galerie hierher ziehen
+                    </p>
+                  )}
+
+                  {anchors.map((a) => (
+                    <BoardAnchor
+                      key={a.id}
+                      anchor={a}
+                      isSelected={selected?.id === a.id}
+                      onSelect={(id) => setSelected({ id, kind: "anchor" })}
+                      onMove={handleMoveAnchor}
+                      onResize={handleResizeAnchor}
+                      boardRef={boardRef}
+                    />
+                  ))}
+
+                  {notes.map((n) => (
+                    <BoardNote
+                      key={n.id}
+                      note={n}
+                      isSelected={selected?.id === n.id}
+                      onSelect={(id) => setSelected({ id, kind: "note" })}
+                      onMove={handleMoveNote}
+                      onResize={handleResizeNote}
+                      onEditText={handleEditNoteText}
+                      boardRef={boardRef}
+                    />
+                  ))}
+
+                  {figures.map((fig) => (
+                    <BoardFigure
+                      key={fig.id}
+                      figure={fig}
+                      boardSizePx={boardSizePx}
+                      isSelected={selected?.id === fig.id}
+                      onSelect={(id) => setSelected({ id, kind: "figure" })}
+                      onRename={handleRenameFigure}
+                      onMove={handleMoveFigure}
+                      onRotate={handleRotateFigure}
+                      onResize={handleResizeFigure}
+                      boardRef={boardRef}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Galerie/Konfigurationsfenster: auf Mobile darunter (order-2), auf Desktop links (lg:order-1) */}
         <div className="order-2 lg:order-1 w-full lg:w-64 shrink-0">
           {!hasSelection && (
             <Gallery
