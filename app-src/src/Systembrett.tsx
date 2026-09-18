@@ -1,21 +1,26 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett – Prototyp-Komponente (v8)
+ * Virtuelles Systembrett – Prototyp-Komponente (v9)
  * ---------------------------------------------------
- * Änderungen gegenüber v7:
- * 1. Zoom-Funktion für das Brett: +/- Buttons und Prozentanzeige über dem
- *    Brett skalieren die maximale Board-Breite zwischen 50% und 150% der
- *    neuen Standardgröße (650px). Der Zoom verändert direkt die tatsächliche
- *    Pixel-Breite des Board-Containers (nicht CSS-transform), damit der
- *    ResizeObserver weiterhin korrekte Werte liefert und Drag/Resize/Rotation
- *    exakt bleiben. Dadurch ragt das Brett auf normalen Bildschirmen nicht
- *    mehr unten aus dem sichtbaren Bereich.
- * 2. Responsives Layout: Ab der Tailwind-"lg"-Breakpoint (≥1024px) stehen
- *    Galerie/Konfigurationsfenster und Brett nebeneinander wie bisher.
- *    Darunter (Tablet/Mobile) wird auf eine vertikale Anordnung umgeschaltet:
- *    Brett zuerst (oben), Galerie/Konfigurationsfenster darunter – über
- *    Flex-Direction-Wechsel und "order"-Utilities gelöst.
+ * Änderungen gegenüber v8:
+ * 1. Neue Figuren-Farbpalette: Gelb (Standard), Grün, Rot, Blau (ersetzt die
+ *    bisherige "Holz/Blau/Rot/Gelb"-Kombination).
+ * 2. Figuren wirken räumlicher: radialer Glanz-Gradient (Licht von oben
+ *    links) plus weicher Drop-Shadow simulieren ein leicht gewölbtes,
+ *    physisches Holzstück statt einer flachen Fläche.
+ * 3. Figuren haben eine dezente Holzmaserung: ein SVG-Filter
+ *    (feTurbulence + feColorMatrix) erzeugt ein organisches Streifenmuster,
+ *    das als halbtransparenter Overlay über der Farbfläche liegt.
+ * 4. Das Brett wirkt räumlicher: Inset-Shadow (vertiefte Spielfläche) plus
+ *    weicher Rand-Schatten.
+ * 5. Neue Kiefernholz-Optik fürs Brett: hellerer, warmer Holzton mit
+ *    sichtbarer Maserung (gleicher SVG-Filter-Ansatz wie bei Figuren, nur
+ *    großflächiger) und ein durchgezogener, dunkler Rahmen mit Abstand zum
+ *    äußeren Rand – angelehnt an das Referenzbild eines physischen
+ *    Systembretts.
+ * 6. Post-it-Text ist jetzt horizontal UND vertikal zentriert (vorher nur
+ *    linksbündiger Blocktext).
  *
  * Abhängigkeiten: nur React + Tailwind CSS (keine externen Libraries nötig)
  */
@@ -23,7 +28,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 // ---------- Typen ----------
 
 type ShapeType = "circle" | "square" | "triangle";
-type ColorKey = "wood" | "blue" | "red" | "yellow";
+type ColorKey = "yellow" | "green" | "red" | "blue";
 type SizeKey = "small" | "large";
 type AnchorShape = "rect" | "circle" | "triangle";
 type AnchorColorKey = "blue" | "red" | "yellow" | "green" | "gray";
@@ -34,7 +39,7 @@ interface Figure {
   kind: "figure";
   type: ShapeType;
   label: string;
-  x: number; // % relativ zur Board-Breite/-Höhe (Zentrum)
+  x: number;
   y: number;
   rotation: number;
   color: ColorKey;
@@ -46,7 +51,7 @@ interface Anchor {
   kind: "anchor";
   shape: AnchorShape;
   label: string;
-  x: number; // % relativ zur Board-Breite (linke obere Ecke)
+  x: number;
   y: number;
   widthPct: number;
   heightPct: number;
@@ -57,7 +62,7 @@ interface Note {
   id: string;
   kind: "note";
   text: string;
-  x: number; // % relativ zur Board-Breite (linke obere Ecke)
+  x: number;
   y: number;
   widthPct: number;
   heightPct: number;
@@ -66,11 +71,12 @@ interface Note {
 
 // ---------- Konstanten ----------
 
-const COLOR_STYLES: Record<ColorKey, { fill: string; stroke: string; label: string }> = {
-  wood: { fill: "#c19a6b", stroke: "#8b6b3d", label: "Holz" },
-  blue: { fill: "#3b82f6", stroke: "#1d4ed8", label: "Blau" },
-  red: { fill: "#ef4444", stroke: "#b91c1c", label: "Rot" },
-  yellow: { fill: "#eab308", stroke: "#a16207", label: "Gelb" },
+// Neue Palette: Gelb ist Standard, dazu Grün, Rot, Blau
+const COLOR_STYLES: Record<ColorKey, { base: string; light: string; dark: string; label: string }> = {
+  yellow: { base: "#eab308", light: "#fde68a", dark: "#92600a", label: "Gelb" },
+  green: { base: "#65a30d", light: "#bef264", dark: "#3f6212", label: "Grün" },
+  red: { base: "#dc2626", light: "#fca5a5", dark: "#7f1d1d", label: "Rot" },
+  blue: { base: "#2563eb", light: "#93c5fd", dark: "#1e3a8a", label: "Blau" },
 };
 
 const ANCHOR_COLOR_STYLES: Record<AnchorColorKey, { fill: string; label: string }> = {
@@ -116,17 +122,65 @@ const ANCHOR_SHAPE_LABELS: Record<AnchorShape, string> = {
   triangle: "Bodenanker (Dreieck)",
 };
 
-// Zoom-Konfiguration: Standardgröße 650px, Bereich 50%-150% in 10%-Schritten
 const BOARD_BASE_PX = 650;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 1.5;
 const ZOOM_STEP = 0.1;
 const ZOOM_DEFAULT = 1;
 
-const PANEL_WIDTH = "w-64"; // einheitliche Breite für Galerie + Konfigurationsfenster (Desktop)
-
 let idCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${Date.now()}-${idCounter++}`;
+
+// ---------- SVG-Definitionen: Holzmaserungs-Filter + Gradients ----------
+// Einmalig im DOM vorhanden, wird von allen Figuren/dem Brett per url(#...)
+// referenziert. feTurbulence erzeugt organisches Rauschen, feColorMatrix
+// färbt es in gedämpften Brauntönen und macht es halbtransparent, sodass es
+// als Maserungs-Overlay über der jeweiligen Grundfarbe liegt.
+const WoodDefs: React.FC = () => (
+  <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+    <defs>
+      <filter id="woodGrainFine" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.06 0.9" numOctaves="2" seed="7" result="noise" />
+        <feColorMatrix
+          in="noise"
+          type="matrix"
+          values="0 0 0 0 0.28
+                  0 0 0 0 0.18
+                  0 0 0 0 0.08
+                  0 0 0 0.35 0"
+        />
+      </filter>
+      <filter id="woodGrainBoard" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.15" numOctaves="3" seed="12" result="noise" />
+        <feColorMatrix
+          in="noise"
+          type="matrix"
+          values="0 0 0 0 0.55
+                  0 0 0 0 0.38
+                  0 0 0 0 0.20
+                  0 0 0 0.22 0"
+        />
+      </filter>
+
+      {(Object.keys(COLOR_STYLES) as ColorKey[]).map((key) => {
+        const c = COLOR_STYLES[key];
+        return (
+          <radialGradient key={key} id={`figGradient-${key}`} cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor={c.light} />
+            <stop offset="55%" stopColor={c.base} />
+            <stop offset="100%" stopColor={c.dark} />
+          </radialGradient>
+        );
+      })}
+
+      <linearGradient id="boardWoodGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#f3d9ae" />
+        <stop offset="50%" stopColor="#e8c58c" />
+        <stop offset="100%" stopColor="#dfb877" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
 
 // ---------- Hook: gemessene Board-Größe in px ----------
 
@@ -152,7 +206,7 @@ function useElementSize<T extends HTMLElement>() {
   return { ref, size };
 }
 
-// ---------- Figuren-Icon ----------
+// ---------- Figuren-Icon (räumlich, mit Holzmaserung) ----------
 
 interface ShapeSvgProps {
   type: ShapeType;
@@ -168,23 +222,41 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
   const eyeOffsetY = -half * 0.18;
   const eyeGap = size * 0.14;
   const eyeRadius = Math.max(1.8, size * 0.045);
+  const gradientId = `figGradient-${color}`;
 
   const renderBase = () => {
     switch (type) {
       case "circle":
-        return <circle cx={0} cy={0} r={half - 2} fill={c.fill} stroke={c.stroke} strokeWidth={2} />;
+        return (
+          <>
+            <circle cx={0} cy={0} r={half - 2} fill={`url(#${gradientId})`} stroke={c.dark} strokeWidth={1.5} />
+            <circle cx={0} cy={0} r={half - 2} fill={c.base} filter="url(#woodGrainFine)" opacity={0.5} />
+          </>
+        );
       case "square":
         return (
-          <rect
-            x={-half + 2}
-            y={-half + 2}
-            width={size - 4}
-            height={size - 4}
-            fill={c.fill}
-            stroke={c.stroke}
-            strokeWidth={2}
-            rx={4}
-          />
+          <>
+            <rect
+              x={-half + 2}
+              y={-half + 2}
+              width={size - 4}
+              height={size - 4}
+              fill={`url(#${gradientId})`}
+              stroke={c.dark}
+              strokeWidth={1.5}
+              rx={4}
+            />
+            <rect
+              x={-half + 2}
+              y={-half + 2}
+              width={size - 4}
+              height={size - 4}
+              fill={c.base}
+              filter="url(#woodGrainFine)"
+              opacity={0.5}
+              rx={4}
+            />
+          </>
         );
       case "triangle": {
         const r = half - 2;
@@ -195,7 +267,12 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
         ]
           .map((p) => p.join(","))
           .join(" ");
-        return <polygon points={pts} fill={c.fill} stroke={c.stroke} strokeWidth={2} />;
+        return (
+          <>
+            <polygon points={pts} fill={`url(#${gradientId})`} stroke={c.dark} strokeWidth={1.5} />
+            <polygon points={pts} fill={c.base} filter="url(#woodGrainFine)" opacity={0.5} />
+          </>
+        );
       }
     }
   };
@@ -206,11 +283,12 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
       height={size}
       viewBox={`${-half} ${-half} ${size} ${size}`}
       className="overflow-visible pointer-events-none select-none"
+      style={{ filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.35))" }}
     >
       <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
         {renderBase()}
-        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.stroke} />
-        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.stroke} />
+        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
+        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
       </g>
       {selected && (
         <circle cx={0} cy={0} r={half + 4} fill="none" stroke="#111827" strokeWidth={1.5} strokeDasharray="4 3" />
@@ -362,7 +440,7 @@ const Gallery: React.FC<GalleryProps> = ({
               className="flex items-center justify-center rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
               title={`${SHAPE_LABELS[type]} hinzufügen`}
             >
-              <ShapeSvg type={type} color="wood" size={32} />
+              <ShapeSvg type={type} color="yellow" size={32} />
             </button>
           ))}
         </div>
@@ -462,7 +540,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
               className={`w-7 h-7 rounded-full border-2 transition-transform ${
                 figure.color === key ? "border-gray-800 scale-110" : "border-gray-200"
               }`}
-              style={{ backgroundColor: COLOR_STYLES[key].fill }}
+              style={{ backgroundColor: COLOR_STYLES[key].base }}
             />
           ))}
         </div>
@@ -946,7 +1024,7 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
   );
 };
 
-// ---------- Post-it auf dem Brett ----------
+// ---------- Post-it auf dem Brett (Text jetzt horizontal + vertikal zentriert) ----------
 
 interface BoardNoteProps {
   note: Note;
@@ -1023,7 +1101,7 @@ const BoardNote: React.FC<BoardNoteProps> = ({ note, isSelected, onSelect, onMov
       className="select-none"
     >
       <div
-        className="relative w-full h-full rounded-sm p-1.5 overflow-hidden"
+        className="relative w-full h-full rounded-sm p-1.5 overflow-hidden flex items-center justify-center"
         style={{
           backgroundColor: NOTE_COLOR_STYLES[note.color].bg,
           boxShadow: isSelected ? "0 4px 10px rgba(0,0,0,0.25)" : "0 2px 5px rgba(0,0,0,0.15)",
@@ -1036,10 +1114,11 @@ const BoardNote: React.FC<BoardNoteProps> = ({ note, isSelected, onSelect, onMov
             onChange={(e) => onEditText(note.id, e.target.value)}
             onBlur={() => setEditing(false)}
             onPointerDown={(e) => e.stopPropagation()}
-            className="w-full h-full bg-transparent resize-none outline-none text-[11px] text-gray-800 leading-tight"
+            className="w-full h-full bg-transparent resize-none outline-none text-[11px] text-gray-800 leading-tight text-center flex items-center justify-center"
+            style={{ textAlign: "center" }}
           />
         ) : (
-          <span className="text-[11px] text-gray-800 leading-tight whitespace-pre-wrap break-words">
+          <span className="text-[11px] text-gray-800 leading-tight whitespace-pre-wrap break-words text-center">
             {note.text || <span className="text-gray-500 italic">Doppelklick zum Beschriften</span>}
           </span>
         )}
@@ -1089,7 +1168,7 @@ const Systembrett: React.FC = () => {
       x: clampPercent(xPct),
       y: clampPercent(yPct),
       rotation: 0,
-      color: "wood",
+      color: "yellow",
       size: "large",
     }),
     []
@@ -1253,15 +1332,7 @@ const Systembrett: React.FC = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-50 p-4 sm:p-6 flex justify-center">
-      {/*
-        Responsive Grundlayout:
-        - Mobil/Tablet (< lg): flex-col, Brett zuerst (order-1), Galerie/Panel
-          danach (order-2) — erreicht über die Reihenfolge im DOM plus
-          "flex-col-reverse" wäre eine Alternative, hier stattdessen explizite
-          Order-Klassen für Klarheit.
-        - Ab lg (≥1024px): flex-row wie bisher, Galerie/Panel links, Brett
-          rechts, ursprüngliche DOM-Reihenfolge zählt (order wird zurückgesetzt).
-      */}
+      <WoodDefs />
       <div className="flex flex-col lg:flex-row gap-4 items-center lg:items-start max-w-6xl w-full">
         {/* Arbeitsfläche: steht auf Mobile ZUERST (order-1), auf Desktop rechts (lg:order-2) */}
         <div className="order-1 lg:order-2 w-full flex flex-col items-center gap-2">
@@ -1269,67 +1340,98 @@ const Systembrett: React.FC = () => {
             <ZoomControl zoom={zoom} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onReset={handleZoomReset} />
           </div>
 
+          {/*
+            Kiefernholz-Brett: linearGradient für warmen Holzton, SVG-Filter
+            für Maserung als Overlay, plus Inset-Shadow für eine leicht
+            vertiefte Spielfläche (räumlicher Eindruck) und ein durchgezogener
+            dunkler Rahmen mit Abstand zum äußeren Rand (angelehnt an das
+            Referenzbild eines physischen Systembretts).
+          */}
           <div
-            ref={boardRef}
-            onDragOver={handleBoardDragOver}
-            onDrop={handleBoardDrop}
-            onClick={() => setSelected(null)}
-            className="relative w-full rounded-xl bg-amber-50 border-2 border-amber-200 shadow-inner overflow-hidden"
+            className="relative w-full rounded-xl overflow-hidden"
             style={{
               maxWidth: `${boardMaxPx}px`,
               aspectRatio: "1 / 1",
-              backgroundImage:
-                "repeating-linear-gradient(45deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 12px)",
+              background: "linear-gradient(135deg, #f3d9ae 0%, #e8c58c 50%, #dfb877 100%)",
+              boxShadow: "inset 0 2px 10px rgba(120, 80, 30, 0.25), inset 0 0 40px rgba(120, 80, 30, 0.12), 0 8px 20px rgba(0,0,0,0.15)",
             }}
           >
-            {splitBoard && (
-              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-amber-400/70 -translate-x-1/2 pointer-events-none z-0" />
-            )}
+            {/* Maserungs-Overlay als eigenes SVG, deckt die ganze Fläche ab */}
+            <svg width="100%" height="100%" className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "multiply" }}>
+              <rect x="0" y="0" width="100%" height="100%" fill="#c9985f" filter="url(#woodGrainBoard)" opacity={0.55} />
+            </svg>
 
-            {figures.length === 0 && anchors.length === 0 && notes.length === 0 && (
-              <p className="absolute inset-0 flex items-center justify-center text-amber-300 text-sm pointer-events-none z-10 text-center px-6">
-                Figuren, Bodenanker oder Post-its aus der Galerie hierher ziehen
-              </p>
-            )}
+            {/* Durchgezogener, dunkler Rahmen mit Abstand zum Rand (wie im Referenzbild) */}
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: "6%",
+                top: "6%",
+                right: "6%",
+                bottom: "6%",
+                border: "3px solid #8b5a2b",
+                borderRadius: "2px",
+                boxShadow: "0 1px 2px rgba(255,255,255,0.3) inset",
+              }}
+            />
 
-            {anchors.map((a) => (
-              <BoardAnchor
-                key={a.id}
-                anchor={a}
-                isSelected={selected?.id === a.id}
-                onSelect={(id) => setSelected({ id, kind: "anchor" })}
-                onMove={handleMoveAnchor}
-                onResize={handleResizeAnchor}
-                boardRef={boardRef}
-              />
-            ))}
+            <div
+              ref={boardRef}
+              onDragOver={handleBoardDragOver}
+              onDrop={handleBoardDrop}
+              onClick={() => setSelected(null)}
+              className="absolute"
+              style={{ left: "6%", top: "6%", right: "6%", bottom: "6%" }}
+            >
+              {splitBoard && (
+                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-amber-800/40 -translate-x-1/2 pointer-events-none z-0" />
+              )}
 
-            {notes.map((n) => (
-              <BoardNote
-                key={n.id}
-                note={n}
-                isSelected={selected?.id === n.id}
-                onSelect={(id) => setSelected({ id, kind: "note" })}
-                onMove={handleMoveNote}
-                onResize={handleResizeNote}
-                onEditText={handleEditNoteText}
-                boardRef={boardRef}
-              />
-            ))}
+              {figures.length === 0 && anchors.length === 0 && notes.length === 0 && (
+                <p className="absolute inset-0 flex items-center justify-center text-amber-800/40 text-sm pointer-events-none z-10 text-center px-6">
+                  Figuren, Bodenanker oder Post-its aus der Galerie hierher ziehen
+                </p>
+              )}
 
-            {figures.map((fig) => (
-              <BoardFigure
-                key={fig.id}
-                figure={fig}
-                boardSizePx={boardSizePx}
-                isSelected={selected?.id === fig.id}
-                onSelect={(id) => setSelected({ id, kind: "figure" })}
-                onRename={handleRenameFigure}
-                onMove={handleMoveFigure}
-                onRotate={handleRotateFigure}
-                boardRef={boardRef}
-              />
-            ))}
+              {anchors.map((a) => (
+                <BoardAnchor
+                  key={a.id}
+                  anchor={a}
+                  isSelected={selected?.id === a.id}
+                  onSelect={(id) => setSelected({ id, kind: "anchor" })}
+                  onMove={handleMoveAnchor}
+                  onResize={handleResizeAnchor}
+                  boardRef={boardRef}
+                />
+              ))}
+
+              {notes.map((n) => (
+                <BoardNote
+                  key={n.id}
+                  note={n}
+                  isSelected={selected?.id === n.id}
+                  onSelect={(id) => setSelected({ id, kind: "note" })}
+                  onMove={handleMoveNote}
+                  onResize={handleResizeNote}
+                  onEditText={handleEditNoteText}
+                  boardRef={boardRef}
+                />
+              ))}
+
+              {figures.map((fig) => (
+                <BoardFigure
+                  key={fig.id}
+                  figure={fig}
+                  boardSizePx={boardSizePx}
+                  isSelected={selected?.id === fig.id}
+                  onSelect={(id) => setSelected({ id, kind: "figure" })}
+                  onRename={handleRenameFigure}
+                  onMove={handleMoveFigure}
+                  onRotate={handleRotateFigure}
+                  boardRef={boardRef}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
