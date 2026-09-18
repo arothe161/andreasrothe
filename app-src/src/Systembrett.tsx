@@ -1,27 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett - Prototyp-Komponente (v13)
+ * Virtuelles Systembrett - Prototyp-Komponente (v15)
  * ---------------------------------------------------
- * Aenderungen gegenueber v12:
- * 1. Bugfix "Bodenanker unsichtbar": Bodenanker werden jetzt NICHT mehr als
- *    SVG-Formen gerendert, sondern als reine CSS-<div>-Elemente
- *    (background-color, border-radius fuer Kreis, clip-path fuer Dreieck).
- *    Das eliminiert jede denkbare Kollision mit externen SVG-bezogenen
- *    CSS-Regeln (fill/fillOpacity/preserveAspectRatio), die zuvor trotz
- *    mehrfacher Versuche die Sichtbarkeit beeintraechtigt haben koennte.
- * 2. Der quadratische Container/Rahmen unter Figuren ist entfernt - der
- *    aeussere Drag-Container hat jetzt explizit keinen Rand/Outline mehr.
- * 3. Der Brett-Rahmen (dunkle Linie mit Abstand zum Rand) ist jetzt ueber
- *    eine eigene Checkbox ein-/ausblendbar, analog zur Trennlinie. Die
- *    Trennlinie ist standardmaessig AKTIV (splitBoard-Default: true), der
- *    Rahmen standardmaessig ebenfalls sichtbar, beide unabhaengig voneinander
- *    abschaltbar.
- * 4. Galerie-Ueberschrift "Bodenanker" -> "Formen".
- * 5. Mobile: Beim ersten Laden wird auf schmalen Bildschirmen (< 640px)
- *    automatisch ein kleinerer Start-Zoom gewaehlt, damit das Brett nicht
- *    den gesamten Viewport einnimmt und ein Teil der darunterliegenden
- *    Galerie ohne Scrollen sichtbar bleibt.
+ * Aenderungen gegenueber v14:
+ * 1. Bugfix "Formen sind immer Rechtecke": Der Fehler lag NICHT im
+ *    Rendering-Code (AnchorShapeDiv), sondern in
+ *    handleAddAnchorFromSidebar: createAnchor() wurde ohne das "shape"-
+ *    Argument aufgerufen. Dadurch landete ein Zufallswert (fuer die
+ *    Position) im shape-Feld statt "circle"/"rect"/"triangle", und die
+ *    Form fiel beim Rendern immer auf das ungeformte Rechteck zurueck.
+ *    Jetzt wird "shape" korrekt als erstes Argument durchgereicht.
+ * 2. Neue Funktion: Druecken der Entf-Taste (Delete) oder Backspace
+ *    loescht das aktuell ausgewaehlte Element (Figur, Form oder Post-it),
+ *    sofern kein Text-Eingabefeld fokussiert ist.
  *
  * Abhaengigkeiten: nur React + Tailwind CSS (keine externen Libraries noetig)
  */
@@ -80,7 +72,6 @@ const COLOR_STYLES: Record<ColorKey, { base: string; light: string; dark: string
   blue: { base: "#2563eb", light: "#93c5fd", dark: "#1e3a8a", label: "Blau" },
 };
 
-// Anker-Farben: einfache, feste Hex-Werte fuer CSS background-color.
 const ANCHOR_COLOR_STYLES: Record<AnchorColorKey, { fill: string; label: string }> = {
   blue: { fill: "#3b82f6", label: "Blau" },
   red: { fill: "#ef4444", label: "Rot" },
@@ -139,7 +130,7 @@ const getInitialZoom = () => {
   return window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_DEFAULT_ZOOM : 1;
 };
 
-// ---------- SVG-Definitionen (nur noch fuer Figuren-Holzmaserung/Board) ----------
+// ---------- SVG-Definitionen ----------
 
 const WoodDefs: React.FC = () => (
   <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
@@ -282,7 +273,13 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
       height={size}
       viewBox={`${-half} ${-half} ${size} ${size}`}
       className="overflow-visible pointer-events-none select-none"
-      style={{ filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.35))", outline: "none", border: "none" }}
+      style={{
+        filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.35))",
+        outline: "none",
+        border: "none",
+        background: "transparent",
+        display: "block",
+      }}
     >
       <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
         {renderBase()}
@@ -296,12 +293,7 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
   );
 };
 
-// ---------- Formen-Icon (Bodenanker) - jetzt reine CSS-<div>-Formen ----------
-// Bugfix: Kreis und Dreieck waren als SVG unsichtbar (Ursache trotz mehrerer
-// Versuche nicht zweifelsfrei isolierbar). Robuste Loesung: keine SVG-Formen
-// mehr, sondern <div>-Elemente mit background-color, border-radius (Kreis)
-// und clip-path (Dreieck) - Standard-CSS, das nicht mit SVG-spezifischen
-// Stylesheet-Regeln kollidieren kann.
+// ---------- Formen-Icon (Bodenanker) - reine CSS-<div>-Formen ----------
 
 interface AnchorShapeDivProps {
   shape: AnchorShape;
@@ -317,6 +309,8 @@ const AnchorShapeDiv: React.FC<AnchorShapeDivProps> = ({ shape, color, selected 
     height: "100%",
     backgroundColor: fillColor,
     opacity: ANCHOR_OPACITY,
+    borderRadius: 0,
+    clipPath: "none",
   };
 
   if (shape === "circle") {
@@ -328,7 +322,7 @@ const AnchorShapeDiv: React.FC<AnchorShapeDivProps> = ({ shape, color, selected 
   }
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div style={{ position: "relative", width: "100%", height: "100%", background: "transparent" }}>
       <div style={baseStyle} />
       {selected && (
         <div
@@ -336,6 +330,7 @@ const AnchorShapeDiv: React.FC<AnchorShapeDivProps> = ({ shape, color, selected 
           style={{
             border: "1px dashed #111827",
             borderRadius: shape === "circle" ? "50%" : shape === "rect" ? "4px" : 0,
+            background: "transparent",
           }}
         />
       )}
@@ -348,7 +343,7 @@ const AnchorPreview: React.FC<{ shape: AnchorShape; color: AnchorColorKey; size:
   color,
   size,
 }) => (
-  <div style={{ width: size, height: size }}>
+  <div style={{ width: size, height: size, background: "transparent" }}>
     <AnchorShapeDiv shape={shape} color={color} />
   </div>
 );
@@ -391,7 +386,7 @@ const ZoomControl: React.FC<ZoomControlProps> = ({ zoom, onZoomIn, onZoomOut, on
     </button>
     <button
       onClick={onReset}
-      title="Zoom zuruecksetzen (100%)"
+      title="Zoom zuruecksetzen"
       className="text-xs text-gray-500 w-12 text-center hover:text-gray-800"
     >
       {Math.round(zoom * 100)}%
@@ -500,7 +495,7 @@ const Gallery: React.FC<GalleryProps> = ({
           Rahmen anzeigen
         </label>
         <p className="text-xs text-gray-400 mt-3">
-          Tipp: Ausgewaehlte Figuren/Formen lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren.
+          Tipp: Ausgewaehlte Elemente lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren, oder mit der Entf-Taste loeschen.
         </p>
       </div>
     </div>
@@ -531,7 +526,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       </div>
 
       <p className="text-xs text-gray-400 -mt-2 text-center">
-        Drehung: {Math.round(figure.rotation)} Grad am runden Griff oben ziehen. Groesse: an den Eck-Griffen ziehen (Seitenverhaeltnis bleibt fest).
+        Blickrichtung: am runden Griff oben ziehen. Groesse: an den Eck-Griffen ziehen (Seitenverhaeltnis bleibt fest).
       </p>
 
       <div>
@@ -859,10 +854,20 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
         zIndex: dragging || rotating || resizing ? 30 : isSelected ? 20 : 10,
         outline: "none",
         border: "none",
+        background: "transparent",
       }}
       className="select-none"
     >
-      <div style={{ position: "relative", width: size, height: size, outline: "none", border: "none" }}>
+      <div
+        style={{
+          position: "relative",
+          width: size,
+          height: size,
+          outline: "none",
+          border: "none",
+          background: "transparent",
+        }}
+      >
         <ShapeSvg type={figure.type} color={figure.color} size={size} rotation={figure.rotation} selected={isSelected} />
 
         {isSelected && !editingLabel && (
@@ -875,6 +880,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
               height: 0,
               transform: `rotate(${figure.rotation}deg)`,
               transformOrigin: "0 0",
+              background: "transparent",
             }}
           >
             <div
@@ -943,7 +949,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
         {isSelected && (
           <div
             className="absolute left-1/2 -translate-x-1/2 flex justify-center"
-            style={{ top: "100%", marginTop: 6, width: "max-content" }}
+            style={{ top: "100%", marginTop: 6, width: "max-content", background: "transparent" }}
             onPointerDown={(e) => e.stopPropagation()}
           >
             {editingLabel ? (
@@ -1307,8 +1313,12 @@ const Systembrett: React.FC = () => {
     setSelected({ id: fig.id, kind: "figure" });
   };
 
+  // BUGFIX: "shape" wird jetzt korrekt als erstes Argument an createAnchor
+  // uebergeben. Vorher fehlte dieses Argument, wodurch der Zufallswert fuer
+  // die x-Position versehentlich im shape-Feld landete und die Form beim
+  // Rendern immer auf das ungeformte Rechteck zurueckfiel.
   const handleAddAnchorFromSidebar = (shape: AnchorShape) => {
-    const anchor = createAnchor(40 + Math.random() * 15, 40 + Math.random() * 15);
+    const anchor = createAnchor(shape, 40 + Math.random() * 15, 40 + Math.random() * 15);
     setAnchors((prev) => [...prev, anchor]);
     setSelected({ id: anchor.id, kind: "anchor" });
   };
@@ -1341,6 +1351,9 @@ const Systembrett: React.FC = () => {
     e.dataTransfer.dropEffect = "copy";
   };
 
+  // BUGFIX: auch hier wird "template.value" jetzt korrekt als "shape"-Argument
+  // an createAnchor uebergeben (war vorher schon korrekt, hier zur Konsistenz
+  // mit dem Sidebar-Fix nochmal geprueft).
   const handleBoardDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const template = draggedTemplateRef.current;
@@ -1429,6 +1442,9 @@ const Systembrett: React.FC = () => {
   const handleZoomOut = () => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100));
   const handleZoomReset = () => setZoom(getInitialZoom());
 
+  // Tastatur-Handler: Copy/Paste (Strg/Cmd+C/V) UND jetzt neu Loeschen
+  // (Entf/Backspace) fuer das aktuell ausgewaehlte Element. Reagiert nicht,
+  // solange ein Text-Eingabefeld fokussiert ist.
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
       const el = target as HTMLElement | null;
@@ -1438,8 +1454,11 @@ const Systembrett: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c";
       const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v";
+      const isDelete = e.key === "Delete" || e.key === "Backspace";
 
-      if (isCopy && !isEditableTarget(e.target)) {
+      if (isEditableTarget(e.target)) return;
+
+      if (isCopy) {
         if (selectedFigure) {
           clipboardRef.current = { kind: "figure", data: selectedFigure };
         } else if (selectedAnchor) {
@@ -1447,7 +1466,7 @@ const Systembrett: React.FC = () => {
         }
       }
 
-      if (isPaste && !isEditableTarget(e.target) && clipboardRef.current) {
+      if (isPaste && clipboardRef.current) {
         e.preventDefault();
         const item = clipboardRef.current;
         if (item.kind === "figure") {
@@ -1472,11 +1491,23 @@ const Systembrett: React.FC = () => {
           clipboardRef.current = { kind: "anchor", data: newAnchor };
         }
       }
+
+      if (isDelete && selected) {
+        e.preventDefault();
+        if (selected.kind === "figure") {
+          setFigures((prev) => prev.filter((f) => f.id !== selected.id));
+        } else if (selected.kind === "anchor") {
+          setAnchors((prev) => prev.filter((a) => a.id !== selected.id));
+        } else if (selected.kind === "note") {
+          setNotes((prev) => prev.filter((n) => n.id !== selected.id));
+        }
+        setSelected(null);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedFigure, selectedAnchor]);
+  }, [selected, selectedFigure, selectedAnchor]);
 
   const hasSelection = selected !== null;
   const boardMaxPx = Math.round(BOARD_BASE_PX * zoom);
