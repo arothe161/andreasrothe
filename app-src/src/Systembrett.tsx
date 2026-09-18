@@ -1,32 +1,27 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett – Prototyp-Komponente (v12, Syntaxfix)
- * ---------------------------------------------------------------
- * Änderung gegenüber v11.1:
- * - Bugfix "Überlappung von Dreh- und Skalierregler": Vorher rotierte NUR
- *   der Rotations-Griff mit der Figur mit, während der Resize-Griff eine
- *   feste Bildschirm-Position hatte. Bei bestimmten Rotationswinkeln
- *   (z.B. 135 Grad) lief der rotierende Griff exakt durch die fixe
- *   Position des Resize-Griffs hindurch.
- *
- *   Neues Verhalten (nach Miro/Figma-Vorbild): Die komplette Bounding-Box
- *   inkl. aller Griffe rotiert gemeinsam mit der Figur. Vier Eck-Griffe
- *   (lokal bei 45/135/225/315 Grad) skalieren die Figur PROPORTIONAL
- *   (festes Seitenverhaeltnis, ein einzelner Radius-Wert, da Figuren
- *   kreisrund sind). Der Rotations-Griff sitzt separat, abgesetzt
- *   oberhalb der Box (lokal 0 Grad, groesserer Abstand als die Ecken).
- *   Ecken und Rotations-Griff haben dadurch immer einen konstanten
- *   Winkelabstand von 45 Grad und rotieren gemeinsam - sie koennen bei
- *   keinem Rotationswinkel mehr kollidieren.
- *
- * Alle uebrigen Punkte unveraendert: Zoom-Regler fix oben links,
- * scrollbares Brett bei manuellem Zoom, Copy/Paste fuer Figuren und Anker,
- * kein Positions-Sprung beim Aus-/Abwaehlen, sichtbare Kreis-/Dreieck-Anker.
- *
- * Hinweis: Alle Kommentare in dieser Datei verwenden ausschliesslich
- * doppelte Schraegstriche (//), keine Python-Raute (#), um den zuvor
- * aufgetretenen esbuild-Syntaxfehler zu vermeiden.
+ * Virtuelles Systembrett - Prototyp-Komponente (v13)
+ * ---------------------------------------------------
+ * Aenderungen gegenueber v12:
+ * 1. Bugfix "Bodenanker unsichtbar": Bodenanker werden jetzt NICHT mehr als
+ *    SVG-Formen gerendert, sondern als reine CSS-<div>-Elemente
+ *    (background-color, border-radius fuer Kreis, clip-path fuer Dreieck).
+ *    Das eliminiert jede denkbare Kollision mit externen SVG-bezogenen
+ *    CSS-Regeln (fill/fillOpacity/preserveAspectRatio), die zuvor trotz
+ *    mehrfacher Versuche die Sichtbarkeit beeintraechtigt haben koennte.
+ * 2. Der quadratische Container/Rahmen unter Figuren ist entfernt - der
+ *    aeussere Drag-Container hat jetzt explizit keinen Rand/Outline mehr.
+ * 3. Der Brett-Rahmen (dunkle Linie mit Abstand zum Rand) ist jetzt ueber
+ *    eine eigene Checkbox ein-/ausblendbar, analog zur Trennlinie. Die
+ *    Trennlinie ist standardmaessig AKTIV (splitBoard-Default: true), der
+ *    Rahmen standardmaessig ebenfalls sichtbar, beide unabhaengig voneinander
+ *    abschaltbar.
+ * 4. Galerie-Ueberschrift "Bodenanker" -> "Formen".
+ * 5. Mobile: Beim ersten Laden wird auf schmalen Bildschirmen (< 640px)
+ *    automatisch ein kleinerer Start-Zoom gewaehlt, damit das Brett nicht
+ *    den gesamten Viewport einnimmt und ein Teil der darunterliegenden
+ *    Galerie ohne Scrollen sichtbar bleibt.
  *
  * Abhaengigkeiten: nur React + Tailwind CSS (keine externen Libraries noetig)
  */
@@ -80,27 +75,28 @@ type ClipboardItem = { kind: "figure"; data: Figure } | { kind: "anchor"; data: 
 
 const COLOR_STYLES: Record<ColorKey, { base: string; light: string; dark: string; label: string }> = {
   yellow: { base: "#eab308", light: "#fde68a", dark: "#92600a", label: "Gelb" },
-  green: { base: "#65a30d", light: "#bef264", dark: "#3f6212", label: "Grün" },
+  green: { base: "#65a30d", light: "#bef264", dark: "#3f6212", label: "Gruen" },
   red: { base: "#dc2626", light: "#fca5a5", dark: "#7f1d1d", label: "Rot" },
   blue: { base: "#2563eb", light: "#93c5fd", dark: "#1e3a8a", label: "Blau" },
 };
 
+// Anker-Farben: einfache, feste Hex-Werte fuer CSS background-color.
 const ANCHOR_COLOR_STYLES: Record<AnchorColorKey, { fill: string; label: string }> = {
   blue: { fill: "#3b82f6", label: "Blau" },
   red: { fill: "#ef4444", label: "Rot" },
   yellow: { fill: "#eab308", label: "Gelb" },
-  green: { fill: "#22c55e", label: "Grün" },
+  green: { fill: "#22c55e", label: "Gruen" },
   gray: { fill: "#6b7280", label: "Grau" },
 };
 
 const NOTE_COLOR_STYLES: Record<NoteColorKey, { bg: string; label: string }> = {
   yellow: { bg: "#fef08a", label: "Gelb" },
   pink: { bg: "#fbcfe8", label: "Rosa" },
-  green: { bg: "#bbf7d0", label: "Grün" },
+  green: { bg: "#bbf7d0", label: "Gruen" },
   blue: { bg: "#bfdbfe", label: "Blau" },
 };
 
-const ANCHOR_OPACITY = 0.28;
+const ANCHOR_OPACITY = 0.32;
 
 const FIGURE_MIN_PCT = 4;
 const FIGURE_MAX_PCT = 20;
@@ -122,22 +118,28 @@ const SHAPE_LABELS: Record<ShapeType, string> = {
 };
 
 const ANCHOR_SHAPE_LABELS: Record<AnchorShape, string> = {
-  rect: "Bodenanker (Rechteck)",
-  circle: "Bodenanker (Kreis)",
-  triangle: "Bodenanker (Dreieck)",
+  rect: "Form (Rechteck)",
+  circle: "Form (Kreis)",
+  triangle: "Form (Dreieck)",
 };
 
 const BOARD_BASE_PX = 650;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
-const ZOOM_DEFAULT = 1;
+const MOBILE_BREAKPOINT_PX = 640;
+const MOBILE_DEFAULT_ZOOM = 0.55;
 const PASTE_OFFSET_PCT = 4;
 
 let idCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${Date.now()}-${idCounter++}`;
 
-// ---------- SVG-Definitionen ----------
+const getInitialZoom = () => {
+  if (typeof window === "undefined") return 1;
+  return window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_DEFAULT_ZOOM : 1;
+};
+
+// ---------- SVG-Definitionen (nur noch fuer Figuren-Holzmaserung/Board) ----------
 
 const WoodDefs: React.FC = () => (
   <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
@@ -175,12 +177,6 @@ const WoodDefs: React.FC = () => (
           </radialGradient>
         );
       })}
-
-      <linearGradient id="boardWoodGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#f3d9ae" />
-        <stop offset="50%" stopColor="#e8c58c" />
-        <stop offset="100%" stopColor="#dfb877" />
-      </linearGradient>
     </defs>
   </svg>
 );
@@ -232,8 +228,8 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
       case "circle":
         return (
           <>
-            <circle cx={0} cy={0} r={half - 2} fill={`url(#${gradientId})`} style={{ fill: `url(#${gradientId})` }} stroke={c.dark} strokeWidth={1.5} />
-            <circle cx={0} cy={0} r={half - 2} fill={c.base} style={{ fill: c.base }} filter="url(#woodGrainFine)" opacity={0.5} />
+            <circle cx={0} cy={0} r={half - 2} fill={`url(#${gradientId})`} stroke={c.dark} strokeWidth={1.5} />
+            <circle cx={0} cy={0} r={half - 2} fill={c.base} filter="url(#woodGrainFine)" opacity={0.5} />
           </>
         );
       case "square":
@@ -245,7 +241,6 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
               width={size - 4}
               height={size - 4}
               fill={`url(#${gradientId})`}
-              style={{ fill: `url(#${gradientId})` }}
               stroke={c.dark}
               strokeWidth={1.5}
               rx={4}
@@ -256,7 +251,6 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
               width={size - 4}
               height={size - 4}
               fill={c.base}
-              style={{ fill: c.base }}
               filter="url(#woodGrainFine)"
               opacity={0.5}
               rx={4}
@@ -274,8 +268,8 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
           .join(" ");
         return (
           <>
-            <polygon points={pts} fill={`url(#${gradientId})`} style={{ fill: `url(#${gradientId})` }} stroke={c.dark} strokeWidth={1.5} />
-            <polygon points={pts} fill={c.base} style={{ fill: c.base }} filter="url(#woodGrainFine)" opacity={0.5} />
+            <polygon points={pts} fill={`url(#${gradientId})`} stroke={c.dark} strokeWidth={1.5} />
+            <polygon points={pts} fill={c.base} filter="url(#woodGrainFine)" opacity={0.5} />
           </>
         );
       }
@@ -288,12 +282,12 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
       height={size}
       viewBox={`${-half} ${-half} ${size} ${size}`}
       className="overflow-visible pointer-events-none select-none"
-      style={{ filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.35))" }}
+      style={{ filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.35))", outline: "none", border: "none" }}
     >
       <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
         {renderBase()}
-        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} style={{ fill: selected ? "#111827" : c.dark }} />
-        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} style={{ fill: selected ? "#111827" : c.dark }} />
+        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
+        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
       </g>
       {selected && (
         <circle cx={0} cy={0} r={half + 4} fill="none" stroke="#111827" strokeWidth={1.5} strokeDasharray="4 3" />
@@ -302,83 +296,60 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
   );
 };
 
-// ---------- Bodenanker-Icon ----------
+// ---------- Formen-Icon (Bodenanker) - jetzt reine CSS-<div>-Formen ----------
+// Bugfix: Kreis und Dreieck waren als SVG unsichtbar (Ursache trotz mehrerer
+// Versuche nicht zweifelsfrei isolierbar). Robuste Loesung: keine SVG-Formen
+// mehr, sondern <div>-Elemente mit background-color, border-radius (Kreis)
+// und clip-path (Dreieck) - Standard-CSS, das nicht mit SVG-spezifischen
+// Stylesheet-Regeln kollidieren kann.
 
-interface AnchorSvgProps {
+interface AnchorShapeDivProps {
   shape: AnchorShape;
   color: AnchorColorKey;
   selected?: boolean;
 }
 
-const AnchorSvg: React.FC<AnchorSvgProps> = ({ shape, color, selected }) => {
-  const c = ANCHOR_COLOR_STYLES[color];
+const AnchorShapeDiv: React.FC<AnchorShapeDivProps> = ({ shape, color, selected }) => {
+  const fillColor = ANCHOR_COLOR_STYLES[color].fill;
 
-  const renderBase = () => {
-    switch (shape) {
-      case "circle":
-        return (
-          <ellipse
-            cx={50}
-            cy={50}
-            rx={48}
-            ry={48}
-            fill={c.fill}
-            style={{ fill: c.fill, fillOpacity: ANCHOR_OPACITY }}
-            fillOpacity={ANCHOR_OPACITY}
-          />
-        );
-      case "rect":
-        return (
-          <rect
-            x={2}
-            y={2}
-            width={96}
-            height={96}
-            fill={c.fill}
-            style={{ fill: c.fill, fillOpacity: ANCHOR_OPACITY }}
-            fillOpacity={ANCHOR_OPACITY}
-            rx={4}
-          />
-        );
-      case "triangle":
-        return (
-          <polygon
-            points="50,2 98,96 2,96"
-            fill={c.fill}
-            style={{ fill: c.fill, fillOpacity: ANCHOR_OPACITY }}
-            fillOpacity={ANCHOR_OPACITY}
-          />
-        );
-    }
+  const baseStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    backgroundColor: fillColor,
+    opacity: ANCHOR_OPACITY,
   };
 
+  if (shape === "circle") {
+    baseStyle.borderRadius = "50%";
+  } else if (shape === "rect") {
+    baseStyle.borderRadius = "4px";
+  } else if (shape === "triangle") {
+    baseStyle.clipPath = "polygon(50% 0%, 100% 100%, 0% 100%)";
+  }
+
   return (
-    <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="overflow-visible select-none">
-      {renderBase()}
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <div style={baseStyle} />
       {selected && (
-        <rect
-          x={-2}
-          y={-2}
-          width={104}
-          height={104}
-          fill="none"
-          stroke="#111827"
-          strokeWidth={1}
-          strokeDasharray="4 3"
-          vectorEffect="non-scaling-stroke"
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            border: "1px dashed #111827",
+            borderRadius: shape === "circle" ? "50%" : shape === "rect" ? "4px" : 0,
+          }}
         />
       )}
-    </svg>
+    </div>
   );
 };
 
-const AnchorPreviewSvg: React.FC<{ shape: AnchorShape; color: AnchorColorKey; size: number }> = ({
+const AnchorPreview: React.FC<{ shape: AnchorShape; color: AnchorColorKey; size: number }> = ({
   shape,
   color,
   size,
 }) => (
   <div style={{ width: size, height: size }}>
-    <AnchorSvg shape={shape} color={color} />
+    <AnchorShapeDiv shape={shape} color={color} />
   </div>
 );
 
@@ -416,7 +387,7 @@ const ZoomControl: React.FC<ZoomControlProps> = ({ zoom, onZoomIn, onZoomOut, on
       title="Verkleinern"
       className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
     >
-      −
+      -
     </button>
     <button
       onClick={onReset}
@@ -445,6 +416,8 @@ interface GalleryProps {
   onDragStartTemplate: (e: React.DragEvent, kind: "figure" | "anchor" | "note", value?: ShapeType | AnchorShape) => void;
   splitBoard: boolean;
   onToggleSplit: () => void;
+  showFrame: boolean;
+  onToggleFrame: () => void;
 }
 
 const Gallery: React.FC<GalleryProps> = ({
@@ -454,6 +427,8 @@ const Gallery: React.FC<GalleryProps> = ({
   onDragStartTemplate,
   splitBoard,
   onToggleSplit,
+  showFrame,
+  onToggleFrame,
 }) => {
   const figureTemplates: ShapeType[] = ["circle", "square", "triangle"];
   const anchorTemplates: AnchorShape[] = ["rect", "circle", "triangle"];
@@ -480,7 +455,7 @@ const Gallery: React.FC<GalleryProps> = ({
       </div>
 
       <div className="pt-3 border-t border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-700 mb-1">Bodenanker</h2>
+        <h2 className="text-sm font-semibold text-gray-700 mb-1">Formen</h2>
         <p className="text-xs text-gray-400 mb-3">Fuer Orte, Themen, Ressourcen etc.</p>
         <div className="flex gap-2">
           {anchorTemplates.map((shape) => (
@@ -492,7 +467,7 @@ const Gallery: React.FC<GalleryProps> = ({
               className="flex items-center justify-center rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
               title={ANCHOR_SHAPE_LABELS[shape]}
             >
-              <AnchorPreviewSvg shape={shape} color="gray" size={32} />
+              <AnchorPreview shape={shape} color="gray" size={32} />
             </button>
           ))}
         </div>
@@ -516,12 +491,16 @@ const Gallery: React.FC<GalleryProps> = ({
 
       <div className="pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-700 mb-2">Brett</h2>
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none mb-2">
           <input type="checkbox" checked={splitBoard} onChange={onToggleSplit} className="accent-gray-700" />
-          In zwei Haelften teilen
+          Trennlinie anzeigen
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input type="checkbox" checked={showFrame} onChange={onToggleFrame} className="accent-gray-700" />
+          Rahmen anzeigen
         </label>
         <p className="text-xs text-gray-400 mt-3">
-          Tipp: Ausgewaehlte Figuren/Anker lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren.
+          Tipp: Ausgewaehlte Figuren/Formen lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren.
         </p>
       </div>
     </div>
@@ -543,7 +522,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Figur</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          ✕ schliessen
+          x schliessen
         </button>
       </div>
 
@@ -552,7 +531,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       </div>
 
       <p className="text-xs text-gray-400 -mt-2 text-center">
-        Drehung: {Math.round(figure.rotation)}° am runden Griff oben ziehen. Groesse: an den Eck-Griffen ziehen (Seitenverhaeltnis bleibt fest).
+        Drehung: {Math.round(figure.rotation)} Grad am runden Griff oben ziehen. Groesse: an den Eck-Griffen ziehen (Seitenverhaeltnis bleibt fest).
       </p>
 
       <div>
@@ -560,7 +539,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
         <input
           value={figure.label}
           onChange={(e) => onChange(figure.id, { label: e.target.value })}
-          placeholder="Bezeichnung eingeben…"
+          placeholder="Bezeichnung eingeben..."
           className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         />
       </div>
@@ -592,7 +571,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
   );
 };
 
-// ---------- Kontextpanel: Bodenanker ----------
+// ---------- Kontextpanel: Form (Bodenanker) ----------
 
 interface AnchorPanelProps {
   anchor: Anchor;
@@ -605,15 +584,15 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
   return (
     <div className="w-full lg:w-64 shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-700">Bodenanker</h2>
+        <h2 className="text-sm font-semibold text-gray-700">Form</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          ✕ schliessen
+          x schliessen
         </button>
       </div>
 
       <div className="flex justify-center">
         <div className="w-16 h-16">
-          <AnchorSvg shape={anchor.shape} color={anchor.color} selected />
+          <AnchorShapeDiv shape={anchor.shape} color={anchor.color} selected />
         </div>
       </div>
 
@@ -624,7 +603,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
         <input
           value={anchor.label}
           onChange={(e) => onChange(anchor.id, { label: e.target.value })}
-          placeholder="z.B. Ziel, Ressource…"
+          placeholder="z.B. Ziel, Ressource..."
           className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         />
       </div>
@@ -650,7 +629,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
         onClick={() => onDelete(anchor.id)}
         className="mt-2 text-sm text-red-500 hover:text-red-600 border border-red-200 rounded-md py-1.5 hover:bg-red-50 transition-colors"
       >
-        Anker entfernen
+        Form entfernen
       </button>
     </div>
   );
@@ -671,7 +650,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Post-it</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          ✕ schliessen
+          x schliessen
         </button>
       </div>
 
@@ -680,7 +659,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
           style={{ backgroundColor: NOTE_COLOR_STYLES[note.color].bg, width: 72, height: 64 }}
           className="rounded-sm shadow flex items-center justify-center p-1"
         >
-          <span className="text-[10px] text-gray-700 text-center line-clamp-3">{note.text || "…"}</span>
+          <span className="text-[10px] text-gray-700 text-center line-clamp-3">{note.text || "..."}</span>
         </div>
       </div>
 
@@ -691,7 +670,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
         <textarea
           value={note.text}
           onChange={(e) => onChange(note.id, { text: e.target.value })}
-          placeholder="Notiz eingeben…"
+          placeholder="Notiz eingeben..."
           rows={4}
           className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
         />
@@ -725,14 +704,6 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
 };
 
 // ---------- Figur auf dem Brett ----------
-// Neues Transform-Control-Modell (Miro/Figma-Vorbild): Die gesamte
-// Bounding-Box inkl. aller Griffe rotiert gemeinsam mit der Figur. Vier
-// Eck-Griffe bei lokal 45/135/225/315 Grad skalieren PROPORTIONAL (ein
-// Radius-Wert fuer Breite = Hoehe, da Figuren kreisrund sind). Der
-// Rotations-Griff sitzt separat bei lokal 0 Grad (oben), mit groesserem
-// Abstand als die Ecken. Da beide Gruppen einen konstanten Winkelabstand
-// von 45 Grad zueinander haben und gemeinsam rotieren, kollidieren sie bei
-// keinem Rotationswinkel mehr.
 
 interface BoardFigureProps {
   figure: Figure;
@@ -821,9 +792,6 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
     (e.target as Element).releasePointerCapture(e.pointerId);
   };
 
-  // Proportionale Skalierung ueber Eck-Griffe: Distanz vom Figuren-
-  // Mittelpunkt zum Zeiger bestimmt die neue Groesse (Seitenverhaeltnis
-  // bleibt zwangslaeufig 1:1, da nur ein einzelner Radius-Wert verwendet wird).
   const handleResizeStart = (e: React.PointerEvent) => {
     e.stopPropagation();
     onSelect(figure.id);
@@ -867,12 +835,8 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
   };
 
   const half = size / 2;
-  // Eck-Griffe sitzen auf dem Diagonal-Radius der Box (45/135/225/315 Grad
-  // relativ zur Box, die selbst um figure.rotation gedreht ist).
   const cornerRadius = half * Math.SQRT2;
   const cornerAngles = [45, 135, 225, 315];
-  // Rotationsgriff: eigener, groesserer Radius, lokal bei 0 Grad (oben).
-  // 45 Grad Abstand zu jeder Ecke, konstant bei jeder Rotation.
   const rotateHandleRadius = half + 20;
 
   return (
@@ -893,10 +857,12 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
         cursor: dragging ? "grabbing" : "grab",
         touchAction: "none",
         zIndex: dragging || rotating || resizing ? 30 : isSelected ? 20 : 10,
+        outline: "none",
+        border: "none",
       }}
       className="select-none"
     >
-      <div style={{ position: "relative", width: size, height: size }}>
+      <div style={{ position: "relative", width: size, height: size, outline: "none", border: "none" }}>
         <ShapeSvg type={figure.type} color={figure.color} size={size} rotation={figure.rotation} selected={isSelected} />
 
         {isSelected && !editingLabel && (
@@ -993,7 +959,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
                     setEditingLabel(false);
                   }
                 }}
-                placeholder="Name…"
+                placeholder="Name..."
                 className="text-xs text-center border border-gray-300 rounded px-1 py-0.5 w-24 bg-white shadow-sm"
               />
             ) : figure.label ? (
@@ -1060,7 +1026,7 @@ function useCornerDrag(
   return { dragging, handlePointerDown, handlePointerMove, handlePointerUp };
 }
 
-// ---------- Bodenanker auf dem Brett ----------
+// ---------- Form (Bodenanker) auf dem Brett ----------
 
 interface BoardAnchorProps {
   anchor: Anchor;
@@ -1129,7 +1095,7 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
       className="select-none"
     >
       <div className="relative w-full h-full">
-        <AnchorSvg shape={anchor.shape} color={anchor.color} selected={isSelected} />
+        <AnchorShapeDiv shape={anchor.shape} color={anchor.color} selected={isSelected} />
 
         {anchor.label && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-1">
@@ -1277,8 +1243,9 @@ const Systembrett: React.FC = () => {
   const [anchors, setAnchors] = useState<Anchor[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [selected, setSelected] = useState<Selectable>(null);
-  const [splitBoard, setSplitBoard] = useState(false);
-  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+  const [splitBoard, setSplitBoard] = useState(true);
+  const [showFrame, setShowFrame] = useState(true);
+  const [zoom, setZoom] = useState(getInitialZoom);
   const draggedTemplateRef = useRef<{ kind: "figure" | "anchor" | "note"; value?: ShapeType | AnchorShape } | null>(null);
   const clipboardRef = useRef<ClipboardItem | null>(null);
 
@@ -1460,7 +1427,7 @@ const Systembrett: React.FC = () => {
 
   const handleZoomIn = () => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 100) / 100));
   const handleZoomOut = () => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100));
-  const handleZoomReset = () => setZoom(ZOOM_DEFAULT);
+  const handleZoomReset = () => setZoom(getInitialZoom());
 
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
@@ -1539,18 +1506,20 @@ const Systembrett: React.FC = () => {
                   <rect x="0" y="0" width="100%" height="100%" fill="#c9985f" filter="url(#woodGrainBoard)" opacity={0.55} />
                 </svg>
 
-                <div
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: "6%",
-                    top: "6%",
-                    right: "6%",
-                    bottom: "6%",
-                    border: "3px solid #8b5a2b",
-                    borderRadius: "2px",
-                    boxShadow: "0 1px 2px rgba(255,255,255,0.3) inset",
-                  }}
-                />
+                {showFrame && (
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: "6%",
+                      top: "6%",
+                      right: "6%",
+                      bottom: "6%",
+                      border: "3px solid #8b5a2b",
+                      borderRadius: "2px",
+                      boxShadow: "0 1px 2px rgba(255,255,255,0.3) inset",
+                    }}
+                  />
+                )}
 
                 <div
                   ref={boardRef}
@@ -1566,7 +1535,7 @@ const Systembrett: React.FC = () => {
 
                   {figures.length === 0 && anchors.length === 0 && notes.length === 0 && (
                     <p className="absolute inset-0 flex items-center justify-center text-amber-800/40 text-sm pointer-events-none z-10 text-center px-6">
-                      Figuren, Bodenanker oder Post-its aus der Galerie hierher ziehen
+                      Figuren, Formen oder Post-its aus der Galerie hierher ziehen
                     </p>
                   )}
 
@@ -1624,6 +1593,8 @@ const Systembrett: React.FC = () => {
               onDragStartTemplate={handleTemplateDragStart}
               splitBoard={splitBoard}
               onToggleSplit={() => setSplitBoard((s) => !s)}
+              showFrame={showFrame}
+              onToggleFrame={() => setShowFrame((s) => !s)}
             />
           )}
 
