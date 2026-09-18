@@ -1,24 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett - Prototyp-Komponente (v16)
+ * Virtuelles Systembrett - Prototyp-Komponente (v17)
  * ---------------------------------------------------
- * Aenderung gegenueber v15:
- * - Bugfix "helles Kaestchen/Schatten um Figuren-Icons (auch in der
- *   Galerie)": Die Ursache war der CSS-Filter "drop-shadow(...)", der auf
- *   dem GESAMTEN <svg>-Wrapper-Element lag. Bei einem SVG mit
- *   "overflow: visible" und einer viewBox, die groesser ist als der
- *   sichtbare Inhalt, kann der Browser den Filter-Effektbereich als eigene,
- *   sichtbare Bounding-Box mit Hintergrund/Schatten rendern - das erzeugte
- *   das helle, teils rotiert wirkende Kaestchen um jede Figur, unabhaengig
- *   vom Kontext (Board oder Galerie).
+ * Aenderung gegenueber v16:
+ * - Mobile Layout: Das horizontale Padding des Hauptcontainers ("p-4" auf
+ *   Mobile) ist entfernt (jetzt "px-0 py-4"), damit das Brett und die
+ *   Galerie auf kleinen Bildschirmen die volle Breite nutzen koennen,
+ *   statt seitlich eingeengt zu werden. Vertikales Padding bleibt erhalten.
+ *   Ab dem "sm"-Breakpoint (kleine Tablets aufwaerts) gilt weiterhin das
+ *   bisherige "p-6" auf allen Seiten.
  *
- *   Fix: Der Schatten wird jetzt ueber einen echten SVG-<filter> mit
- *   feDropShadow erzeugt, der in <defs> definiert und gezielt nur auf die
- *   <g>-Gruppe mit den tatsaechlichen Formen (circle/rect/polygon)
- *   angewendet wird - nicht mehr auf das gesamte <svg>-Element. Dadurch
- *   bleibt der Filter-Effektbereich eng an der tatsaechlichen Figur, ohne
- *   sichtbare Bounding-Box drumherum.
+ * Alle uebrigen Punkte aus v16 unveraendert: Formen-Bugfix (shape-Parameter
+ * korrekt uebergeben), Entf-Taste loescht ausgewaehltes Element,
+ * feDropShadow als SVG-Filter statt CSS-drop-shadow (behebt das
+ * Kaestchen-Problem um Figuren-Icons), Zoom-Regler fix oben links,
+ * scrollbares Brett bei manuellem Zoom, freie Skalierung mit festem
+ * Seitenverhaeltnis bei Figuren, Copy/Paste fuer Figuren und Formen.
  *
  * Abhaengigkeiten: nur React + Tailwind CSS (keine externen Libraries noetig)
  */
@@ -136,9 +134,6 @@ const getInitialZoom = () => {
 };
 
 // ---------- SVG-Definitionen ----------
-// Der Figuren-Schatten ist jetzt ein echter SVG-<filter> (feDropShadow),
-// nicht mehr ein CSS-filter auf dem gesamten <svg>-Element. Das verhindert
-// die zuvor sichtbare, ungewollte Bounding-Box um jede Figur.
 
 const WoodDefs: React.FC = () => (
   <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
@@ -291,9 +286,6 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
         display: "block",
       }}
     >
-      {/* Schatten jetzt als SVG-feDropShadow-Filter NUR auf dieser Gruppe,
-          nicht mehr als CSS-filter auf dem gesamten <svg>-Element. Das
-          verhindert die zuvor sichtbare Bounding-Box um die Figur. */}
       <g filter="url(#figureShadow)">
         <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
           {renderBase()}
@@ -1520,7 +1512,12 @@ const Systembrett: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-gray-50">
       <WoodDefs />
-      <div className="w-full p-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-start justify-center">
+      {/*
+        Mobile-Fix: "px-0" statt "p-4" auf Mobile, damit Brett/Galerie die
+        volle Bildschirmbreite nutzen koennen. Ab "sm"-Breakpoint gilt
+        weiterhin das bisherige beidseitige Padding.
+      */}
+      <div className="w-full px-0 py-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-start justify-center">
         <div className="order-1 lg:order-2 w-full lg:flex-1 flex flex-col items-center gap-2 min-w-0">
           <div className="w-full overflow-auto rounded-xl" style={{ maxHeight: "85vh" }}>
             <div className="relative inline-block p-2">
@@ -1620,7 +1617,7 @@ const Systembrett: React.FC = () => {
           </div>
         </div>
 
-        <div className="order-2 lg:order-1 w-full lg:w-64 shrink-0">
+        <div className="order-2 lg:order-1 w-full lg:w-64 shrink-0 px-4 sm:px-0">
           {!hasSelection && (
             <Gallery
               onAddFigure={handleAddFigureFromSidebar}

@@ -1,5 +1,6 @@
 ---
 layout: default
+fullwidth: true
 lang: de
 title: Virtuelles Systembrett online nutzen – Systemische Aufstellungen für Coaching und Führung
 description: Virtuelles Systembrett für systemische Aufstellungen im Coaching und in der Führungskräfteentwicklung. Figuren frei positionieren, drehen und beschriften – direkt im Browser, ohne Installation.
@@ -49,13 +50,32 @@ permalink: /systembrett/
 <div class="divider"></div>
 
 <!--
-  Brett-Container: nutzt dieselbe max-width-Logik wie die uebrigen Sections
-  (section { padding: 1rem 12vw 2rem; max-width: 100%; } aus style.css),
-  damit das Brett im selben Spaltenmass wie der Text darueber sitzt.
+  Brett-Sektion: eigene Klasse "systembrett-section" statt generischer
+  <section> ohne Klasse, damit wir gezielt per Media Query das seitliche
+  Padding auf Mobile aufheben koennen, ohne das globale section-Padding
+  fuer alle anderen Bereiche der Seite zu veraendern.
 -->
-<section id="systembrett-app" style="padding-top: 0;">
+<section id="systembrett-app" class="systembrett-section">
   <div id="systembrett-root"></div>
 </section>
+
+<style>
+  /* Nur fuer diese Seite: Brett-Sektion bekommt auf kleinen Bildschirmen
+     kein seitliches Padding mehr, damit das Systembrett die volle
+     Bildschirmbreite nutzen kann. Das globale section-Padding (12vw)
+     bleibt fuer alle anderen Bereiche (Intro-Text, Header, Footer etc.)
+     unveraendert bestehen. */
+  .systembrett-section {
+    padding-top: 0;
+  }
+
+  @media (max-width: 900px) {
+    .systembrett-section {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+</style>
 
 <link rel="stylesheet" href="{{ '/assets/systembrett/systembrett.css' | relative_url }}">
 <script type="module" src="{{ '/assets/systembrett/systembrett.js' | relative_url }}"></script>
