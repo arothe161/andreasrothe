@@ -1,27 +1,34 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Virtuelles Systembrett – Prototyp-Komponente (v11)
- * ---------------------------------------------------
- * Änderung gegenüber v10:
- * - Bugfix "Springen" beim Aus-/Abwählen einer Figur: Der äußere,
- *   zentrumsbasiert positionierte Container (position:absolute + 
- *   transform: translate(-50%,-50%)) hatte VORHER eine variable Höhe,
- *   je nachdem ob der Label-Bereich sichtbar war oder nicht. Da die
- *   Zentrierung sich auf die aktuelle Boxhöhe bezieht, verschob das
- *   Erscheinen/Verschwinden des Labels die Figur selbst um die halbe
- *   Höhendifferenz nach oben/unten.
- *   Fix: Der äußere Container hat jetzt eine FESTE Höhe (nur die Figur-
- *   Fläche selbst). Der Label-/Editier-Bereich hängt als absolut
- *   positioniertes Element UNTERHALB der Figur (top: 100% + Abstand) und
- *   beeinflusst die Höhe des zentrierten Containers nicht mehr — die
- *   Figur bleibt beim Auswählen exakt an ihrer Position.
+ * Virtuelles Systembrett – Prototyp-Komponente (v12, Syntaxfix)
+ * ---------------------------------------------------------------
+ * Änderung gegenüber v11.1:
+ * - Bugfix "Überlappung von Dreh- und Skalierregler": Vorher rotierte NUR
+ *   der Rotations-Griff mit der Figur mit, während der Resize-Griff eine
+ *   feste Bildschirm-Position hatte. Bei bestimmten Rotationswinkeln
+ *   (z.B. 135 Grad) lief der rotierende Griff exakt durch die fixe
+ *   Position des Resize-Griffs hindurch.
  *
- * Alle übrigen Punkte aus v10 unverändert: Zoom-Regler fix oben links,
- * scrollbares Brett bei manuellem Zoom, frei skalierbare Figuren, Copy/Paste
- * für Figuren & Anker, Bugfix für unsichtbare Kreis-/Dreieck-Anker.
+ *   Neues Verhalten (nach Miro/Figma-Vorbild): Die komplette Bounding-Box
+ *   inkl. aller Griffe rotiert gemeinsam mit der Figur. Vier Eck-Griffe
+ *   (lokal bei 45/135/225/315 Grad) skalieren die Figur PROPORTIONAL
+ *   (festes Seitenverhaeltnis, ein einzelner Radius-Wert, da Figuren
+ *   kreisrund sind). Der Rotations-Griff sitzt separat, abgesetzt
+ *   oberhalb der Box (lokal 0 Grad, groesserer Abstand als die Ecken).
+ *   Ecken und Rotations-Griff haben dadurch immer einen konstanten
+ *   Winkelabstand von 45 Grad und rotieren gemeinsam - sie koennen bei
+ *   keinem Rotationswinkel mehr kollidieren.
  *
- * Abhängigkeiten: nur React + Tailwind CSS (keine externen Libraries nötig)
+ * Alle uebrigen Punkte unveraendert: Zoom-Regler fix oben links,
+ * scrollbares Brett bei manuellem Zoom, Copy/Paste fuer Figuren und Anker,
+ * kein Positions-Sprung beim Aus-/Abwaehlen, sichtbare Kreis-/Dreieck-Anker.
+ *
+ * Hinweis: Alle Kommentare in dieser Datei verwenden ausschliesslich
+ * doppelte Schraegstriche (//), keine Python-Raute (#), um den zuvor
+ * aufgetretenen esbuild-Syntaxfehler zu vermeiden.
+ *
+ * Abhaengigkeiten: nur React + Tailwind CSS (keine externen Libraries noetig)
  */
 
 // ---------- Typen ----------
@@ -178,7 +185,7 @@ const WoodDefs: React.FC = () => (
   </svg>
 );
 
-// ---------- Hook: gemessene Board-Größe in px ----------
+// ---------- Hook: gemessene Board-Groesse in px ----------
 
 function useElementSize<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -413,7 +420,7 @@ const ZoomControl: React.FC<ZoomControlProps> = ({ zoom, onZoomIn, onZoomOut, on
     </button>
     <button
       onClick={onReset}
-      title="Zoom zurücksetzen (100%)"
+      title="Zoom zuruecksetzen (100%)"
       className="text-xs text-gray-500 w-12 text-center hover:text-gray-800"
     >
       {Math.round(zoom * 100)}%
@@ -421,7 +428,7 @@ const ZoomControl: React.FC<ZoomControlProps> = ({ zoom, onZoomIn, onZoomOut, on
     <button
       onClick={onZoomIn}
       disabled={zoom >= ZOOM_MAX - 1e-9}
-      title="Vergrößern"
+      title="Vergroessern"
       className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
     >
       +
@@ -464,7 +471,7 @@ const Gallery: React.FC<GalleryProps> = ({
               onDragStart={(e) => onDragStartTemplate(e, "figure", type)}
               onClick={() => onAddFigure(type)}
               className="flex items-center justify-center rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
-              title={`${SHAPE_LABELS[type]} hinzufügen`}
+              title={`${SHAPE_LABELS[type]} hinzufuegen`}
             >
               <ShapeSvg type={type} color="yellow" size={32} />
             </button>
@@ -474,7 +481,7 @@ const Gallery: React.FC<GalleryProps> = ({
 
       <div className="pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Bodenanker</h2>
-        <p className="text-xs text-gray-400 mb-3">Für Orte, Themen, Ressourcen etc.</p>
+        <p className="text-xs text-gray-400 mb-3">Fuer Orte, Themen, Ressourcen etc.</p>
         <div className="flex gap-2">
           {anchorTemplates.map((shape) => (
             <button
@@ -493,14 +500,14 @@ const Gallery: React.FC<GalleryProps> = ({
 
       <div className="pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Post-its</h2>
-        <p className="text-xs text-gray-400 mb-3">Für Notizen, Zitate, Beobachtungen</p>
+        <p className="text-xs text-gray-400 mb-3">Fuer Notizen, Zitate, Beobachtungen</p>
         <div className="flex gap-2">
           <button
             draggable
             onDragStart={(e) => onDragStartTemplate(e, "note")}
             onClick={onAddNote}
             className="flex items-center justify-center rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
-            title="Post-it hinzufügen"
+            title="Post-it hinzufuegen"
           >
             <NotePreview color="yellow" size={32} />
           </button>
@@ -511,10 +518,10 @@ const Gallery: React.FC<GalleryProps> = ({
         <h2 className="text-sm font-semibold text-gray-700 mb-2">Brett</h2>
         <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
           <input type="checkbox" checked={splitBoard} onChange={onToggleSplit} className="accent-gray-700" />
-          In zwei Hälften teilen
+          In zwei Haelften teilen
         </label>
         <p className="text-xs text-gray-400 mt-3">
-          Tipp: Ausgewählte Figuren/Anker lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren.
+          Tipp: Ausgewaehlte Figuren/Anker lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren.
         </p>
       </div>
     </div>
@@ -536,7 +543,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Figur</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          ✕ schließen
+          ✕ schliessen
         </button>
       </div>
 
@@ -545,7 +552,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       </div>
 
       <p className="text-xs text-gray-400 -mt-2 text-center">
-        Drehung: {Math.round(figure.rotation)}° — am Ringgriff ziehen · Größe: am Eck-Griff ziehen
+        Drehung: {Math.round(figure.rotation)}° am runden Griff oben ziehen. Groesse: an den Eck-Griffen ziehen (Seitenverhaeltnis bleibt fest).
       </p>
 
       <div>
@@ -600,7 +607,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Bodenanker</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          ✕ schließen
+          ✕ schliessen
         </button>
       </div>
 
@@ -610,7 +617,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 -mt-2 text-center">Größe: am Eck-Griff auf dem Brett ziehen</p>
+      <p className="text-xs text-gray-400 -mt-2 text-center">Groesse: am Eck-Griff auf dem Brett ziehen</p>
 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Beschriftung</label>
@@ -664,7 +671,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Post-it</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          ✕ schließen
+          ✕ schliessen
         </button>
       </div>
 
@@ -677,7 +684,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 -mt-2 text-center">Größe: am Eck-Griff auf dem Brett ziehen</p>
+      <p className="text-xs text-gray-400 -mt-2 text-center">Groesse: am Eck-Griff auf dem Brett ziehen</p>
 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Text</label>
@@ -718,11 +725,14 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
 };
 
 // ---------- Figur auf dem Brett ----------
-// WICHTIG (Bugfix): Der äußere, zentrierte Container hat jetzt eine FESTE
-// Höhe (= Größe der Figur). Der Label-/Editier-Bereich liegt als absolut
-// positioniertes Element unterhalb davon (top: 100% + Abstand), sodass er
-// die Höhe des transformierten Containers nicht mehr beeinflusst. Dadurch
-// "springt" die Figur beim Aus-/Abwählen nicht mehr.
+// Neues Transform-Control-Modell (Miro/Figma-Vorbild): Die gesamte
+// Bounding-Box inkl. aller Griffe rotiert gemeinsam mit der Figur. Vier
+// Eck-Griffe bei lokal 45/135/225/315 Grad skalieren PROPORTIONAL (ein
+// Radius-Wert fuer Breite = Hoehe, da Figuren kreisrund sind). Der
+// Rotations-Griff sitzt separat bei lokal 0 Grad (oben), mit groesserem
+// Abstand als die Ecken. Da beide Gruppen einen konstanten Winkelabstand
+// von 45 Grad zueinander haben und gemeinsam rotieren, kollidieren sie bei
+// keinem Rotationswinkel mehr.
 
 interface BoardFigureProps {
   figure: Figure;
@@ -753,7 +763,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
   const [rotating, setRotating] = useState(false);
   const [resizing, setResizing] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
-  const resizeStartRef = useRef<{ startX: number; startY: number; sizePct: number } | null>(null);
+  const resizeStartRef = useRef<{ startDist: number; sizePct: number } | null>(null);
 
   const size = (figure.sizePct / 100) * Math.max(boardSizePx.width, 1);
 
@@ -811,21 +821,36 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
     (e.target as Element).releasePointerCapture(e.pointerId);
   };
 
+  // Proportionale Skalierung ueber Eck-Griffe: Distanz vom Figuren-
+  // Mittelpunkt zum Zeiger bestimmt die neue Groesse (Seitenverhaeltnis
+  // bleibt zwangslaeufig 1:1, da nur ein einzelner Radius-Wert verwendet wird).
   const handleResizeStart = (e: React.PointerEvent) => {
     e.stopPropagation();
     onSelect(figure.id);
     setResizing(true);
-    resizeStartRef.current = { startX: e.clientX, startY: e.clientY, sizePct: figure.sizePct };
+    const node = nodeRef.current;
+    if (node) {
+      const rect = node.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const startDist = Math.hypot(e.clientX - cx, e.clientY - cy);
+      resizeStartRef.current = { startDist, sizePct: figure.sizePct };
+    }
     (e.target as Element).setPointerCapture(e.pointerId);
   };
 
   const handleResizeMove = (e: React.PointerEvent) => {
     if (!resizing || !resizeStartRef.current) return;
-    const rect = boardRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const { startX, startY, sizePct } = resizeStartRef.current;
-    const dPct = ((e.clientX - startX + (e.clientY - startY)) / 2 / rect.width) * 100;
-    const newSize = Math.min(FIGURE_MAX_PCT, Math.max(FIGURE_MIN_PCT, sizePct + dPct));
+    const node = nodeRef.current;
+    if (!node) return;
+    const nodeRect = node.getBoundingClientRect();
+    const cx = nodeRect.left + nodeRect.width / 2;
+    const cy = nodeRect.top + nodeRect.height / 2;
+    const currentDist = Math.hypot(e.clientX - cx, e.clientY - cy);
+    const { startDist, sizePct } = resizeStartRef.current;
+    if (startDist < 1) return;
+    const scaleFactor = currentDist / startDist;
+    const newSize = Math.min(FIGURE_MAX_PCT, Math.max(FIGURE_MIN_PCT, sizePct * scaleFactor));
     onResize(figure.id, newSize);
   };
 
@@ -842,7 +867,13 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
   };
 
   const half = size / 2;
-  const handleDistance = half + 14;
+  // Eck-Griffe sitzen auf dem Diagonal-Radius der Box (45/135/225/315 Grad
+  // relativ zur Box, die selbst um figure.rotation gedreht ist).
+  const cornerRadius = half * Math.SQRT2;
+  const cornerAngles = [45, 135, 225, 315];
+  // Rotationsgriff: eigener, groesserer Radius, lokal bei 0 Grad (oben).
+  // 45 Grad Abstand zu jeder Ecke, konstant bei jeder Rotation.
+  const rotateHandleRadius = half + 20;
 
   return (
     <div
@@ -865,14 +896,21 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
       }}
       className="select-none"
     >
-      {/* Diese innere Box hat exakt size x size — die Zentrierung oben
-          bezieht sich also immer auf eine konstante Höhe, unabhängig davon,
-          ob unten ein Label angezeigt wird. */}
       <div style={{ position: "relative", width: size, height: size }}>
         <ShapeSvg type={figure.type} color={figure.color} size={size} rotation={figure.rotation} selected={isSelected} />
 
         {isSelected && !editingLabel && (
-          <>
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: 0,
+              height: 0,
+              transform: `rotate(${figure.rotation}deg)`,
+              transformOrigin: "0 0",
+            }}
+          >
             <div
               onPointerDown={handleRotateStart}
               onPointerMove={handleRotateMove}
@@ -880,13 +918,12 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
               title="Ziehen, um die Blickrichtung zu drehen"
               style={{
                 position: "absolute",
-                left: "50%",
-                top: "50%",
+                left: 0,
+                top: -rotateHandleRadius,
                 width: 16,
                 height: 16,
                 marginLeft: -8,
                 marginTop: -8,
-                transform: `rotate(${figure.rotation}deg) translateY(-${handleDistance}px)`,
                 touchAction: "none",
                 cursor: rotating ? "grabbing" : "grab",
                 zIndex: 40,
@@ -897,20 +934,46 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
             </div>
 
             <div
-              onPointerDown={handleResizeStart}
-              onPointerMove={handleResizeMove}
-              onPointerUp={handleResizeEnd}
-              title="Ziehen, um die Größe zu ändern"
-              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
-              style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
+              style={{
+                position: "absolute",
+                left: -1,
+                top: -rotateHandleRadius + 8,
+                width: 2,
+                height: rotateHandleRadius - half - 8,
+                backgroundColor: "#9ca3af",
+              }}
             />
-          </>
+
+            {cornerAngles.map((angle) => {
+              const rad = (angle * Math.PI) / 180;
+              const hx = cornerRadius * Math.sin(rad);
+              const hy = -cornerRadius * Math.cos(rad);
+              return (
+                <div
+                  key={angle}
+                  onPointerDown={handleResizeStart}
+                  onPointerMove={handleResizeMove}
+                  onPointerUp={handleResizeEnd}
+                  title="Ziehen, um die Groesse zu aendern (Seitenverhaeltnis bleibt fest)"
+                  style={{
+                    position: "absolute",
+                    left: hx,
+                    top: hy,
+                    width: 10,
+                    height: 10,
+                    marginLeft: -5,
+                    marginTop: -5,
+                    touchAction: "none",
+                    cursor: resizing ? "grabbing" : "nwse-resize",
+                    zIndex: 40,
+                  }}
+                  className="rounded-full bg-white border-2 border-blue-500 shadow"
+                />
+              );
+            })}
+          </div>
         )}
 
-        {/* Label-/Editier-Bereich: absolut UNTERHALB der Figur verankert
-            (top: 100% der inneren Box + fixer Abstand), NICHT mehr Teil des
-            normalen Flex-Flows. Beeinflusst dadurch die Höhe des äußeren,
-            zentrierten Containers nicht — kein Sprung mehr beim Auswählen. */}
         {isSelected && (
           <div
             className="absolute left-1/2 -translate-x-1/2 flex justify-center"
@@ -1081,7 +1144,7 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
             onPointerDown={handleResizeStart}
             onPointerMove={handleResizeMove}
             onPointerUp={handleResizeEnd}
-            title="Ziehen, um die Größe zu ändern"
+            title="Ziehen, um die Groesse zu aendern"
             className="absolute -bottom-2 -right-2 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
             style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
           />
@@ -1195,7 +1258,7 @@ const BoardNote: React.FC<BoardNoteProps> = ({ note, isSelected, onSelect, onMov
             onPointerDown={handleResizeStart}
             onPointerMove={handleResizeMove}
             onPointerUp={handleResizeEnd}
-            title="Ziehen, um die Größe zu ändern"
+            title="Ziehen, um die Groesse zu aendern"
             className="absolute -bottom-2 -right-2 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
             style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
           />
