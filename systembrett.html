@@ -1,27 +1,13 @@
 ---
-layout: default
+layout: systembrett-layout
 lang: de
 title: Virtuelles Systembrett – Andreas Rothe
 description: Interaktives virtuelles Systembrett für systemische Aufstellungen im Coaching.
 permalink: /systembrett/
 ---
 
-<!--
-  Diese Seite nutzt bewusst dein bestehendes "layout: default", damit Header,
-  Footer, Sprachumschaltung und SEO-Tags konsistent mit dem Rest der Seite
-  bleiben. Falls das Systembrett mehr Platz braucht (z.B. auf Mobilgeräten),
-  kannst du später ein eigenes, schlankeres Layout ohne Footer anlegen.
-
-  Wichtig: Tailwinds "preflight" (CSS-Reset) ist im systembrett.css-Bundle
-  enthalten und wirkt nur innerhalb von #systembrett-root, sofern du in
-  app-src/src/index.css KEINE globalen Selektoren (html, body) überschreibst.
-  Dein bestehendes style.css bleibt davon unberührt.
--->
-
 <link rel="stylesheet" href="{{ '/assets/systembrett/systembrett.css' | relative_url }}">
 
-<section style="padding: 1.5rem 0;">
-  <div id="systembrett-root"></div>
-</section>
+<div id="systembrett-root"></div>
 
 <script type="module" src="{{ '/assets/systembrett/systembrett.js' | relative_url }}"></script>
