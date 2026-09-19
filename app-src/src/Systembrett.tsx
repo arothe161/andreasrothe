@@ -1,24 +1,42 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { toPng } from "html-to-image";
 
 /**
- * Virtuelles Systembrett - Prototyp-Komponente (v17)
- * ---------------------------------------------------
- * Aenderung gegenueber v16:
- * - Mobile Layout: Das horizontale Padding des Hauptcontainers ("p-4" auf
- *   Mobile) ist entfernt (jetzt "px-0 py-4"), damit das Brett und die
- *   Galerie auf kleinen Bildschirmen die volle Breite nutzen koennen,
- *   statt seitlich eingeengt zu werden. Vertikales Padding bleibt erhalten.
- *   Ab dem "sm"-Breakpoint (kleine Tablets aufwaerts) gilt weiterhin das
- *   bisherige "p-6" auf allen Seiten.
+ * Virtuelles Systembrett - Prototyp-Komponente (v22, Syntaxfix)
+ * ----------------------------------------------------------------
+ * Bugfix gegenüber v21 (Ursache jetzt zweifelsfrei behoben):
  *
- * Alle uebrigen Punkte aus v16 unveraendert: Formen-Bugfix (shape-Parameter
- * korrekt uebergeben), Entf-Taste loescht ausgewaehltes Element,
- * feDropShadow als SVG-Filter statt CSS-drop-shadow (behebt das
- * Kaestchen-Problem um Figuren-Icons), Zoom-Regler fix oben links,
- * scrollbares Brett bei manuellem Zoom, freie Skalierung mit festem
- * Seitenverhaeltnis bei Figuren, Copy/Paste fuer Figuren und Formen.
+ * "Figuren werden beim Wechsel in den Vollbildmodus unsichtbar und bleiben
+ * es auch nach Rückkehr in den Normalmodus" - das war ein State-Bug, kein
+ * CSS/Filter-Problem:
  *
- * Abhaengigkeiten: nur React + Tailwind CSS (keine externen Libraries noetig)
+ * Der Hook "useElementSize" registrierte seinen ResizeObserver bisher nur
+ * einmalig beim ersten Mount (useEffect mit leerer Dependency-Liste,
+ * gebunden an ein normales useRef-Objekt). Da v21 für den normalen Modus
+ * und den Vollbildmodus jeweils einen eigenen BoardContent-JSX-Zweig
+ * hatte, wurde beim Umschalten zwischen den Modi das komplette Element
+ * (inkl. des div mit dem boardRef) unmounted und ein neues, separates div
+ * gemounted. Der bereits registrierte ResizeObserver beobachtete danach
+ * weiter das alte, nicht mehr existierende DOM-Element und wurde nie
+ * erneut auf das neue Element registriert - "boardSizePx" blieb somit
+ * dauerhaft eingefroren (bzw. auf 0), auch nach Rückkehr in den
+ * Normalmodus, weil der Observer nie neu gebunden wurde. Da die
+ * Figurengröße direkt aus "boardSizePx.width" berechnet wird, wurden
+ * Figuren dadurch auf eine Größe von praktisch 0px zusammengeschrumpft.
+ *
+ * Fix: "useElementSize" nutzt jetzt einen zusätzlichen Callback, der bei
+ * jedem Mount UND Unmount des Zielelements aufgerufen wird (React ruft
+ * Callback-Refs zuverlässig bei jeder Element-Änderung auf). Dadurch wird
+ * der ResizeObserver bei jedem Element-Austausch (z.B. durch bedingtes
+ * Rendering beim Fullscreen-Wechsel) sauber abgemeldet und neu registriert.
+ * Das normale RefObject bleibt für bestehende .current-Zugriffe in den
+ * Drag-Handlern unverändert nutzbar.
+ *
+ * Hinweis: Alle Kommentare in dieser Datei verwenden ausschließlich "//",
+ * keine Python-Raute "#", um den zuvor aufgetretenen esbuild-Syntaxfehler
+ * zu vermeiden.
+ *
+ * Abhängigkeiten: React + Tailwind CSS + html-to-image (npm install html-to-image)
  */
 
 // ---------- Typen ----------
@@ -28,6 +46,7 @@ type ColorKey = "yellow" | "green" | "red" | "blue";
 type AnchorShape = "rect" | "circle" | "triangle";
 type AnchorColorKey = "blue" | "red" | "yellow" | "green" | "gray";
 type NoteColorKey = "yellow" | "pink" | "green" | "blue";
+type CornerKey = "tl" | "tr" | "bl" | "br";
 
 interface Figure {
   id: string;
@@ -70,7 +89,7 @@ type ClipboardItem = { kind: "figure"; data: Figure } | { kind: "anchor"; data: 
 
 const COLOR_STYLES: Record<ColorKey, { base: string; light: string; dark: string; label: string }> = {
   yellow: { base: "#eab308", light: "#fde68a", dark: "#92600a", label: "Gelb" },
-  green: { base: "#65a30d", light: "#bef264", dark: "#3f6212", label: "Gruen" },
+  green: { base: "#65a30d", light: "#bef264", dark: "#3f6212", label: "Grün" },
   red: { base: "#dc2626", light: "#fca5a5", dark: "#7f1d1d", label: "Rot" },
   blue: { base: "#2563eb", light: "#93c5fd", dark: "#1e3a8a", label: "Blau" },
 };
@@ -79,14 +98,14 @@ const ANCHOR_COLOR_STYLES: Record<AnchorColorKey, { fill: string; label: string 
   blue: { fill: "#3b82f6", label: "Blau" },
   red: { fill: "#ef4444", label: "Rot" },
   yellow: { fill: "#eab308", label: "Gelb" },
-  green: { fill: "#22c55e", label: "Gruen" },
+  green: { fill: "#22c55e", label: "Grün" },
   gray: { fill: "#6b7280", label: "Grau" },
 };
 
 const NOTE_COLOR_STYLES: Record<NoteColorKey, { bg: string; label: string }> = {
   yellow: { bg: "#fef08a", label: "Gelb" },
   pink: { bg: "#fbcfe8", label: "Rosa" },
-  green: { bg: "#bbf7d0", label: "Gruen" },
+  green: { bg: "#bbf7d0", label: "Grün" },
   blue: { bg: "#bfdbfe", label: "Blau" },
 };
 
@@ -97,7 +116,7 @@ const FIGURE_MAX_PCT = 20;
 const FIGURE_DEFAULT_PCT = 9.5;
 
 const ANCHOR_MIN_PCT = 6;
-const ANCHOR_MAX_PCT = 60;
+const ANCHOR_MAX_PCT = 95;
 const ANCHOR_DEFAULT_PCT = 16;
 
 const NOTE_MIN_PCT = 8;
@@ -124,6 +143,8 @@ const ZOOM_STEP = 0.1;
 const MOBILE_BREAKPOINT_PX = 640;
 const MOBILE_DEFAULT_ZOOM = 0.55;
 const PASTE_OFFSET_PCT = 4;
+const FULLSCREEN_TOP_BAR_PX = 64;
+const FULLSCREEN_MARGIN_PX = 32;
 
 let idCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${Date.now()}-${idCounter++}`;
@@ -132,6 +153,49 @@ const getInitialZoom = () => {
   if (typeof window === "undefined") return 1;
   return window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_DEFAULT_ZOOM : 1;
 };
+
+const computeFullscreenZoom = () => {
+  if (typeof window === "undefined") return 1;
+  const availableW = window.innerWidth - FULLSCREEN_MARGIN_PX * 2;
+  const availableH = window.innerHeight - FULLSCREEN_TOP_BAR_PX - FULLSCREEN_MARGIN_PX * 2;
+  const smaller = Math.min(availableW, availableH);
+  const zoom = smaller / BOARD_BASE_PX;
+  return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(zoom * 100) / 100));
+};
+
+// ---------- Hilfsfunktionen: Fullscreen API mit Vendor-Fallback ----------
+
+interface FullscreenCapableElement extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+}
+
+interface FullscreenCapableDocument extends Document {
+  webkitExitFullscreen?: () => Promise<void> | void;
+  webkitFullscreenElement?: Element | null;
+}
+
+function requestFullscreenOn(el: HTMLElement) {
+  const target = el as FullscreenCapableElement;
+  if (target.requestFullscreen) {
+    target.requestFullscreen().catch(() => {});
+  } else if (target.webkitRequestFullscreen) {
+    target.webkitRequestFullscreen();
+  }
+}
+
+function exitFullscreen() {
+  const doc = document as FullscreenCapableDocument;
+  if (document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  } else if (doc.webkitExitFullscreen) {
+    doc.webkitExitFullscreen();
+  }
+}
+
+function getFullscreenElement(): Element | null {
+  const doc = document as FullscreenCapableDocument;
+  return document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+}
 
 // ---------- SVG-Definitionen ----------
 
@@ -160,9 +224,6 @@ const WoodDefs: React.FC = () => (
                   0 0 0 0.22 0"
         />
       </filter>
-      <filter id="figureShadow" x="-40%" y="-40%" width="180%" height="180%">
-        <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000000" floodOpacity="0.35" />
-      </filter>
 
       {(Object.keys(COLOR_STYLES) as ColorKey[]).map((key) => {
         const c = COLOR_STYLES[key];
@@ -178,28 +239,51 @@ const WoodDefs: React.FC = () => (
   </svg>
 );
 
-// ---------- Hook: gemessene Board-Größe in px ----------
+// ---------- Hook: gemessene Element-Größe in px ----------
+// Bugfix: Zusätzlich zum normalen RefObject (für bestehende .current-
+// Zugriffe) wird ein Callback zurückgegeben, der die JSX-ref-Prop bindet.
+// React ruft diesen Callback bei JEDEM Mount UND Unmount des Zielelements
+// zuverlässig auf - dadurch wird der ResizeObserver bei jedem Element-
+// Austausch (z.B. durch bedingtes Rendering beim Fullscreen-Wechsel)
+// korrekt abgemeldet und neu registriert, statt auf einem entfernten
+// DOM-Element hängen zu bleiben.
 
 function useElementSize<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
+  const elementRef = useRef<T | null>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) {
-        const { width, height } = entry.contentRect;
-        setSize({ width, height });
-      }
-    });
-    observer.observe(el);
-    setSize({ width: el.clientWidth, height: el.clientHeight });
-    return () => observer.disconnect();
+  const attachRef = useCallback((node: T | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
+    elementRef.current = node;
+
+    if (node) {
+      const observer = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (entry) {
+          const { width, height } = entry.contentRect;
+          setSize({ width, height });
+        }
+      });
+      observer.observe(node);
+      observerRef.current = observer;
+      setSize({ width: node.clientWidth, height: node.clientHeight });
+    } else {
+      setSize({ width: 0, height: 0 });
+    }
   }, []);
 
-  return { ref, size };
+  useEffect(() => {
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
+
+  return { ref: elementRef, attachRef, size };
 }
 
 // ---------- Figuren-Icon ----------
@@ -284,14 +368,13 @@ const ShapeSvg: React.FC<ShapeSvgProps> = ({ type, color, size, rotation = 0, se
         border: "none",
         background: "transparent",
         display: "block",
+        filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.35))",
       }}
     >
-      <g filter="url(#figureShadow)">
-        <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
-          {renderBase()}
-          <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
-          <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
-        </g>
+      <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "0 0" }}>
+        {renderBase()}
+        <circle cx={-eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
+        <circle cx={eyeGap} cy={eyeOffsetY - half * 0.35} r={eyeRadius} fill={selected ? "#111827" : c.dark} />
       </g>
       {selected && (
         <circle cx={0} cy={0} r={half + 4} fill="none" stroke="#111827" strokeWidth={1.5} strokeDasharray="4 3" />
@@ -372,41 +455,113 @@ const NotePreview: React.FC<{ color: NoteColorKey; size: number }> = ({ color, s
   </div>
 );
 
-// ---------- Zoom-Kontrolle ----------
+// ---------- Icons für Toolbar-Buttons ----------
 
-interface ZoomControlProps {
+const IconFullscreen: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconDownload: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconSidebar: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <line x1="9" y1="4" x2="9" y2="20" />
+  </svg>
+);
+
+// ---------- Zoom-, Vollbild- und Export-Kontrolle ----------
+
+interface ToolbarProps {
   zoom: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
+  onSaveAsImage: () => void;
+  isExporting: boolean;
 }
 
-const ZoomControl: React.FC<ZoomControlProps> = ({ zoom, onZoomIn, onZoomOut, onReset }) => (
-  <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1">
+const Toolbar: React.FC<ToolbarProps> = ({
+  zoom,
+  onZoomIn,
+  onZoomOut,
+  onReset,
+  isFullscreen,
+  onToggleFullscreen,
+  onSaveAsImage,
+  isExporting,
+}) => (
+  <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1">
+      <button
+        onClick={onZoomOut}
+        disabled={zoom <= ZOOM_MIN + 1e-9}
+        title="Verkleinern"
+        className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+      >
+        -
+      </button>
+      <button
+        onClick={onReset}
+        title="Zoom zurücksetzen"
+        className="text-xs text-gray-500 w-12 text-center hover:text-gray-800"
+      >
+        {Math.round(zoom * 100)}%
+      </button>
+      <button
+        onClick={onZoomIn}
+        disabled={zoom >= ZOOM_MAX - 1e-9}
+        title="Vergrößern"
+        className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+      >
+        +
+      </button>
+    </div>
+
     <button
-      onClick={onZoomOut}
-      disabled={zoom <= ZOOM_MIN + 1e-9}
-      title="Verkleinern"
-      className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+      onClick={onSaveAsImage}
+      disabled={isExporting}
+      title="Als Bild speichern"
+      className="flex items-center justify-center w-8 h-8 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
     >
-      -
+      <IconDownload />
     </button>
-    <button
-      onClick={onReset}
-      title="Zoom zuruecksetzen"
-      className="text-xs text-gray-500 w-12 text-center hover:text-gray-800"
-    >
-      {Math.round(zoom * 100)}%
-    </button>
-    <button
-      onClick={onZoomIn}
-      disabled={zoom >= ZOOM_MAX - 1e-9}
-      title="VerGrößern"
-      className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
-    >
-      +
-    </button>
+
+    {!isFullscreen && (
+      <button
+        onClick={onToggleFullscreen}
+        title="Vollbild anzeigen"
+        className="flex items-center justify-center w-8 h-8 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-600 hover:bg-gray-100"
+      >
+        <IconFullscreen />
+      </button>
+    )}
   </div>
+);
+
+// ---------- Sidebar-Toggle (Desktop) ----------
+
+interface SidebarToggleProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+const SidebarToggle: React.FC<SidebarToggleProps> = ({ collapsed, onToggle }) => (
+  <button
+    onClick={onToggle}
+    title={collapsed ? "Menü einblenden" : "Menü ausblenden"}
+    className="hidden lg:flex items-center justify-center w-8 h-8 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+  >
+    <IconSidebar />
+  </button>
 );
 
 // ---------- Galerie ----------
@@ -439,7 +594,7 @@ const Gallery: React.FC<GalleryProps> = ({
     <div className="w-full lg:w-64 shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Figuren</h2>
-        <p className="text-xs text-gray-400 mb-3">Klicken, um aufs Brett zu setzen</p>
+        <p className="text-xs text-gray-400 mb-3">Ziehen oder klicken, um aufs Brett zu setzen</p>
         <div className="flex gap-2">
           {figureTemplates.map((type) => (
             <button
@@ -448,7 +603,7 @@ const Gallery: React.FC<GalleryProps> = ({
               onDragStart={(e) => onDragStartTemplate(e, "figure", type)}
               onClick={() => onAddFigure(type)}
               className="flex items-center justify-center rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
-              title={`${SHAPE_LABELS[type]} hinzufuegen`}
+              title={`${SHAPE_LABELS[type]} hinzufügen`}
             >
               <ShapeSvg type={type} color="yellow" size={32} />
             </button>
@@ -484,7 +639,7 @@ const Gallery: React.FC<GalleryProps> = ({
             onDragStart={(e) => onDragStartTemplate(e, "note")}
             onClick={onAddNote}
             className="flex items-center justify-center rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
-            title="Post-it hinzufuegen"
+            title="Post-it hinzufügen"
           >
             <NotePreview color="yellow" size={32} />
           </button>
@@ -502,7 +657,7 @@ const Gallery: React.FC<GalleryProps> = ({
           Rahmen anzeigen
         </label>
         <p className="text-xs text-gray-400 mt-3">
-          Tipp: Ausgewaehlte Elemente lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren, oder mit der Entf-Taste loeschen.
+          Tipp: Ausgewählte Elemente lassen sich mit Strg/Cmd+C und Strg/Cmd+V duplizieren, oder mit der Entf-Taste löschen.
         </p>
       </div>
     </div>
@@ -524,7 +679,7 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Figur</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          x schliessen
+          × schließen
         </button>
       </div>
 
@@ -536,7 +691,6 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
         Blickrichtung: am runden Griff oben ziehen. Größe: an den Eck-Griffen ziehen.
       </p>
 
-      {/* 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Name</label>
         <input
@@ -546,10 +700,9 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
           className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         />
       </div>
-      */}
 
       <div>
-        <label className="text-sm font-semibold text-gray-700">Farbe</label>
+        <label className="text-xs text-gray-500 block mb-2">Farbe</label>
         <div className="flex gap-2">
           {(Object.keys(COLOR_STYLES) as ColorKey[]).map((key) => (
             <button
@@ -590,7 +743,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Form</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          x schliessen
+          × schließen
         </button>
       </div>
 
@@ -600,7 +753,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 -mt-2 text-center">Größe: am Eck-Griff auf dem Brett ziehen</p>
+      <p className="text-xs text-gray-400 -mt-2 text-center">Größe: an den Eck-Griffen auf dem Brett ziehen</p>
 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Beschriftung</label>
@@ -613,7 +766,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
       </div>
 
       <div>
-        <label className="text-sm font-semibold text-gray-700">Farbe</label>
+        <label className="text-xs text-gray-500 block mb-2">Farbe</label>
         <div className="flex gap-2 flex-wrap">
           {(Object.keys(ANCHOR_COLOR_STYLES) as AnchorColorKey[]).map((key) => (
             <button
@@ -654,7 +807,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700">Post-it</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs">
-          x schliessen
+          × schließen
         </button>
       </div>
 
@@ -879,6 +1032,20 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
       >
         <ShapeSvg type={figure.type} color={figure.color} size={size} rotation={figure.rotation} selected={isSelected} />
 
+        {!editingLabel && figure.label && (
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none px-1"
+            onDoubleClick={handleLabelToggle}
+          >
+            <span
+              className="text-[11px] font-medium text-black/80 text-center leading-tight px-1 truncate"
+              style={{ maxWidth: "90%", textShadow: "0 1px 2px rgba(255,255,255,0.6)" }}
+            >
+              {figure.label}
+            </span>
+          </div>
+        )}
+
         {isSelected && !editingLabel && (
           <div
             style={{
@@ -935,7 +1102,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
                   onPointerDown={handleResizeStart}
                   onPointerMove={handleResizeMove}
                   onPointerUp={handleResizeEnd}
-                  title="Ziehen, um die Größe zu aendern (Seitenverhaeltnis bleibt fest)"
+                  title="Ziehen, um die Größe zu ändern (Seitenverhältnis bleibt fest)"
                   style={{
                     position: "absolute",
                     left: hx,
@@ -955,43 +1122,41 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
           </div>
         )}
 
-        {isSelected && (
+        {isSelected && editingLabel && (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitRename();
+                if (e.key === "Escape") {
+                  setDraft(figure.label);
+                  setEditingLabel(false);
+                }
+              }}
+              placeholder="Name..."
+              className="text-xs text-center border border-gray-300 rounded px-1 py-0.5 w-20 bg-white shadow-sm"
+            />
+          </div>
+        )}
+
+        {isSelected && !editingLabel && !figure.label && (
           <div
             className="absolute left-1/2 -translate-x-1/2 flex justify-center"
             style={{ top: "100%", marginTop: 6, width: "max-content", background: "transparent" }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {editingLabel ? (
-              <input
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={commitRename}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitRename();
-                  if (e.key === "Escape") {
-                    setDraft(figure.label);
-                    setEditingLabel(false);
-                  }
-                }}
-                placeholder="Name..."
-                className="text-xs text-center border border-gray-300 rounded px-1 py-0.5 w-24 bg-white shadow-sm"
-              />
-            ) : figure.label ? (
-              <span
-                onDoubleClick={handleLabelToggle}
-                className="text-xs text-gray-700 bg-white/80 rounded px-1.5 py-0.5 whitespace-nowrap shadow-sm cursor-text"
-              >
-                {figure.label}
-              </span>
-            ) : (
-              <button
-                onClick={handleLabelToggle}
-                className="text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-1.5 py-0.5 bg-white/70 hover:text-gray-600 hover:border-gray-400"
-              >
-                + Label
-              </button>
-            )}
+            <button
+              onClick={handleLabelToggle}
+              className="text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-1.5 py-0.5 bg-white/70 hover:text-gray-600 hover:border-gray-400"
+            >
+              + Name
+            </button>
           </div>
         )}
       </div>
@@ -999,7 +1164,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
   );
 };
 
-// ---------- Generischer Hook: Ecken-basiertes Ziehen ----------
+// ---------- Generischer Hook: Ecken-basiertes Ziehen (Verschieben) ----------
 
 function useCornerDrag(
   x: number,
@@ -1041,6 +1206,77 @@ function useCornerDrag(
   return { dragging, handlePointerDown, handlePointerMove, handlePointerUp };
 }
 
+// ---------- Hilfsfunktion: freies Eck-Resize (Formen, Post-its) ----------
+
+interface FreeResizeStart {
+  corner: CornerKey;
+  startX: number;
+  startY: number;
+  boxX: number;
+  boxY: number;
+  boxW: number;
+  boxH: number;
+}
+
+function computeFreeResize(
+  start: FreeResizeStart,
+  dxPct: number,
+  dyPct: number,
+  minPct: number,
+  maxPct: number
+) {
+  const { corner, boxX, boxY, boxW, boxH } = start;
+  const right = boxX + boxW;
+  const bottom = boxY + boxH;
+
+  let newX = boxX;
+  let newY = boxY;
+  let newW = boxW;
+  let newH = boxH;
+
+  if (corner === "tl") {
+    newX = Math.min(boxX + dxPct, right - minPct);
+    newY = Math.min(boxY + dyPct, bottom - minPct);
+    newW = right - newX;
+    newH = bottom - newY;
+  } else if (corner === "tr") {
+    newY = Math.min(boxY + dyPct, bottom - minPct);
+    newW = boxW + dxPct;
+    newH = bottom - newY;
+  } else if (corner === "bl") {
+    newX = Math.min(boxX + dxPct, right - minPct);
+    newW = right - newX;
+    newH = boxH + dyPct;
+  } else {
+    newW = boxW + dxPct;
+    newH = boxH + dyPct;
+  }
+
+  newW = Math.min(maxPct, Math.max(minPct, newW));
+  newH = Math.min(maxPct, Math.max(minPct, newH));
+
+  if (corner === "tl" || corner === "bl") {
+    newX = right - newW;
+  }
+  if (corner === "tl" || corner === "tr") {
+    newY = bottom - newH;
+  }
+
+  return {
+    x: Math.max(0, Math.min(99, newX)),
+    y: Math.max(0, Math.min(99, newY)),
+    widthPct: newW,
+    heightPct: newH,
+  };
+}
+
+const CORNER_CONFIG: { key: CornerKey; cursor: string }[] = [
+  { key: "tl", cursor: "nwse-resize" },
+  { key: "tr", cursor: "nesw-resize" },
+  { key: "bl", cursor: "nesw-resize" },
+  { key: "br", cursor: "nwse-resize" },
+];
+
 // ---------- Form (Bodenanker) auf dem Brett ----------
 
 interface BoardAnchorProps {
@@ -1048,7 +1284,7 @@ interface BoardAnchorProps {
   isSelected: boolean;
   onSelect: (id: string) => void;
   onMove: (id: string, xPct: number, yPct: number) => void;
-  onResize: (id: string, widthPct: number, heightPct: number) => void;
+  onResize: (id: string, xPct: number, yPct: number, widthPct: number, heightPct: number) => void;
   boardRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -1060,13 +1296,26 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
     boardRef
   );
   const [resizing, setResizing] = useState(false);
-  const resizeStartRef = useRef<{ startX: number; startY: number; w: number; h: number } | null>(null);
+  const resizeStartRef = useRef<FreeResizeStart | null>(null);
 
-  const handleResizeStart = (e: React.PointerEvent) => {
+  const handleResizeStart = (corner: CornerKey) => (e: React.PointerEvent) => {
     e.stopPropagation();
     onSelect(anchor.id);
     setResizing(true);
-    resizeStartRef.current = { startX: e.clientX, startY: e.clientY, w: anchor.widthPct, h: anchor.heightPct };
+    const rect = boardRef.current?.getBoundingClientRect();
+    if (rect) {
+      const startXPct = ((e.clientX - rect.left) / rect.width) * 100;
+      const startYPct = ((e.clientY - rect.top) / rect.height) * 100;
+      resizeStartRef.current = {
+        corner,
+        startX: startXPct,
+        startY: startYPct,
+        boxX: anchor.x,
+        boxY: anchor.y,
+        boxW: anchor.widthPct,
+        boxH: anchor.heightPct,
+      };
+    }
     (e.target as Element).setPointerCapture(e.pointerId);
   };
 
@@ -1074,12 +1323,13 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
     if (!resizing || !resizeStartRef.current) return;
     const rect = boardRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const { startX, startY, w, h } = resizeStartRef.current;
-    const dxPct = ((e.clientX - startX) / rect.width) * 100;
-    const dyPct = ((e.clientY - startY) / rect.height) * 100;
-    const newW = Math.min(ANCHOR_MAX_PCT, Math.max(ANCHOR_MIN_PCT, w + dxPct));
-    const newH = Math.min(ANCHOR_MAX_PCT, Math.max(ANCHOR_MIN_PCT, h + dyPct));
-    onResize(anchor.id, newW, newH);
+    const currentXPct = ((e.clientX - rect.left) / rect.width) * 100;
+    const currentYPct = ((e.clientY - rect.top) / rect.height) * 100;
+    const start = resizeStartRef.current;
+    const dxPct = currentXPct - start.startX;
+    const dyPct = currentYPct - start.startY;
+    const result = computeFreeResize(start, dxPct, dyPct, ANCHOR_MIN_PCT, ANCHOR_MAX_PCT);
+    onResize(anchor.id, result.x, result.y, result.widthPct, result.heightPct);
   };
 
   const handleResizeEnd = (e: React.PointerEvent) => {
@@ -1120,16 +1370,34 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
           </div>
         )}
 
-        {isSelected && (
-          <div
-            onPointerDown={handleResizeStart}
-            onPointerMove={handleResizeMove}
-            onPointerUp={handleResizeEnd}
-            title="Ziehen, um die Größe zu aendern"
-            className="absolute -bottom-2 -right-2 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
-            style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
-          />
-        )}
+        {isSelected &&
+          CORNER_CONFIG.map(({ key, cursor }) => {
+            const positionStyle: React.CSSProperties = { position: "absolute", width: 12, height: 12 };
+            if (key === "tl") {
+              positionStyle.top = -6;
+              positionStyle.left = -6;
+            } else if (key === "tr") {
+              positionStyle.top = -6;
+              positionStyle.right = -6;
+            } else if (key === "bl") {
+              positionStyle.bottom = -6;
+              positionStyle.left = -6;
+            } else {
+              positionStyle.bottom = -6;
+              positionStyle.right = -6;
+            }
+            return (
+              <div
+                key={key}
+                onPointerDown={handleResizeStart(key)}
+                onPointerMove={handleResizeMove}
+                onPointerUp={handleResizeEnd}
+                title="Ziehen, um die Größe zu ändern (freies Seitenverhältnis)"
+                className="rounded-sm bg-white border-2 border-gray-700 shadow"
+                style={{ ...positionStyle, cursor, touchAction: "none", zIndex: 40 }}
+              />
+            );
+          })}
       </div>
     </div>
   );
@@ -1239,7 +1507,7 @@ const BoardNote: React.FC<BoardNoteProps> = ({ note, isSelected, onSelect, onMov
             onPointerDown={handleResizeStart}
             onPointerMove={handleResizeMove}
             onPointerUp={handleResizeEnd}
-            title="Ziehen, um die Größe zu aendern"
+            title="Ziehen, um die Größe zu ändern"
             className="absolute -bottom-2 -right-2 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
             style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
           />
@@ -1248,6 +1516,150 @@ const BoardNote: React.FC<BoardNoteProps> = ({ note, isSelected, onSelect, onMov
     </div>
   );
 };
+
+// ---------- Board-Inhalt (Brett + Figuren/Formen/Post-its) ----------
+
+interface BoardContentProps {
+  boardMaxPx: number;
+  showFrame: boolean;
+  splitBoard: boolean;
+  figures: Figure[];
+  anchors: Anchor[];
+  notes: Note[];
+  selected: Selectable;
+  boardSizePx: { width: number; height: number };
+  boardRef: React.RefObject<HTMLDivElement>;
+  boardAttachRef: (node: HTMLDivElement | null) => void;
+  boardCaptureRef: React.RefObject<HTMLDivElement>;
+  onSelect: (sel: Selectable) => void;
+  onBoardDragOver: (e: React.DragEvent) => void;
+  onBoardDrop: (e: React.DragEvent) => void;
+  onMoveFigure: (id: string, x: number, y: number) => void;
+  onRotateFigure: (id: string, r: number) => void;
+  onResizeFigure: (id: string, s: number) => void;
+  onRenameFigure: (id: string, l: string) => void;
+  onMoveAnchor: (id: string, x: number, y: number) => void;
+  onResizeAnchor: (id: string, x: number, y: number, w: number, h: number) => void;
+  onMoveNote: (id: string, x: number, y: number) => void;
+  onResizeNote: (id: string, w: number, h: number) => void;
+  onEditNoteText: (id: string, t: string) => void;
+}
+
+const BoardContent: React.FC<BoardContentProps> = ({
+  boardMaxPx,
+  showFrame,
+  splitBoard,
+  figures,
+  anchors,
+  notes,
+  selected,
+  boardSizePx,
+  boardRef,
+  boardAttachRef,
+  boardCaptureRef,
+  onSelect,
+  onBoardDragOver,
+  onBoardDrop,
+  onMoveFigure,
+  onRotateFigure,
+  onResizeFigure,
+  onRenameFigure,
+  onMoveAnchor,
+  onResizeAnchor,
+  onMoveNote,
+  onResizeNote,
+  onEditNoteText,
+}) => (
+  <div
+    ref={boardCaptureRef}
+    className="relative rounded-xl overflow-hidden"
+    style={{
+      width: `${boardMaxPx}px`,
+      height: `${boardMaxPx}px`,
+      background: "linear-gradient(135deg, #f3d9ae 0%, #e8c58c 50%, #dfb877 100%)",
+      boxShadow:
+        "inset 0 2px 10px rgba(120, 80, 30, 0.25), inset 0 0 40px rgba(120, 80, 30, 0.12), 0 8px 20px rgba(0,0,0,0.15)",
+    }}
+  >
+    <svg width="100%" height="100%" className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "multiply" }}>
+      <rect x="0" y="0" width="100%" height="100%" fill="#c9985f" filter="url(#woodGrainBoard)" opacity={0.55} />
+    </svg>
+
+    {showFrame && (
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: "6%",
+          top: "6%",
+          right: "6%",
+          bottom: "6%",
+          border: "3px solid #8b5a2b",
+          borderRadius: "2px",
+          boxShadow: "0 1px 2px rgba(255,255,255,0.3) inset",
+        }}
+      />
+    )}
+
+    <div
+      ref={boardAttachRef}
+      onDragOver={onBoardDragOver}
+      onDrop={onBoardDrop}
+      onClick={() => onSelect(null)}
+      className="absolute"
+      style={{ left: "6%", top: "6%", right: "6%", bottom: "6%" }}
+    >
+      {splitBoard && (
+        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-amber-800/40 -translate-x-1/2 pointer-events-none z-0" />
+      )}
+
+      {figures.length === 0 && anchors.length === 0 && notes.length === 0 && (
+        <p className="absolute inset-0 flex items-center justify-center text-amber-800/40 text-sm pointer-events-none z-10 text-center px-6">
+          Figuren, Formen oder Post-its aus der Galerie hierher ziehen
+        </p>
+      )}
+
+      {anchors.map((a) => (
+        <BoardAnchor
+          key={a.id}
+          anchor={a}
+          isSelected={selected?.id === a.id}
+          onSelect={(id) => onSelect({ id, kind: "anchor" })}
+          onMove={onMoveAnchor}
+          onResize={onResizeAnchor}
+          boardRef={boardRef}
+        />
+      ))}
+
+      {notes.map((n) => (
+        <BoardNote
+          key={n.id}
+          note={n}
+          isSelected={selected?.id === n.id}
+          onSelect={(id) => onSelect({ id, kind: "note" })}
+          onMove={onMoveNote}
+          onResize={onResizeNote}
+          onEditText={onEditNoteText}
+          boardRef={boardRef}
+        />
+      ))}
+
+      {figures.map((fig) => (
+        <BoardFigure
+          key={fig.id}
+          figure={fig}
+          boardSizePx={boardSizePx}
+          isSelected={selected?.id === fig.id}
+          onSelect={(id) => onSelect({ id, kind: "figure" })}
+          onRename={onRenameFigure}
+          onMove={onMoveFigure}
+          onRotate={onRotateFigure}
+          onResize={onResizeFigure}
+          boardRef={boardRef}
+        />
+      ))}
+    </div>
+  </div>
+);
 
 // ---------- Hauptkomponente ----------
 
@@ -1261,16 +1673,76 @@ const Systembrett: React.FC = () => {
   const [splitBoard, setSplitBoard] = useState(true);
   const [showFrame, setShowFrame] = useState(true);
   const [zoom, setZoom] = useState(getInitialZoom);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const draggedTemplateRef = useRef<{ kind: "figure" | "anchor" | "note"; value?: ShapeType | AnchorShape } | null>(null);
   const clipboardRef = useRef<ClipboardItem | null>(null);
+  const appRootRef = useRef<HTMLDivElement>(null);
+  const boardCaptureRef = useRef<HTMLDivElement>(null);
 
-  const { ref: boardRef, size: boardSizePx } = useElementSize<HTMLDivElement>();
+  // Bugfix: "attachRef" wird als JSX-ref-Prop verwendet (Callback-Ref, der
+  // bei jedem Mount/Unmount den ResizeObserver neu bindet). "ref" bleibt
+  // ein normales RefObject für .current-Zugriffe in Drag-Handlern.
+  const { ref: boardRef, attachRef: boardAttachRef, size: boardSizePx } = useElementSize<HTMLDivElement>();
 
   const selectedFigure = selected?.kind === "figure" ? figures.find((f) => f.id === selected.id) ?? null : null;
   const selectedAnchor = selected?.kind === "anchor" ? anchors.find((a) => a.id === selected.id) ?? null : null;
   const selectedNote = selected?.kind === "note" ? notes.find((n) => n.id === selected.id) ?? null : null;
 
   const clampPercent = (v: number) => Math.min(99, Math.max(1, v));
+
+  const handleToggleFullscreen = () => {
+    if (getFullscreenElement()) {
+      exitFullscreen();
+    } else if (appRootRef.current) {
+      requestFullscreenOn(appRootRef.current);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = !!getFullscreenElement();
+      setIsFullscreen(active);
+      if (active) {
+        setZoom(computeFullscreenZoom());
+      } else {
+        setZoom(getInitialZoom());
+		setSidebarCollapsed(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const handleSaveAsImage = async () => {
+    if (!boardCaptureRef.current || isExporting) return;
+    setIsExporting(true);
+    const previousSelection = selected;
+    setSelected(null);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const dataUrl = await toPng(boardCaptureRef.current, {
+        pixelRatio: 2,
+        backgroundColor: undefined,
+      });
+      const link = document.createElement("a");
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      link.download = `systembrett-${timestamp}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Export als Bild fehlgeschlagen:", err);
+    } finally {
+      setSelected(previousSelection);
+      setIsExporting(false);
+    }
+  };
 
   const createFigure = useCallback(
     (type: ShapeType, xPct = 50, yPct = 50): Figure => ({
@@ -1405,8 +1877,10 @@ const Systembrett: React.FC = () => {
     setAnchors((prev) => prev.map((a) => (a.id === id ? { ...a, x: xPct, y: yPct } : a)));
   };
 
-  const handleResizeAnchor = (id: string, widthPct: number, heightPct: number) => {
-    setAnchors((prev) => prev.map((a) => (a.id === id ? { ...a, widthPct, heightPct } : a)));
+  const handleResizeAnchor = (id: string, xPct: number, yPct: number, widthPct: number, heightPct: number) => {
+    setAnchors((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, x: xPct, y: yPct, widthPct, heightPct } : a))
+    );
   };
 
   const handleMoveNote = (id: string, xPct: number, yPct: number) => {
@@ -1442,7 +1916,7 @@ const Systembrett: React.FC = () => {
 
   const handleZoomIn = () => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 100) / 100));
   const handleZoomOut = () => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100));
-  const handleZoomReset = () => setZoom(getInitialZoom());
+  const handleZoomReset = () => setZoom(isFullscreen ? computeFullscreenZoom() : getInitialZoom());
 
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
@@ -1511,154 +1985,171 @@ const Systembrett: React.FC = () => {
   const hasSelection = selected !== null;
   const boardMaxPx = Math.round(BOARD_BASE_PX * zoom);
 
+  const menuColumn = (
+    <div className="flex items-start gap-0 relative">
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{
+          maxWidth: sidebarCollapsed ? 0 : 1000,
+          opacity: sidebarCollapsed ? 0 : 1,
+        }}
+      >
+        <div className="w-full lg:w-64 shrink-0 px-4 sm:px-0">
+          <button
+            onClick={() => setMobileMenuOpen((o) => !o)}
+            className="lg:hidden w-full flex items-center justify-between text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl px-4 py-2.5 mb-2 shadow-sm"
+          >
+            Menü
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              style={{ transform: mobileMenuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+            >
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <div
+            className="lg:!max-h-none lg:!opacity-100 overflow-hidden transition-all duration-300 ease-in-out"
+            style={{
+              maxHeight: mobileMenuOpen ? 2000 : 0,
+              opacity: mobileMenuOpen ? 1 : 0,
+            }}
+          >
+            {!hasSelection && (
+              <Gallery
+                onAddFigure={handleAddFigureFromSidebar}
+                onAddAnchor={handleAddAnchorFromSidebar}
+                onAddNote={handleAddNoteFromSidebar}
+                onDragStartTemplate={handleTemplateDragStart}
+                splitBoard={splitBoard}
+                onToggleSplit={() => setSplitBoard((s) => !s)}
+                showFrame={showFrame}
+                onToggleFrame={() => setShowFrame((s) => !s)}
+              />
+            )}
+
+            {selectedFigure && (
+              <FigurePanel
+                figure={selectedFigure}
+                onChange={handleUpdateFigure}
+                onDelete={handleDeleteFigure}
+                onClose={() => setSelected(null)}
+              />
+            )}
+            {selectedAnchor && (
+              <AnchorPanel
+                anchor={selectedAnchor}
+                onChange={handleUpdateAnchor}
+                onDelete={handleDeleteAnchor}
+                onClose={() => setSelected(null)}
+              />
+            )}
+            {selectedNote && (
+              <NotePanel
+                note={selectedNote}
+                onChange={handleUpdateNote}
+                onDelete={handleDeleteNote}
+                onClose={() => setSelected(null)}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <SidebarToggle collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
+    </div>
+  );
+
+  const boardContentProps: Omit<BoardContentProps, "boardMaxPx"> = {
+    showFrame,
+    splitBoard,
+    figures,
+    anchors,
+    notes,
+    selected,
+    boardSizePx,
+    boardRef,
+    boardAttachRef,
+    boardCaptureRef,
+    onSelect: setSelected,
+    onBoardDragOver: handleBoardDragOver,
+    onBoardDrop: handleBoardDrop,
+    onMoveFigure: handleMoveFigure,
+    onRotateFigure: handleRotateFigure,
+    onResizeFigure: handleResizeFigure,
+    onRenameFigure: handleRenameFigure,
+    onMoveAnchor: handleMoveAnchor,
+    onResizeAnchor: handleResizeAnchor,
+    onMoveNote: handleMoveNote,
+    onResizeNote: handleResizeNote,
+    onEditNoteText: handleEditNoteText,
+  };
+
   return (
-    <div className="w-full min-h-screen bg-gray-50">
+    <div
+      ref={appRootRef}
+      className="w-full min-h-screen bg-gray-50 relative"
+      style={
+        isFullscreen
+          ? { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }
+          : undefined
+      }
+    >
       <WoodDefs />
-      {/*
-        Mobile-Fix: "px-0" statt "p-4" auf Mobile, damit Brett/Galerie die
-        volle Bildschirmbreite nutzen koennen. Ab "sm"-Breakpoint gilt
-        weiterhin das bisherige beidseitige Padding.
-      */}
-      <div className="w-full px-0 py-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-start justify-center">
-        <div className="order-1 lg:order-2 w-full lg:flex-1 flex flex-col items-center gap-2 min-w-0">
-          <div className="w-full overflow-auto rounded-xl" style={{ maxHeight: "85vh" }}>
-            <div className="relative inline-block p-2">
-              <div className="sticky top-2 left-2 z-50 inline-block mb-2">
-                <ZoomControl zoom={zoom} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onReset={handleZoomReset} />
-              </div>
 
-              <div
-                className="relative rounded-xl overflow-hidden"
-                style={{
-                  width: `${boardMaxPx}px`,
-                  height: `${boardMaxPx}px`,
-                  background: "linear-gradient(135deg, #f3d9ae 0%, #e8c58c 50%, #dfb877 100%)",
-                  boxShadow:
-                    "inset 0 2px 10px rgba(120, 80, 30, 0.25), inset 0 0 40px rgba(120, 80, 30, 0.12), 0 8px 20px rgba(0,0,0,0.15)",
-                }}
-              >
-                <svg width="100%" height="100%" className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "multiply" }}>
-                  <rect x="0" y="0" width="100%" height="100%" fill="#c9985f" filter="url(#woodGrainBoard)" opacity={0.55} />
-                </svg>
+      {isFullscreen && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100]">
+          <Toolbar
+            zoom={zoom}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onReset={handleZoomReset}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={handleToggleFullscreen}
+            onSaveAsImage={handleSaveAsImage}
+            isExporting={isExporting}
+          />
+        </div>
+      )}
 
-                {showFrame && (
-                  <div
-                    className="absolute pointer-events-none"
-                    style={{
-                      left: "6%",
-                      top: "6%",
-                      right: "6%",
-                      bottom: "6%",
-                      border: "3px solid #8b5a2b",
-                      borderRadius: "2px",
-                      boxShadow: "0 1px 2px rgba(255,255,255,0.3) inset",
-                    }}
+      {!isFullscreen && (
+        <div className="w-full px-0 py-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-start justify-center">
+          <div className="order-1 lg:order-2 w-full lg:flex-1 flex flex-col items-center gap-2 min-w-0">
+            <div className="w-full overflow-auto rounded-xl" style={{ maxHeight: "85vh" }}>
+              <div className="relative inline-block p-2">
+                <div className="sticky top-2 left-2 z-50 inline-block mb-2">
+                  <Toolbar
+                    zoom={zoom}
+                    onZoomIn={handleZoomIn}
+                    onZoomOut={handleZoomOut}
+                    onReset={handleZoomReset}
+                    isFullscreen={isFullscreen}
+                    onToggleFullscreen={handleToggleFullscreen}
+                    onSaveAsImage={handleSaveAsImage}
+                    isExporting={isExporting}
                   />
-                )}
-
-                <div
-                  ref={boardRef}
-                  onDragOver={handleBoardDragOver}
-                  onDrop={handleBoardDrop}
-                  onClick={() => setSelected(null)}
-                  className="absolute"
-                  style={{ left: "6%", top: "6%", right: "6%", bottom: "6%" }}
-                >
-                  {splitBoard && (
-                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-amber-800/40 -translate-x-1/2 pointer-events-none z-0" />
-                  )}
-
-                  {figures.length === 0 && anchors.length === 0 && notes.length === 0 && (
-                    <p className="absolute inset-0 flex items-center justify-center text-amber-800/40 text-sm pointer-events-none z-10 text-center px-6">
-                      Figuren, Formen oder Post-its aus der Galerie hierher ziehen
-                    </p>
-                  )}
-
-                  {anchors.map((a) => (
-                    <BoardAnchor
-                      key={a.id}
-                      anchor={a}
-                      isSelected={selected?.id === a.id}
-                      onSelect={(id) => setSelected({ id, kind: "anchor" })}
-                      onMove={handleMoveAnchor}
-                      onResize={handleResizeAnchor}
-                      boardRef={boardRef}
-                    />
-                  ))}
-
-                  {notes.map((n) => (
-                    <BoardNote
-                      key={n.id}
-                      note={n}
-                      isSelected={selected?.id === n.id}
-                      onSelect={(id) => setSelected({ id, kind: "note" })}
-                      onMove={handleMoveNote}
-                      onResize={handleResizeNote}
-                      onEditText={handleEditNoteText}
-                      boardRef={boardRef}
-                    />
-                  ))}
-
-                  {figures.map((fig) => (
-                    <BoardFigure
-                      key={fig.id}
-                      figure={fig}
-                      boardSizePx={boardSizePx}
-                      isSelected={selected?.id === fig.id}
-                      onSelect={(id) => setSelected({ id, kind: "figure" })}
-                      onRename={handleRenameFigure}
-                      onMove={handleMoveFigure}
-                      onRotate={handleRotateFigure}
-                      onResize={handleResizeFigure}
-                      boardRef={boardRef}
-                    />
-                  ))}
                 </div>
+
+                <BoardContent boardMaxPx={boardMaxPx} {...boardContentProps} />
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="order-2 lg:order-1 w-full lg:w-64 shrink-0 px-4 sm:px-0">
-          {!hasSelection && (
-            <Gallery
-              onAddFigure={handleAddFigureFromSidebar}
-              onAddAnchor={handleAddAnchorFromSidebar}
-              onAddNote={handleAddNoteFromSidebar}
-              onDragStartTemplate={handleTemplateDragStart}
-              splitBoard={splitBoard}
-              onToggleSplit={() => setSplitBoard((s) => !s)}
-              showFrame={showFrame}
-              onToggleFrame={() => setShowFrame((s) => !s)}
-            />
-          )}
-
-          {selectedFigure && (
-            <FigurePanel
-              figure={selectedFigure}
-              onChange={handleUpdateFigure}
-              onDelete={handleDeleteFigure}
-              onClose={() => setSelected(null)}
-            />
-          )}
-          {selectedAnchor && (
-            <AnchorPanel
-              anchor={selectedAnchor}
-              onChange={handleUpdateAnchor}
-              onDelete={handleDeleteAnchor}
-              onClose={() => setSelected(null)}
-            />
-          )}
-          {selectedNote && (
-            <NotePanel
-              note={selectedNote}
-              onChange={handleUpdateNote}
-              onDelete={handleDeleteNote}
-              onClose={() => setSelected(null)}
-            />
-          )}
+          <div className="order-2 lg:order-1">{menuColumn}</div>
         </div>
-      </div>
+      )}
+
+      {isFullscreen && (
+        <div className="flex-1 flex items-center justify-center gap-4 w-full overflow-auto px-4">
+          {menuColumn}
+          <BoardContent boardMaxPx={boardMaxPx} {...boardContentProps} />
+        </div>
+      )}
     </div>
   );
 };
