@@ -178,7 +178,7 @@ const WoodDefs: React.FC = () => (
   </svg>
 );
 
-// ---------- Hook: gemessene Board-Groesse in px ----------
+// ---------- Hook: gemessene Board-Größe in px ----------
 
 function useElementSize<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -401,7 +401,7 @@ const ZoomControl: React.FC<ZoomControlProps> = ({ zoom, onZoomIn, onZoomOut, on
     <button
       onClick={onZoomIn}
       disabled={zoom >= ZOOM_MAX - 1e-9}
-      title="Vergroessern"
+      title="VerGrößern"
       className="w-6 h-6 flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
     >
       +
@@ -439,7 +439,7 @@ const Gallery: React.FC<GalleryProps> = ({
     <div className="w-full lg:w-64 shrink-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Figuren</h2>
-        <p className="text-xs text-gray-400 mb-3">Ziehen oder klicken, um aufs Brett zu setzen</p>
+        <p className="text-xs text-gray-400 mb-3">Klicken, um aufs Brett zu setzen</p>
         <div className="flex gap-2">
           {figureTemplates.map((type) => (
             <button
@@ -458,7 +458,7 @@ const Gallery: React.FC<GalleryProps> = ({
 
       <div className="pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Formen</h2>
-        <p className="text-xs text-gray-400 mb-3">Fuer Orte, Themen, Ressourcen etc.</p>
+        <p className="text-xs text-gray-400 mb-3">Für Orte, Themen, Ressourcen etc.</p>
         <div className="flex gap-2">
           {anchorTemplates.map((shape) => (
             <button
@@ -477,7 +477,7 @@ const Gallery: React.FC<GalleryProps> = ({
 
       <div className="pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Post-its</h2>
-        <p className="text-xs text-gray-400 mb-3">Fuer Notizen, Zitate, Beobachtungen</p>
+        <p className="text-xs text-gray-400 mb-3">Für Notizen, Zitate, Beobachtungen</p>
         <div className="flex gap-2">
           <button
             draggable
@@ -533,9 +533,10 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
       </div>
 
       <p className="text-xs text-gray-400 -mt-2 text-center">
-        Blickrichtung: am runden Griff oben ziehen. Groesse: an den Eck-Griffen ziehen (Seitenverhaeltnis bleibt fest).
+        Blickrichtung: am runden Griff oben ziehen. Größe: an den Eck-Griffen ziehen.
       </p>
 
+      {/* 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Name</label>
         <input
@@ -545,9 +546,10 @@ const FigurePanel: React.FC<FigurePanelProps> = ({ figure, onChange, onDelete, o
           className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         />
       </div>
+      */}
 
       <div>
-        <label className="text-xs text-gray-500 block mb-2">Farbe</label>
+        <label className="text-sm font-semibold text-gray-700">Farbe</label>
         <div className="flex gap-2">
           {(Object.keys(COLOR_STYLES) as ColorKey[]).map((key) => (
             <button
@@ -598,7 +600,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 -mt-2 text-center">Groesse: am Eck-Griff auf dem Brett ziehen</p>
+      <p className="text-xs text-gray-400 -mt-2 text-center">Größe: am Eck-Griff auf dem Brett ziehen</p>
 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Beschriftung</label>
@@ -611,7 +613,7 @@ const AnchorPanel: React.FC<AnchorPanelProps> = ({ anchor, onChange, onDelete, o
       </div>
 
       <div>
-        <label className="text-xs text-gray-500 block mb-2">Farbe</label>
+        <label className="text-sm font-semibold text-gray-700">Farbe</label>
         <div className="flex gap-2 flex-wrap">
           {(Object.keys(ANCHOR_COLOR_STYLES) as AnchorColorKey[]).map((key) => (
             <button
@@ -665,7 +667,7 @@ const NotePanel: React.FC<NotePanelProps> = ({ note, onChange, onDelete, onClose
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 -mt-2 text-center">Groesse: am Eck-Griff auf dem Brett ziehen</p>
+      <p className="text-xs text-gray-400 -mt-2 text-center">Größe: am Eck-Griff auf dem Brett ziehen</p>
 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Text</label>
@@ -933,7 +935,7 @@ const BoardFigure: React.FC<BoardFigureProps> = ({
                   onPointerDown={handleResizeStart}
                   onPointerMove={handleResizeMove}
                   onPointerUp={handleResizeEnd}
-                  title="Ziehen, um die Groesse zu aendern (Seitenverhaeltnis bleibt fest)"
+                  title="Ziehen, um die Größe zu aendern (Seitenverhaeltnis bleibt fest)"
                   style={{
                     position: "absolute",
                     left: hx,
@@ -1123,7 +1125,7 @@ const BoardAnchor: React.FC<BoardAnchorProps> = ({ anchor, isSelected, onSelect,
             onPointerDown={handleResizeStart}
             onPointerMove={handleResizeMove}
             onPointerUp={handleResizeEnd}
-            title="Ziehen, um die Groesse zu aendern"
+            title="Ziehen, um die Größe zu aendern"
             className="absolute -bottom-2 -right-2 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
             style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
           />
@@ -1237,7 +1239,7 @@ const BoardNote: React.FC<BoardNoteProps> = ({ note, isSelected, onSelect, onMov
             onPointerDown={handleResizeStart}
             onPointerMove={handleResizeMove}
             onPointerUp={handleResizeEnd}
-            title="Ziehen, um die Groesse zu aendern"
+            title="Ziehen, um die Größe zu aendern"
             className="absolute -bottom-2 -right-2 w-4 h-4 rounded-sm bg-white border-2 border-gray-700 shadow"
             style={{ cursor: "nwse-resize", touchAction: "none", zIndex: 40 }}
           />
