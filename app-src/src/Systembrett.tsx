@@ -2120,7 +2120,7 @@ const Systembrett: React.FC = () => {
       {!isFullscreen && (
         <div className="w-full px-0 py-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-start justify-center">
           <div className="order-1 lg:order-2 w-full lg:flex-1 flex flex-col items-center gap-2 min-w-0">
-            <div className="w-full overflow-auto rounded-xl" style={{ maxHeight: "85vh" }}>
+            <div className="w-full overflow-auto rounded-xl">
               <div className="relative inline-block p-2">
                 <div className="sticky top-2 left-2 z-50 inline-block mb-2">
                   <Toolbar
