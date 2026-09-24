@@ -91,7 +91,7 @@ description: Coaching für Einzelpersonen und Teams in Unternehmen und Behörden
     <p>{{ site.data.de.about_p3 }}</p>
     <div class="about-credentials">
       <div class="credential">
-        <div class="credential-title">{{ site.data.de.about_cred1_title }}</div>
+        <div class="credential-title">{{ site.data[page.lang].about_cred1_title }}</div>
         <div class="credential-text">{{ site.data.de.about_cred1_text }}</div>
       </div>
 	  <div class="credential">
@@ -164,97 +164,107 @@ class="hero-image-photo"
 			{{ site.data.de.contact_p }}
 		  </p>
 		  <div class="kontakt-info">
-		  <!--  <div class="kontakt-info-item">
-			  <span class="kontakt-info-label">{{ site.data.de.contact_email_label }}</span>
-			  <span class="kontakt-info-val"><a href="mailto:{{ site.data.de.contact_email_val }}" style="color:inherit; text-decoration:none;">{{ site.data.de.contact_email_val }}</a></span>
+			  <!--  <div class="kontakt-info-item">
+				  <span class="kontakt-info-label">{{ site.data.de.contact_email_label }}</span>
+				  <span class="kontakt-info-val"><a href="mailto:{{ site.data.de.contact_email_val }}" style="color:inherit; text-decoration:none;">{{ site.data.de.contact_email_val }}</a></span>
+				</div>
+				<div class="kontakt-info-item">
+				  <span class="kontakt-info-label">{{ site.data.de.contact_phone_label }}</span>
+				  <span class="kontakt-info-val"><a href="tel:{{ site.data.de.contact_phone_val | remove: ' ' }}" style="color:inherit; text-decoration:none;">{{ site.data.de.contact_phone_val }}</a></span>
+				</div> -->
+				<div class="kontakt-info-item">
+				  <span class="kontakt-info-label">{{ site.data.de.contact_location_label }}</span>
+				  <span class="kontakt-info-val">{{ site.data.de.contact_location_val }}</span>
+				</div>
+			  </div>
 			</div>
-			<div class="kontakt-info-item">
-			  <span class="kontakt-info-label">{{ site.data.de.contact_phone_label }}</span>
-			  <span class="kontakt-info-val"><a href="tel:{{ site.data.de.contact_phone_val | remove: ' ' }}" style="color:inherit; text-decoration:none;">{{ site.data.de.contact_phone_val }}</a></span>
-			</div> -->
-			<div class="kontakt-info-item">
-			  <span class="kontakt-info-label">{{ site.data.de.contact_location_label }}</span>
-			  <span class="kontakt-info-val">{{ site.data.de.contact_location_val }}</span>
+			<div class="kontakt-form">
+		  <form id="kontaktForm" action="https://formspree.io/f/xrewaobq" method="POST">
+			<input type="text" name="_gotcha" style="display:none">
+
+			<div class="form-row">
+			  <label class="form-label" for="name">{{ site.data.de.contact_form_name }}</label>
+			  <input class="form-input" type="text" id="name" name="name" required placeholder="{{ site.data.de.contact_form_name_ph }}">
 			</div>
+			<div class="form-row">
+			  <label class="form-label" for="email">{{ site.data.de.contact_form_email }}</label>
+			  <input class="form-input" type="email" id="email" name="email" required placeholder="{{ site.data.de.contact_form_email_ph }}">
+			</div>
+			<div class="form-row">
+			  <label class="form-label" for="thema">{{ site.data.de.contact_form_topic }}</label>
+			  <select class="form-select" id="thema" name="thema">
+				<option value="Fuehrungskraefte-Coaching">{{ site.data.de.contact_opt_1 }}</option>
+				<option value="Transformation &amp; Change">{{ site.data.de.contact_opt_2 }}</option>
+				<option value="Orientierung &amp; Reflexion">{{ site.data.de.contact_opt_3 }}</option>
+				<option value="Sonstiges">{{ site.data.de.contact_opt_4 }}</option>
+			  </select>
+			</div>
+			<div class="form-row">
+			  <label class="form-label" for="nachricht">{{ site.data.de.contact_form_msg }}</label>
+			  <textarea class="form-textarea" id="nachricht" name="nachricht" placeholder="{{ site.data.de.contact_form_msg_ph }}"></textarea>
+			</div>
+			<button class="btn-submit" type="submit">{{ site.data.de.contact_form_submit }}</button>
+			<p
+			  id="kontaktFormError"
+			  class="kontakt-form-error"
+			  role="alert"
+			  aria-live="polite"
+			  data-default-message="{{ site.data[page.lang].contact_error }}"
+			></p>
+		  </form>
+		</div>
+
+		<!-- OVERLAY -->
+		<div id="kontaktOverlay" class="kontakt-overlay" aria-hidden="true">
+		  <div class="kontakt-overlay-box" role="dialog" aria-modal="true" aria-labelledby="kontaktOverlayText">
+			<p id="kontaktOverlayText" class="kontakt-overlay-text">
+			  {{ site.data[page.lang].contact_success_text }}
+			</p>
+			<button id="kontaktOverlayClose" class="btn-submit" type="button">
+			  {{ site.data[page.lang].contact_success_close }}
+			</button>
 		  </div>
 		</div>
-		<div class="kontakt-form">
-	  <form id="kontaktForm" action="https://formspree.io/f/xrewaobq" method="POST">
-		<input type="text" name="_gotcha" style="display:none">
 
-		<div class="form-row">
-		  <label class="form-label" for="name">{{ site.data.de.contact_form_name }}</label>
-		  <input class="form-input" type="text" id="name" name="name" required placeholder="{{ site.data.de.contact_form_name_ph }}">
-		</div>
-		<div class="form-row">
-		  <label class="form-label" for="email">{{ site.data.de.contact_form_email }}</label>
-		  <input class="form-input" type="email" id="email" name="email" required placeholder="{{ site.data.de.contact_form_email_ph }}">
-		</div>
-		<div class="form-row">
-		  <label class="form-label" for="thema">{{ site.data.de.contact_form_topic }}</label>
-		  <select class="form-select" id="thema" name="thema">
-			<option value="Fuehrungskraefte-Coaching">{{ site.data.de.contact_opt_1 }}</option>
-			<option value="Transformation &amp; Change">{{ site.data.de.contact_opt_2 }}</option>
-			<option value="Orientierung &amp; Reflexion">{{ site.data.de.contact_opt_3 }}</option>
-			<option value="Sonstiges">{{ site.data.de.contact_opt_4 }}</option>
-		  </select>
-		</div>
-		<div class="form-row">
-		  <label class="form-label" for="nachricht">{{ site.data.de.contact_form_msg }}</label>
-		  <textarea class="form-textarea" id="nachricht" name="nachricht" placeholder="{{ site.data.de.contact_form_msg_ph }}"></textarea>
-		</div>
-		<button class="btn-submit" type="submit">{{ site.data.de.contact_form_submit }}</button>
-		<p id="kontaktFormError" style="display:none; color:#c0392b; margin-top:1rem; font-size:0.85rem;"></p>
-	  </form>
-	</div>
+		<script>
+		(function () {
+		  var form = document.getElementById('kontaktForm');
+		  var overlay = document.getElementById('kontaktOverlay');
+		  var closeBtn = document.getElementById('kontaktOverlayClose');
+		  var errorBox = document.getElementById('kontaktFormError');
+		  if (!form || !overlay) return;
 
-	<!-- OVERLAY -->
-	<div id="kontaktOverlay" class="kontakt-overlay">
-	  <div class="kontakt-overlay-box">
-		<p class="kontakt-overlay-text">Das hat geklappt! Ich werde mich in Kürze bei Ihnen melden.</p>
-		<button id="kontaktOverlayClose" class="btn-submit" type="button">Schließen</button>
-	  </div>
-	</div>
+		  form.addEventListener('submit', function (e) {
+			e.preventDefault();
+			errorBox.classList.remove('is-visible');
+			var data = new FormData(form);
 
-	<script>
-	(function () {
-	  var form = document.getElementById('kontaktForm');
-	  var overlay = document.getElementById('kontaktOverlay');
-	  var closeBtn = document.getElementById('kontaktOverlayClose');
-	  var errorBox = document.getElementById('kontaktFormError');
-	  if (!form || !overlay) return;
-
-	  form.addEventListener('submit', function (e) {
-		e.preventDefault();
-		errorBox.style.display = 'none';
-		var data = new FormData(form);
-
-		fetch(form.action, {
-		  method: 'POST',
-		  body: data,
-		  headers: { 'Accept': 'application/json' }
-		}).then(function (response) {
-		  if (response.ok) {
-			form.reset();
-			overlay.classList.add('open');
-			document.body.classList.add('nav-open');
-		  } else {
-			response.json().then(function (json) {
-			  errorBox.textContent = (json.errors && json.errors.map(function (er) { return er.message; }).join(', ')) || 'Da ist etwas schiefgelaufen. Bitte versuche es erneut.';
-			  errorBox.style.display = 'block';
+			fetch(form.action, {
+			  method: 'POST',
+			  body: data,
+			  headers: { 'Accept': 'application/json' }
+			}).then(function (response) {
+			  if (response.ok) {
+				form.reset();
+				overlay.classList.add('open');
+				document.body.classList.add('nav-open');
+			  } else {
+				response.json().then(function (json) {
+				  errorBox.textContent = (json.errors && json.errors.map(function (er) { return er.message; }).join(', ')) || errorBox.dataset.defaultMessage;
+				  errorBox.classList.add('is-visible');
+				});
+			  }
+			}).catch(function () {
+			  errorBox.textContent = errorBox.dataset.defaultMessage;
+			  errorBox.classList.add('is-visible');
 			});
-		  }
-		}).catch(function () {
-		  errorBox.textContent = 'Da ist etwas schiefgelaufen. Bitte versuche es erneut.';
-		  errorBox.style.display = 'block';
-		});
-	  });
+		  });
 
-	  closeBtn.addEventListener('click', function () {
-		overlay.classList.remove('open');
-		document.body.classList.remove('nav-open');
-	  });
-	})();
-	</script>
+		  closeBtn.addEventListener('click', function () {
+			overlay.classList.remove('open');
+			document.body.classList.remove('nav-open');
+		  });
+		})();
+		</script>
 	  </div>
 	</section>

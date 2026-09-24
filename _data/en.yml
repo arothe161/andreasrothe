@@ -90,6 +90,10 @@ contact_form_msg: "Your message"
 contact_form_msg_ph: "How can I help you?"
 contact_form_submit: "Send message"
 
+contact_success_text: "Thank you! I will get back to you shortly."
+contact_success_close: "Close"
+contact_error: "Something went wrong. Please try again."
+
 # Footer
 footer_name: "Andreas Rothe · Executive & Leadership Coach"
 footer_impressum: "Legal Notice"

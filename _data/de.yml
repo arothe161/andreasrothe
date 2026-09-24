@@ -42,7 +42,7 @@ angebote_title_line1: ""
 angebote_title_em: ""
 
 angebot_1_title: "Führungskräfte-Coaching"
-angebot_1_desc: "Training, Fortbildung und Coaching für Führungskräfte in Unternehmen und Behörden, Begleitung in Transformationsprozessen, Team-Workshops zu New Work und Zusammenarbeit"
+angebot_1_desc: "Training, Fortbildung und Coaching für Führungskräfte in Unternehmen und Behörden, Begleitung in Transformationsprozessen, Team-Workshops zu New Work und Zusammenarbeit."
 
 angebot_2_title: "Interim Leadership"
 angebot_2_desc: "Temporäre Führung von Analysten, Product Teams und crossfunktionalen Teams oder Organisationen – als Elternzeitvertretung, Fractional Leadership oder wenn schnell Führungskapazität benötigt wird."
@@ -73,11 +73,11 @@ contact_title_line1: "Lassen Sie uns ins"
 contact_title_em: "Gespräch kommen."
 contact_p: "Vereinbaren Sie ein unverbindliches Erstgespräch (30 Min.). Wir besprechen Ihre aktuellen Herausforderungen und wie eine Zusammenarbeit aussehen kann."
 contact_email_label: "E-Mail"
-contact_email_val: "mail@andreas-rothe.de"
+contact_email_val: "herr.rothe@t-online.de"
 contact_phone_label: "Telefon"
 contact_phone_val: "+49 176 45634567"
 contact_location_label: "Standort"
-contact_location_val: "Berlin & Remote weltweit"
+contact_location_val: "Vor Ort in Berlin & Remote weltweit"
 
 contact_form_name: "Ihr Name"
 contact_form_name_ph: "Vor- und Nachname"
@@ -91,6 +91,10 @@ contact_opt_4: "Sonstiges"
 contact_form_msg: "Ihre Nachricht"
 contact_form_msg_ph: "Worum geht es in Ihrem Anliegen?"
 contact_form_submit: "Nachricht senden"
+
+contact_success_text: "Das hat geklappt! Ich werde mich in Kürze bei Ihnen melden."
+contact_success_close: "Schließen"
+contact_error: "Da ist etwas schiefgelaufen. Bitte versuchen Sie es erneut oder schreiben sie direkt an herr.rothe@t-online.de."
 
 # Footer
 footer_name: "Andreas Rothe · Leadership Coach und Trainer"

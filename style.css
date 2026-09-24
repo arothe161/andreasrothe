@@ -773,3 +773,12 @@ footer a:hover { color: var(--accent); }
   margin-bottom: 2rem;
   line-height: 1.4;
 }
+.kontakt-form-error {
+  display: none;
+  color: #d87b72;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+.kontakt-form-error.is-visible {
+  display: block;
+}
