@@ -742,3 +742,34 @@ footer a:hover { color: var(--accent); }
   .kontakt-info-item { flex-wrap: wrap; }
   footer { flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 1.5rem 5vw; }
 }
+.kontakt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(14,14,12,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.kontakt-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.kontakt-overlay-box {
+  background: var(--white);
+  padding: 3rem 2.5rem;
+  max-width: 420px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.kontakt-overlay-text {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 300;
+  color: var(--black);
+  margin-bottom: 2rem;
+  line-height: 1.4;
+}
