@@ -172,6 +172,39 @@ section {
   align-items: center;
 }
 
+.lp-split-section.lp-split-section--label {
+  grid-template-columns: 1fr 1fr;
+  column-gap: 5rem;
+  row-gap: 2rem;
+  align-items: start;
+  grid-template-areas:
+    "title body"
+    "credentials body";
+}
+.lp-split-section.lp-split-section--label .lp-split-text {
+  grid-area: title;
+}
+.lp-split-section.lp-split-section--label .about-credentials {
+  grid-area: credentials;
+  margin-top: 0;
+}
+.lp-split-section.lp-split-section--label .about-body {
+  grid-area: body;
+}
+
+@media (max-width: 900px) {
+  .lp-split-section.lp-split-section--label {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "title"
+      "body"
+      "credentials";
+    row-gap: 1rem;
+  }
+  .lp-split-section.lp-split-section--label .about-credentials {
+    margin-top: 2rem;
+  }
+}
 /* Nur die erste Split-Sektion braucht Abstand für die fixe Navigation */
 #hero,
 .lp-split-section:first-of-type {
