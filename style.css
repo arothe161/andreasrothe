@@ -115,6 +115,8 @@ nav {
   display: block;
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
+.social-link { color: inherit; display: inline-flex; }
+.social-link:hover { color: #0a66c2; }
 
 /* Hamburger Button */
 .nav-toggle {
