@@ -162,16 +162,12 @@ section {
   background: var(--border);
   margin: 0 12vw;
 }
+.hero-image {
+  align-self: start;
+  margin-top: 2.5rem;
+}
 
 /* ── HERO & SPLIT SECTIONS ── */
-
-#hero {
-  align-items: start;
-}
-
-#hero .hero-image {
-  align-self: start;
-}
 
 #hero, .lp-split-section {
   min-height: 60vh;
