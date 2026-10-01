@@ -778,7 +778,7 @@ footer a:hover { color: var(--accent); }
 
   .page-container { padding: calc(var(--nav-h) + 3rem) 5vw 4rem; }
   .page-container h1 { font-size: 2.1rem; }
-
+  .kontakt {padding: 2.5rem}
   .kontakt-info-item { flex-wrap: wrap; }
   footer { flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 1.5rem 5vw; }
 }
