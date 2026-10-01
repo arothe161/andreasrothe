@@ -30,7 +30,6 @@
     {%- comment -%} hreflang and canonical calculation {%- endcomment -%}
 	{%- assign canonical_base = site.url | append: site.baseurl -%}
 	{%- assign canonical = canonical_base | append: page.url -%}
-	<link rel="canonical" href="{{ canonical }}">
 	
 	{%- if page.alternate_url -%}
 	  {%- assign de_url = canonical_base -%}
