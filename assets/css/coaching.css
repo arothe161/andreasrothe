@@ -5,9 +5,8 @@
     padding-right: 0 !important;
   }
   .coaching-page .lp-split-section:first-of-type .lp-split-text,
-  .coaching-page .lp-split-section:first-of-type .about-body,
-  .coaching-page .lp-split-section:first-of-type .about-credentials {
-    padding-left: 1.25rem;
+  .coaching-page .lp-split-section:first-of-type .about-body {
+    padding-left: 6vw;
     padding-right: 1.25rem;
   }
 }
