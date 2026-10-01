@@ -245,12 +245,12 @@ section {
 }
 .hero-image {
   background: var(--stone);
-  border: 1px solid var(--border);
   height: 400px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   padding: 1rem;
+  margin-top: 0;
   position: relative;
   overflow: hidden;
 }
