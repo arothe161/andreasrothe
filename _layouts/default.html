@@ -6,7 +6,7 @@
     <meta name="msvalidate.01" content="35A9025FBD3965BAF856E0D7B332CBC3" />
     {%- seo -%}
 
-
+    <link rel="stylesheet" href="https://cloudflare.com">
 
     {%- comment -%} favicons and manifest preserved from original site {%- endcomment -%}
     <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
@@ -28,24 +28,24 @@
     <meta name="theme-color" content="#ffffff">
 
     {%- comment -%} hreflang and canonical calculation {%- endcomment -%}
-{%- assign canonical_base = site.url | append: site.baseurl -%}
-{%- assign canonical = canonical_base | append: page.url -%}
-<link rel="canonical" href="{{ canonical }}">
-
-{%- if page.alternate_url -%}
-  {%- assign de_url = canonical_base -%}
-  {%- assign en_url = canonical_base -%}
-  {%- if page.lang == "de" -%}
-    {%- assign de_url = de_url | append: page.url -%}
-    {%- assign en_url = en_url | append: page.alternate_url -%}
-  {%- else -%}
-    {%- assign en_url = en_url | append: page.url -%}
-    {%- assign de_url = de_url | append: page.alternate_url -%}
-  {%- endif -%}
-  <link rel="alternate" hreflang="de" href="{{ de_url }}">
-  <link rel="alternate" hreflang="en" href="{{ en_url }}">
-  <link rel="alternate" hreflang="x-default" href="{{ de_url }}">
-{%- endif -%}
+	{%- assign canonical_base = site.url | append: site.baseurl -%}
+	{%- assign canonical = canonical_base | append: page.url -%}
+	<link rel="canonical" href="{{ canonical }}">
+	
+	{%- if page.alternate_url -%}
+	  {%- assign de_url = canonical_base -%}
+	  {%- assign en_url = canonical_base -%}
+	  {%- if page.lang == "de" -%}
+	    {%- assign de_url = de_url | append: page.url -%}
+	    {%- assign en_url = en_url | append: page.alternate_url -%}
+	  {%- else -%}
+	    {%- assign en_url = en_url | append: page.url -%}
+	    {%- assign de_url = de_url | append: page.alternate_url -%}
+	  {%- endif -%}
+	  <link rel="alternate" hreflang="de" href="{{ de_url }}">
+	  <link rel="alternate" hreflang="en" href="{{ en_url }}">
+	  <link rel="alternate" hreflang="x-default" href="{{ de_url }}">
+	{%- endif -%}
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,12 +62,6 @@
   
   <body{% if page.url == '/fuehrungskraefte-coaching/' or page.url == '/en/leadership-coaching/' %} class="coaching-page"{% endif %}>
     {% include header.html %}
-
-{% comment %}
-  Ersetzt die bisherige URL-Vergleichskette in _layouts/default.html durch ein Front-Matter-Flag. Ab jetzt entscheidet jede Seite SELBST (in ihrem eigenen Front Matter), ob sie volle Breite (Landingpage-Stil) oder den schmalen .page-container-Wrapper (Textseiten-Stil) bekommt.
-
-  Vorteil: Fuer neue Landingpages muss default.html nie wieder angefasst werden. Einfach "fullwidth: true" ins Front Matter der neuen Seite setzen.
-{% endcomment %}
 
     {% if page.fullwidth %}
       {{ content }}
@@ -127,6 +121,6 @@
 			page_location: window.location.href
 		  });
 		}, true);
-		</script>
+	</script>
   </body>
 </html>
