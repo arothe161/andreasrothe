@@ -394,5 +394,24 @@ Die Zeitangaben beziehen sich auf das Transkript. Die Fragen sind sinngemäß un
 </ul>
 </li>
 </ol>
+<div class="video-consent" data-video-id="7LogzSDRwj4" data-video-title="Coaching-Gespräch Carolin und Gunther Schmidt">
+  <p>Dieses Video liegt auf YouTube. Wenn du es startest, werden Daten an YouTube übertragen. Mehr dazu steht in der <a href="/datenschutz/">Datenschutzerklärung</a>.</p>
+  <button type="button" class="btn-submit video-consent-btn">Video laden</button>
+</div>
+
+<script>
+document.querySelectorAll('.video-consent').forEach(function (box) {
+  box.querySelector('.video-consent-btn').addEventListener('click', function () {
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://www.youtube-nocookie.com/embed/' + box.dataset.videoId + '?rel=0&autoplay=1';
+    iframe.title = box.dataset.videoTitle;
+    iframe.allow = 'encrypted-media; picture-in-picture';
+    iframe.allowFullscreen = true;
+    box.innerHTML = '';
+    box.classList.add('is-loaded');
+    box.appendChild(iframe);
+  });
+});
+</script>
 
 </body></html>
