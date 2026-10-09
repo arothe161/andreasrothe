@@ -4,6 +4,7 @@ title: Andreas Rothe Coaching
 description: Coaching, Interim Leadership, Lehre
 url: "https://andreas-rothe.de"
 baseurl: ""
+
 exclude:
   - app-src
   - githubpushskripts
@@ -21,7 +22,7 @@ seo:
   social:
     name: Andreas Rothe
     links:
-      - "https://www.linkedin.com/in/andreas-rothe-0ba15612b/" # optional
+      - "https://www.linkedin.com/in/andreas-rothe-0ba15612b/"
 
 defaults:
   - scope:
@@ -29,3 +30,8 @@ defaults:
       type: "pages"
     values:
       layout: "default"
+
+collections:
+  wissen:
+    output: true
+    permalink: /wissen/:slug/
