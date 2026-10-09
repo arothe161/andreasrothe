@@ -4,6 +4,10 @@ title: Andreas Rothe Coaching
 description: Coaching, Interim Leadership, Lehre
 url: "https://andreas-rothe.de"
 baseurl: ""
+exclude:
+  - app-src
+  - githubpushskripts
+  - gitpushskripts.txt
 
 plugins:
   - jekyll-seo-tag
