@@ -47,11 +47,11 @@
         <div class="btn-group view-modes">
           <button id="btnView2D" class="btn btn-sm btn-toggle active" title="Draufsicht (2D Vogelperspektive)">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 3h18v18H3V3zm2 2v14h14V5H5z"/></svg>
-            2D Aufsicht
+            2D
           </button>
           <button id="btnView25D" class="btn btn-sm btn-toggle" title="Perspektivische 3D/Schrägansicht">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="m12 1.5 9 5.2v10.6l-9 5.2-9-5.2V6.7l9-5.2zm0 2.3L5.3 8.2 12 12.1l6.7-3.9L12 3.8zM4.5 9.7v7.6L11 21v-7.6L4.5 9.7zm15 0-6.5 3.7V21l6.5-3.7V9.7z"/></svg>
-            3D Perspektive
+            3D
           </button>
         </div>
 
@@ -73,15 +73,20 @@
 
       <!-- RIGHT HEADER ACTIONS -->
       <div class="header-right">
+        <!-- ZOOM-STEUERUNG -->
+        <div class="zoom-controls">
+          <button id="btnZoomIn" class="btn btn-icon btn-sm" title="Vergrößern">+</button>
+          <span id="zoomLevel">100%</span>
+          <button id="btnZoomOut" class="btn btn-icon btn-sm" title="Verkleinern">−</button>
+          <button id="btnCenterBoard" class="btn btn-icon btn-sm" title="Zentrieren">⛶</button>
+        </div>
+
         <div class="btn-group">
           <button id="btnSoundToggle" class="btn btn-icon" title="Haptischer Holz-Klicksound an/aus">
             <svg id="soundIconOn" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             <svg id="soundIconOff" viewBox="0 0 24 24" width="18" height="18" style="display:none;"><path fill="currentColor" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>
           </button>
           
-          <button id="btnZoomReset" class="btn btn-icon" title="Ansicht zentrieren">
-            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-          </button>
           <button id="btnEnterFocus" class="btn btn-secondary" title="Fokus-Modus: Vollbildansicht nur mit Brett und Notizen">
             <span>🎯</span> Fokus-Modus
           </button>
@@ -94,7 +99,7 @@
             Export
           </button>
 
-          <button id="btnSaveSession" class="btn btn-primary" title="Sitzung im Browser speichern oder Datei laden">
+          <button id="btnSaveSession" class="btn btn-secondary" title="Sitzung im Browser speichern oder Datei laden">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
             Speichern
           </button>
@@ -107,45 +112,111 @@
       
       <!-- LEFT TOOLBAR / DRAWER -->
       <aside class="sidebar-left" id="sidebarLeft">
-        <nav class="sidebar-tabs">
-          <button class="tab-btn active" data-tab="tab-figures">Figuren</button>
-          <button class="tab-btn" data-tab="tab-symbols">Symbole</button>
-          <button class="tab-btn" data-tab="tab-relations">Beziehung</button>
-          <button class="tab-btn" data-tab="tab-templates">Vorlagen</button>
-          <button class="tab-btn" data-tab="tab-board-settings">Brett</button>
-        </nav>
+        <div class="sidebar-head">
+          <span class="sidebar-title">Werkzeuge</span>
+          <button id="btnCollapseLeft" class="sidebar-collapse-btn" title="Menü einklappen">‹</button>
+        </div>
+        <button id="btnExpandLeft" class="sidebar-rail-btn" title="Menü ausklappen">
+          <span class="rail-icon">›</span><span class="rail-label">Werkzeuge</span>
+        </button>
 
-        <div class="sidebar-tab-content">
-          
-          <!-- TAB 1: SYSTEMISCHE FIGUREN -->
-          <div id="tab-figures" class="tab-pane active">
+        <div class="sidebar-tab-content accordion" id="leftAccordion">
+          <button class="acc-header open" data-acc="tab-templates" aria-expanded="true">
+            <span>Vorlagen</span><span class="acc-chevron">▾</span>
+          </button>
+<div id="tab-templates" class="acc-body open">
             <div class="pane-header">
-              <h3>Systemische Figuren</h3>
+              <h3>Aufstellungs-Vorlagen</h3>
+              <p class="pane-hint">Schnellstart mit bewährten systemischen Settings.</p>
+            </div>
+
+            <div class="template-list">
+              <div class="template-card highlight-template" data-template="leer">
+                <div class="template-name">Leeres Systembrett</div>
+                <div class="template-desc">Unberührtes Brett für freie, klientenzentrierte Aufstellungen.</div>
+              </div>
+              <div class="template-card" data-template="herkunftsfamilie">
+                <div class="template-name">Herkunftsfamilie</div>
+                <div class="template-desc">Vater, Mutter, Geschwister, Klient(in) und Ahnenfeld.</div>
+              </div>
+              <div class="template-card" data-template="patchwork">
+                <div class="template-name">Patchwork-Familie</div>
+                <div class="template-desc">Gegenwartsfamilie, Ex-Partner und Kinder aus früheren Beziehungen.</div>
+              </div>
+              <div class="template-card" data-template="organisation">
+                <div class="template-name">Team & Organisation</div>
+                <div class="template-desc">Führungskraft, Team, Schnittstellen, Kunden, Projektziel & Hindernis.</div>
+              </div>
+              <div class="template-card" data-template="inneres-team">
+                <div class="template-name">Inneres Team (Schulz von Thun)</div>
+                <div class="template-desc">Ich-Kern, Antreiber, Kritiker, Bewahrer, Kindliches Ich, Visionär.</div>
+              </div>
+              <div class="template-card" data-template="tetralemma">
+                <div class="template-name">Tetralemma (Entscheidungsfindung)</div>
+                <div class="template-desc">1. Das Eine, 2. Das Andere, 3. Beides, 4. Keines von Beidem, 5. Das Fünfte.</div>
+              </div>
+              <div class="template-card" data-template="symptomaufstellung">
+                <div class="template-name">Symptom- & Ressourcen-Aufstellung</div>
+                <div class="template-desc">Klient, Symptom (Krankheit/Blockade), Gewinn/Funktion und Ressource.</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="acc-header" data-acc="tab-figures" aria-expanded="false">
+            <span>Figuren</span><span class="acc-chevron">▾</span>
+          </button>
+<div id="tab-figures" class="acc-body">
+            <div class="pane-header">
+              <h3>Figuren</h3>
               <p class="pane-hint">Klicke eine Figur an oder ziehe sie auf das Brett.</p>
             </div>
 
-            <!-- Schnell-Auswahl Original DSC1833 Figuren -->
-            <div class="section-label">Original Holzfiguren (mit Augen ••)</div>
-            <div class="figure-quick-grid">
+			<!-- Farbige Figuren -->
+            <div class="figure-quick-grid color-figures-row">
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-rot" title="Rote Spielfigur mit Augen (Vitalität, Herz, Konflikt)">
+                <div class="fig-preview pegdoll mittel" style="background:#c0392b;"><span class="eyes" style="color:#fff;">• •</span></div>
+                <span>Rot</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-blau" title="Blaue Spielfigur mit Augen (Klarheit, Struktur)">
+                <div class="fig-preview pegdoll mittel" style="background:#2980b9;"><span class="eyes" style="color:#fff;">• •</span></div>
+                <span>Blau</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-gruen" title="Grüne Spielfigur mit Augen (Wachstum, Hoffnung)">
+                <div class="fig-preview pegdoll mittel" style="background:#27ae60;"><span class="eyes" style="color:#fff;">• •</span></div>
+                <span>Grün</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-schwarz" title="Schwarze Spielfigur mit Augen (Grenze, Tiefe)">
+                <div class="fig-preview pegdoll mittel" style="background:#1a1a1a;"><span class="eyes" style="color:#fff;">• •</span></div>
+                <span>Schwarz</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-weiss" title="Weiße Spielfigur mit Augen (Neutralität, Neubeginn)">
+                <div class="fig-preview pegdoll mittel" style="background:#f4f4f4; border:1px solid #ccc;"><span class="eyes" style="color:#111;">• •</span></div>
+                <span>Weiß</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="eckig-gross-holz" title="Klassische eckige Holzfigur">
+                <div class="fig-preview wood eckig gross"><span class="notch"></span></div>
+                <span>Holzwürfel</span>
+              </button>
+
               <button class="quick-figure-btn" draggable="true" data-create="kegel-gross-holz" title="Naturholz Kegelfigur Groß mit Augen (Erwachsene / Leitung)">
                 <div class="fig-preview wood pegdoll gross"><span class="eyes">• •</span></div>
                 <span>Kegel Groß</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-mittel-holz" title="Naturholz Kegelfigur Mittel mit Augen (Jugendliche / Kollege)">
-                <div class="fig-preview wood pegdoll mittel"><span class="eyes">• •</span></div>
-                <span>Kegel Mittel</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-klein-holz" title="Naturholz Kegelfigur Klein mit Augen (Kind / Aspekt)">
-                <div class="fig-preview wood pegdoll klein"><span class="eyes">• •</span></div>
-                <span>Kegel Klein</span>
               </button>
               <button class="quick-figure-btn" draggable="true" data-create="zylinder-gross-holz" title="Naturholz Zylinder Groß mit Augen">
                 <div class="fig-preview wood zylinder gross"><span class="eyes">• •</span></div>
                 <span>Zylinder Groß</span>
               </button>
-              <button class="quick-figure-btn" draggable="true" data-create="zylinder-mittel-holz" title="Naturholz Zylinder Mittel mit Augen">
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-mittel-holz" title="Naturholz Kegelfigur Mittel mit Augen (Jugendliche / Kollege)">
+                <div class="fig-preview wood pegdoll mittel"><span class="eyes">• •</span></div>
+                <span>Kegel Mittel</span>
+              </button>
+			  <button class="quick-figure-btn" draggable="true" data-create="zylinder-mittel-holz" title="Naturholz Zylinder Mittel mit Augen">
                 <div class="fig-preview wood zylinder mittel"><span class="eyes">• •</span></div>
                 <span>Zylinder Mittel</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-klein-holz" title="Naturholz Kegelfigur Klein mit Augen (Kind / Aspekt)">
+                <div class="fig-preview wood pegdoll klein"><span class="eyes">• •</span></div>
+                <span>Kegel Klein</span>
               </button>
               <button class="quick-figure-btn" draggable="true" data-create="kloetzchen-holz" title="Rechteckiges Holzklötzchen / Säule (Barriere, Stufe, Ressource)">
                 <div class="fig-preview wood block"><span class="block-icon">🪵</span></div>
@@ -153,38 +224,9 @@
               </button>
             </div>
 
-            <!-- Farbige Figuren aus dem Set -->
-            <div class="section-label">Farbige Spielfiguren (Lackiert wie im Foto)</div>
-            <div class="figure-quick-grid color-figures-row">
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-rot" title="Rote Spielfigur mit Augen (Vitalität, Herz, Konflikt)">
-                <div class="fig-preview pegdoll mittel" style="background:#c0392b;"><span class="eyes" style="color:#fff;">• •</span></div>
-                <span>Rot (2x)</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-blau" title="Blaue Spielfigur mit Augen (Klarheit, Struktur)">
-                <div class="fig-preview pegdoll mittel" style="background:#2980b9;"><span class="eyes" style="color:#fff;">• •</span></div>
-                <span>Blau (2x)</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-gruen" title="Grüne Spielfigur mit Augen (Wachstum, Hoffnung)">
-                <div class="fig-preview pegdoll mittel" style="background:#27ae60;"><span class="eyes" style="color:#fff;">• •</span></div>
-                <span>Grün (2x)</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-schwarz" title="Schwarze Spielfigur mit Augen (Grenze, Tiefe)">
-                <div class="fig-preview pegdoll mittel" style="background:#1a1a1a;"><span class="eyes" style="color:#fff;">• •</span></div>
-                <span>Schwarz (1x)</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-weiss" title="Weiße Spielfigur mit Augen (Neutralität, Neubeginn)">
-                <div class="fig-preview pegdoll mittel" style="background:#f4f4f4; border:1px solid #ccc;"><span class="eyes" style="color:#111;">• •</span></div>
-                <span>Weiß (1x)</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="eckig-gross-holz" title="Klassische eckige Holzfigur">
-                <div class="fig-preview wood eckig gross"><span class="notch"></span></div>
-                <span>Eckig Holz</span>
-              </button>
-            </div>
-
-            <div class="section-label">Freie Farb- & Form-Gestaltung</div>
+        <!--    <div class="section-label">Freie Farb- & Form-Gestaltung</div>
             <div class="color-palette-selector">
-              <span class="color-dot active" data-color="wood-light" title="Helle Buche / Birke (Original wie Foto)" style="background:#eedbc0; border:1px solid #b89870;"></span>
+              <span class="color-dot active" data-color="wood-light" title="Helle Buche / Birke" style="background:#eedbc0; border:1px solid #b89870;"></span>
               <span class="color-dot" data-color="#c0392b" title="Rot" style="background:#c0392b"></span>
               <span class="color-dot" data-color="#2980b9" title="Blau" style="background:#2980b9"></span>
               <span class="color-dot" data-color="#27ae60" title="Grün" style="background:#27ae60"></span>
@@ -221,7 +263,7 @@
               <button id="btnCreateCustomFigure" class="btn btn-primary btn-block btn-sm">
                 + Figur auf Brett setzen
               </button>
-            </div>
+            </div>-->
 
             <div class="quick-helpers">
               <button id="btnClearBoard" class="btn btn-outline-danger btn-xs btn-block">
@@ -230,8 +272,10 @@
             </div>
           </div>
 
-          <!-- TAB 2: SYMBOLE & RESSOURCEN -->
-          <div id="tab-symbols" class="tab-pane">
+          <button class="acc-header" data-acc="tab-symbols" aria-expanded="false">
+            <span>Symbole</span><span class="acc-chevron">▾</span>
+          </button>
+<div id="tab-symbols" class="acc-body">
             <div class="pane-header">
               <h3>Symbole & Ressourcen</h3>
               <p class="pane-hint">Für Werte, Ziele, Symptome, Hindernisse oder Ressourcensteine.</p>
@@ -281,30 +325,32 @@
             </div>
           </div>
 
-          <!-- TAB 3: BEZIEHUNGEN & BÄNDER -->
-          <div id="tab-relations" class="tab-pane">
+          <button class="acc-header" data-acc="tab-relations" aria-expanded="false">
+            <span>Beziehungen</span><span class="acc-chevron">▾</span>
+          </button>
+<div id="tab-relations" class="acc-body">
             <div class="pane-header">
               <h3>Beziehungsbänder & Kordeln</h3>
-              <p class="pane-hint">Klicke eine Kordel oder Linie an und wähle zwei Figuren.</p>
+              <p class="pane-hint">Wähle eine Kordel oder Linie, klicke die erste Figur an – die Linie folgt dem Mauszeiger, bis du die Zielfigur anklickst. Esc bricht ab.</p>
             </div>
 
-            <div class="section-label">Original Kordeln (wie im Foto)</div>
+            <div class="section-label">Kordeln</div>
             <div class="relation-tool-buttons">
               <button class="btn btn-outline btn-sm btn-block relation-mode-btn" data-relation-type="solid" data-color="#c0392b">
                 <span class="line-sample" style="background:#c0392b; height:3px; border-radius:2px;"></span>
-                Rote Kordel (Bindung / Loyalität)
+                Rot (Bindung / Loyalität)
               </button>
               <button class="btn btn-outline btn-sm btn-block relation-mode-btn" data-relation-type="solid" data-color="#e8decb">
                 <span class="line-sample" style="background:#e8decb; height:3px; border-radius:2px; border:1px solid #999;"></span>
-                Naturweiße Kordel (Beziehung / Kontakt)
+                Weiß (Beziehung / Kontakt)
               </button>
               <button class="btn btn-outline btn-sm btn-block relation-mode-btn" data-relation-type="solid" data-color="#222222">
                 <span class="line-sample" style="background:#222222; height:3px; border-radius:2px;"></span>
-                Schwarze Kordel (Grenze / Distanz)
+                Schwarz (Grenze / Distanz)
               </button>
             </div>
 
-            <div class="section-label mt-3">Weitere Systemische Dynamiken</div>
+            <div class="section-label mt-3">Weitere Dynamiken</div>
             <div class="relation-tool-buttons">
               <button class="btn btn-outline btn-sm btn-block relation-mode-btn" data-relation-type="conflict" data-color="#c0392b">
                 <span class="line-sample zigzag"></span>
@@ -335,72 +381,31 @@
             </div>
           </div>
 
-          <!-- TAB 4: VORLAGEN (TEMPLATES) -->
-          <div id="tab-templates" class="tab-pane">
-            <div class="pane-header">
-              <h3>Aufstellungs-Vorlagen</h3>
-              <p class="pane-hint">Schnellstart mit bewährten systemischen Settings.</p>
-            </div>
-
-            <div class="template-list">
-              <div class="template-card highlight-template" data-template="ideen-kollektiv">
-                <div class="template-name">🌟 Ideen-Kollektiv Set (wie DSC1833)</div>
-                <div class="template-desc">Original-Aufbau wie auf dem Produktfoto: Kegelfiguren mit Augen, Farbgruppe, Zylinder und Klötzchen auf einem Brett.</div>
-              </div>
-              <div class="template-card" data-template="leer">
-                <div class="template-name">Leeres Systembrett</div>
-                <div class="template-desc">Unberührtes Brett für freie, klientenzentrierte Aufstellungen.</div>
-              </div>
-              <div class="template-card" data-template="herkunftsfamilie">
-                <div class="template-name">Herkunftsfamilie</div>
-                <div class="template-desc">Vater, Mutter, Geschwister, Klient(in) und Ahnenfeld.</div>
-              </div>
-              <div class="template-card" data-template="patchwork">
-                <div class="template-name">Patchwork-Familie</div>
-                <div class="template-desc">Gegenwartsfamilie, Ex-Partner und Kinder aus früheren Beziehungen.</div>
-              </div>
-              <div class="template-card" data-template="organisation">
-                <div class="template-name">Team & Organisation</div>
-                <div class="template-desc">Führungskraft, Team, Schnittstellen, Kunden, Projektziel & Hindernis.</div>
-              </div>
-              <div class="template-card" data-template="inneres-team">
-                <div class="template-name">Inneres Team (Schulz von Thun)</div>
-                <div class="template-desc">Ich-Kern, Antreiber, Kritiker, Bewahrer, Kindliches Ich, Visionär.</div>
-              </div>
-              <div class="template-card" data-template="tetralemma">
-                <div class="template-name">Tetralemma (Entscheidungsfindung)</div>
-                <div class="template-desc">1. Das Eine, 2. Das Andere, 3. Beides, 4. Keines von Beidem, 5. Das Fünfte.</div>
-              </div>
-              <div class="template-card" data-template="symptomaufstellung">
-                <div class="template-name">Symptom- & Ressourcen-Aufstellung</div>
-                <div class="template-desc">Klient, Symptom (Krankheit/Blockade), Gewinn/Funktion und Ressource.</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TAB 5: BRETT-EINSTELLUNGEN -->
-          <div id="tab-board-settings" class="tab-pane">
+          <button class="acc-header" data-acc="tab-board-settings" aria-expanded="false">
+            <span>Brett</span><span class="acc-chevron">▾</span>
+          </button>
+<div id="tab-board-settings" class="acc-body">
             <div class="pane-header">
               <h3>Brett-Konfiguration</h3>
               <p class="pane-hint">Gestalte das Systembrett nach deinen Beratungsvorlieben.</p>
             </div>
 
-            <div class="form-group">
-              <label>Brett-Typ & Form:</label>
-              <div class="btn-group btn-block">
-                <button class="btn btn-xs active board-shape-btn" data-shape="ideen-kollektiv" title="Original Ideen-Kollektiv (Klassiker mit gewellter Trennlinie)">Ideen-Kollektiv</button>
-                <button class="btn btn-xs board-shape-btn" data-shape="single" title="Einteiliges glattes Rechteck">Einteilig</button>
-                <button class="btn btn-xs board-shape-btn" data-shape="round" title="Rundes Systembrett">Rund</button>
-                <button class="btn btn-xs board-shape-btn" data-shape="split" title="Klassisch gerade geteilt">Gerade geteilt</button>
+            <div class="pane-header">
+              <h4>Brett-Typ & Form:</h4>
+              <div class="btn-group btn-block board-shape-group">
+                <button class="btn btn-sm btn-toggle board-shape-btn active" data-shape="classic" title="Klassiker mit gewellter Trennlinie">Klassiker</button>
+                <button class="btn btn-sm btn-toggle board-shape-btn" data-shape="single" title="Einteiliges glattes Rechteck">Einteilig</button>
+                <button class="btn btn-sm btn-toggle board-shape-btn" data-shape="round" title="Rundes Systembrett">Rund</button>
+                <button class="btn btn-sm btn-toggle board-shape-btn" data-shape="split" title="Klassisch gerade geteilt">Gerade geteilt</button>
               </div>
             </div>
 
             <!-- 1-BRETT VS GETRENNT SCHNELLWAHL -->
-            <div class="form-group">
-              <label>Zustand des Brettes:</label>
+            <div class="pane-header" id="boardStateGroup">
+              <h4>Geteiltes Brett:</h4>
               <div class="btn-group btn-block">
-                <button class="btn btn-xs active" id="btnSetUnified">🔗 1 Brett (Default)</button>
-                <button class="btn btn-xs" id="btnSetSplit">✂️ Brett trennen</button>
+                <button class="btn btn-sm btn-toggle active" id="btnSetUnified">🔗 1 Brett (Default)</button>
+                <button class="btn btn-sm btn-toggle" id="btnSetSplit">✂️ Brett trennen</button>
               </div>
             </div>
 
@@ -416,16 +421,16 @@
             <div class="form-group">
               <label class="checkbox-label" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                 <input type="checkbox" id="checkLaserBorder" checked>
-                <span style="font-size:12px;">Gelaserte Randlinie (wie DSC1833)</span>
+                <span style="font-size:12px;">Gelaserte Randlinie</span>
               </label>
               <p class="field-hint">Feine, dunkelbraune Lasergravur parallel zur Kante.</p>
             </div>
 
-            <div class="form-group">
-              <label>Holzart / Oberfläche:</label>
+            <div class="pane-header">
+              <h4>Holzart / Oberfläche:</h4>
               <div class="wood-picker-grid">
                 <button class="wood-choice active" data-wood="buche-hell" style="background:#f5e8d3; color:#422a15;">
-                  <span>Helle Buche / Birke (DSC1833)</span>
+                  <span>Helle Buche / Birke</span>
                 </button>
                 <button class="wood-choice" data-wood="eiche" style="background:#b38b59; color:#fff;">
                   <span>Klassische Eiche</span>
@@ -438,13 +443,162 @@
                 </button>
               </div>
             </div>
-
-            <div class="form-group">
-              <label>Außenfeld (Systemgrenze):</label>
-              <p class="field-hint">Figuren können auch außerhalb des Brettes platziert werden (symbolisiert z.B. Ausgeschlossene oder Beobachter).</p>
-            </div>
           </div>
 
+        </div>
+
+        <!-- INSPEKTOR: überlagert das linke Menü, solange eine Figur ausgewählt ist -->
+        <div class="inspector-overlay" id="inspectorOverlay">
+          <div class="inspector-overlay-head">
+            <button id="btnCloseInspector" class="btn btn-secondary btn-sm" title="Inspektor schließen (Esc)">‹ Werkzeuge</button>
+            <span class="sidebar-title">Inspektor</span>
+          </div>
+          <div class="inspector-overlay-body">
+          <div id="tab-inspector" class="inspector-pane">
+            
+            <div id="inspectorEmptyState" class="empty-inspector-state">
+              <div class="empty-icon">👉</div>
+              <h4>Keine Figur ausgewählt</h4>
+              <p>Klicke eine Figur auf dem Brett an, um ihre Blickrichtung, Rolle, Befinden und Beziehungen einzustellen.</p>
+            </div>
+
+            <div id="inspectorActiveContent" class="inspector-active-content" style="display:none;">
+              <div class="inspector-header">
+                <div class="inspector-fig-preview" id="inspPreview"></div>
+                <div class="inspector-fig-title">
+                  <input type="text" id="inspNameInput" class="input-text" placeholder="Name / Rolle der Figur">
+                  <span id="inspTypeSubtitle" class="fig-type-badge">Eckig Groß • Holz</span>
+                </div>
+              </div>
+              <!-- GESTALTUNG DER FIGUR (FARBE, FORM, GRÖSSE) -->
+              <div class="inspector-card">
+                <label class="card-title">Erscheinungsbild anpassen</label>
+                
+                <div class="builder-row mt-2">
+                  <label>Form:</label>
+                  <div class="btn-group insp-shape-select">
+                    <button class="btn btn-xs" data-shape="eckig">Eckig</button>
+                    <button class="btn btn-xs" data-shape="rund">Rund</button>
+                    <button class="btn btn-xs" data-shape="kegel">Kegel</button>
+           <!--     <button class="btn btn-xs" data-shape="prisma">Prisma</button>-->
+                  </div>
+                </div>
+
+                <div class="builder-row">
+                  <label>Größe:</label>
+                  <div class="btn-group insp-size-select">
+                    <button class="btn btn-xs" data-size="gross">Groß</button>
+                    <button class="btn btn-xs" data-size="mittel">Mittel</button>
+                    <button class="btn btn-xs" data-size="klein">Klein</button>
+                  </div>
+                </div>
+
+                <div class="builder-row">
+                  <label>Farbe:</label>
+                  <div class="color-palette-selector compact" id="inspColorPicker">
+                    <span class="color-dot" data-color="#2c3e50" style="background:#2c3e50"></span>
+                    <span class="color-dot" data-color="#c0392b" style="background:#c0392b"></span>
+                    <span class="color-dot" data-color="#2980b9" style="background:#2980b9"></span>
+                    <span class="color-dot" data-color="#27ae60" style="background:#27ae60"></span>
+                    <span class="color-dot" data-color="#f39c12" style="background:#f39c12"></span>
+                    <span class="color-dot" data-color="#8e44ad" style="background:#8e44ad"></span>
+                    <span class="color-dot" data-color="#ecf0f1" style="background:#ecf0f1; border:1px solid #ccc;"></span>
+                    <span class="color-dot" data-color="#111111" style="background:#111111"></span>
+                    <span class="color-dot" data-color="wood-light" style="background:#d8b182"></span>
+                    <span class="color-dot" data-color="wood-dark" style="background:#5c3a21"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BLICKRICHTUNG & ROTATION -->
+              <div class="inspector-card">
+                <div class="card-title-row">
+                  <label class="card-title">Blickrichtung / Augen</label>
+                  <span id="inspRotationAngle" class="badge-angle">0° (Norden)</span>
+                </div>
+              <!--  
+                <div class="rotation-dial-container">
+                  <div class="rotation-dial" id="rotationDial">
+                    <div class="dial-marker" id="dialMarker"></div>
+                    <div class="dial-needle"></div>
+                    <div class="dial-compass-points">
+                      <span class="cp n">N</span>
+                      <span class="cp o">O</span>
+                      <span class="cp s">S</span>
+                      <span class="cp w">W</span>
+                    </div>
+                  </div>
+                  <div class="quick-turn-buttons">
+                    <button class="btn btn-xs btn-outline" id="btnTurnLeft45" title="45° nach links drehen">↶ -45°</button>
+                    <button class="btn btn-xs btn-outline" id="btnTurnRight45" title="45° nach rechts drehen">↷ +45°</button>
+                    <button class="btn btn-xs btn-outline btn-block" id="btnTurn180" title="Um 180 Grad umdrehen (Blick abwenden)">180° Wenden</button>
+                  </div>
+                </div>
+				-->
+                <div class="pane-header">
+                  <h4>Blick ausrichten auf:</h4>
+                  <div class="flex gap-1">
+                    <select id="inspTargetLookSelect" class="select-sm flex-1">
+                      <option value="">Andere Figur wählen</option>
+                    </select>
+                    <button id="btnAlignLookTo" class="btn btn-xs btn-secondary">Ausrichten</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SYSTEMISCHE PERSPEKTIVE (EGO-VIEW) -->
+              <div class="inspector-card highlight-card">
+                <div class="card-title-row">
+                  <label class="card-title">Perspektivenwechsel</label>
+                  <span class="badge-systemic">Subjektive Sicht</span>
+                </div>
+                <p class="card-desc">Wie erlebt diese Figur die Aufstellung? Was nimmt sie wahr, wer steht in ihrem Rücken?</p>
+                <button id="btnActivatePov" class="btn btn-primary btn-sm btn-block">
+                  <svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:middle;margin-right:4px;"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 13c-3.03 0-5.5-2.47-5.5-5.5S8.97 6.5 12 6.5 17.5 8.97 17.5 12s-2.47 5.5-5.5 5.5z"/></svg>
+                  Blick aus den Augen dieser Figur
+                </button>
+                <div id="povSummaryBox" class="pov-summary-box mt-2">
+                  <div class="pov-field">
+                    <span class="label">Im Blickfeld:</span>
+                    <span id="povVisibleList" class="val">Keine</span>
+                  </div>
+                  <div class="pov-field">
+                    <span class="label">Im Rücken:</span>
+                    <span id="povBackList" class="val">Keine</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BEFINDEN & SKALIERUNG -->
+              <div class="inspector-card">
+                <div class="card-title-row">
+                  <label class="card-title">Skalierung / Befinden</label>
+                  <span id="inspScaleValue" class="badge-scale">5 / 10</span>
+                </div>
+                <p class="card-desc">Wie gut steht die Figur an diesem Platz? (1 = sehr belastet, 10 = vollkommen kraftvoll)</p>
+                <input type="range" id="inspScaleSlider" min="1" max="10" value="5" class="slider-input">
+                <div class="scale-labels">
+                  <span>1 (schwer)</span>
+                  <span>5 (neutral)</span>
+                  <span>10 (gelöst)</span>
+                </div>
+              </div>
+
+              <!-- FIGUR NOTIZEN -->
+              <div class="inspector-card">
+                <label class="card-title">Figuren-Notiz & Körpergefühl</label>
+                <textarea id="inspNotesInput" class="textarea-sm" placeholder="z.B. Druck auf der Brust, schaut nach unten, Loyalitätskonflikt..."></textarea>
+              </div>
+
+              <!-- AKTIONEN -->
+              <div class="inspector-actions">
+                <button id="btnDuplicateFigure" class="btn btn-secondary btn-sm">Duplizieren</button>
+                <button id="btnDeleteFigure" class="btn btn-danger btn-sm">Löschen</button>
+              </div>
+            </div>
+
+          </div>
+          </div>
         </div>
       </aside>
 
@@ -460,13 +614,6 @@
           </div>
         </div>
 
-        <div class="zoom-controls">
-          <button id="btnZoomIn" class="btn btn-icon btn-sm" title="Vergrößern">+</button>
-          <span id="zoomLevel">100%</span>
-          <button id="btnZoomOut" class="btn btn-icon btn-sm" title="Verkleinern">−</button>
-          <button id="btnCenterBoard" class="btn btn-icon btn-sm" title="Zentrieren">⛶</button>
-        </div>
-
         <!-- INTERACTIVE CANVAS / SVG BOARD CONTAINER -->
         <div class="board-viewport" id="boardViewport">
           <div class="board-transform-container" id="boardTransform">
@@ -474,7 +621,7 @@
             <!-- SVG LAYER FOR BOARD, GRID, CONES, SIGHTLINES, FIGURES -->
             <svg id="boardSvg" class="board-svg" width="1600" height="1200" viewBox="0 0 1600 1200">
               <defs>
-                <!-- IDEEN-KOLLEKTIV BUCHE/BIRKE GRADIENTS (DSC1833) -->
+                <!-- BUCHE/BIRKE GRADIENTEN -->
                 <linearGradient id="birchGradLeft" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#fdf4e3" />
                   <stop offset="40%" stop-color="#f7e8d0" />
@@ -487,18 +634,24 @@
                   <stop offset="80%" stop-color="#efd9bd" />
                   <stop offset="100%" stop-color="#e5cca9" />
                 </linearGradient>
-                <!-- WOOD GRAIN OVERLAY -->
-                <pattern id="birchGrainOverlay" width="300" height="20" patternUnits="userSpaceOnUse">
-                  <line x1="0" y1="5" x2="300" y2="5" stroke="#7a5528" stroke-width="0.75" stroke-opacity="0.08" stroke-dasharray="80 3 120 4"/>
-                  <line x1="0" y1="12" x2="300" y2="12" stroke="#7a5528" stroke-width="0.5" stroke-opacity="0.06" stroke-dasharray="40 2 160 3"/>
-                  <line x1="0" y1="18" x2="300" y2="18" stroke="#7a5528" stroke-width="0.6" stroke-opacity="0.07" stroke-dasharray="90 4 70 3"/>
-                </pattern>
+                <linearGradient id="birchGradFull" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fdf4e3" />
+                  <stop offset="40%" stop-color="#f7e8d0" />
+                  <stop offset="80%" stop-color="#eed8bc" />
+                  <stop offset="100%" stop-color="#e2c8a7" />
+                </linearGradient>
 
-                <!-- WOOD TEXTURE FILTERS -->
-                <filter id="woodGrainFilter" x="0%" y="0%" width="100%" height="100%">
-                  <feTurbulence type="fractalNoise" baseFrequency="0.04 0.005" numOctaves="4" result="noise"/>
-                  <feColorMatrix type="matrix" values="0.3 0 0 0 0.7  0 0.25 0 0 0.5  0 0 0.2 0 0.3  0 0 0 1 0" in="noise" result="coloredNoise"/>
-                  <feBlend mode="multiply" in="SourceGraphic" in2="coloredNoise"/>
+                <!-- HOLZMASERUNG: Faserstruktur als Filter (bleibt auch im PNG-Export erhalten) -->
+                <filter id="woodGrainTex" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+                  <!-- feine, langgezogene Fasern -->
+                  <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.075" numOctaves="3" seed="11" result="fine"/>
+                  <!-- sanftes Wellen der Fasern -->
+                  <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.006" numOctaves="2" seed="4" result="warp"/>
+                  <feDisplacementMap in="fine" in2="warp" scale="22" xChannelSelector="R" yChannelSelector="G" result="wavy"/>
+                  <feColorMatrix in="wavy" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.5 0 0 0 -0.62" result="mask"/>
+                  <feFlood flood-color="#6b4220" result="col"/>
+                  <feComposite in="col" in2="mask" operator="in" result="streaks"/>
+                  <feComposite in="streaks" in2="SourceAlpha" operator="in"/>
                 </filter>
 
                 <!-- DROP SHADOW FILTERS -->
@@ -544,6 +697,9 @@
               <!-- SIGHT LINES (INTERSECTIONS) -->
               <g id="sightLinesGroup"></g>
 
+              <!-- RUBBERBAND: Linie folgt dem Mauszeiger bei der Beziehungswahl -->
+              <g id="rubberbandGroup" pointer-events="none"></g>
+
               <!-- FIGURES LAYER -->
               <g id="figuresGroup"></g>
 
@@ -551,7 +707,19 @@
               <g id="controlsOverlayGroup"></g>
             </svg>
 
+            <!-- Unsichtbarer Messkörper: dient dem bildschirmfüllenden Einpassen des Bretts -->
+            <div id="boardFitProxy" class="board-fit-proxy"></div>
+
           </div>
+        </div>
+
+        <!-- EGO-VIEW (Perspektivenwechsel: Sicht aus den Augen der Figur) -->
+        <div id="egoView" class="ego-view" style="display:none;">
+          <div class="ego-head">
+            <span class="ego-title">👁 Sicht von <strong id="egoName">–</strong></span>
+            <span class="ego-summary" id="egoSummary"></span>
+          </div>
+          <svg id="egoSvg" viewBox="0 0 640 150" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
 
         <!-- FLOATING BOTTOM QUICK BAR -->
@@ -560,170 +728,32 @@
             <span><kbd>Entf</kbd> Figur löschen</span>
             <span><kbd>R</kbd> 45° drehen</span>
             <span><kbd>Shift+Mausrad</kbd> Stufenlos drehen</span>
-            <span><kbd>Leertaste+Drag</kbd> Brett verschieben</span>
+            <span><kbd>Esc</kbd> Abbrechen</span>
+            <span><kbd>F</kbd> Fokus-Modus</span>
+            <span class="hint-3d"><kbd>Ecke ziehen</kbd> Brett drehen</span>
+            <span class="hint-3d"><kbd>Mausrad / 2 Finger</kbd> Blickwinkel</span>
           </div>
         </div>
       </main>
 
-      <!-- RIGHT SIDEBAR (INSPECTOR, SYSTEMIC IMPULSES, NOTES) -->
-      <aside class="sidebar-right" id="sidebarRight">
+      <!-- RIGHT SIDEBAR (SYSTEMIC IMPULSES, NOTES) -->
+      <aside class="sidebar-right collapsed" id="sidebarRight">
+        <div class="sidebar-head">
+          <button id="btnCollapseRight" class="sidebar-collapse-btn" title="Menü einklappen">›</button>
+          <span class="sidebar-title">Coach &amp; Notizen</span>
+        </div>
+        <button id="btnExpandRight" class="sidebar-rail-btn" title="Menü ausklappen">
+          <span class="rail-icon">‹</span><span class="rail-label">Coach &amp; Notizen</span>
+        </button>
         <nav class="sidebar-tabs">
-          <button class="tab-btn active" data-tab="tab-inspector">Inspektor</button>
-          <button class="tab-btn" data-tab="tab-impulses">Systemik-Coach</button>
+          <button class="tab-btn active" data-tab="tab-impulses">Systemik-Coach</button>
           <button class="tab-btn" data-tab="tab-notes">Notizen</button>
         </nav>
 
         <div class="sidebar-tab-content">
-          
-          <!-- TAB 1: FIGUREN-INSPEKTOR -->
-          <div id="tab-inspector" class="tab-pane active">
-            
-            <div id="inspectorEmptyState" class="empty-inspector-state">
-              <div class="empty-icon">👉</div>
-              <h4>Keine Figur ausgewählt</h4>
-              <p>Klicke eine Figur auf dem Brett an, um ihre Blickrichtung, Rolle, Befinden und Beziehungen einzustellen.</p>
-            </div>
-
-            <div id="inspectorActiveContent" class="inspector-active-content" style="display:none;">
-              <div class="inspector-header">
-                <div class="inspector-fig-preview" id="inspPreview"></div>
-                <div class="inspector-fig-title">
-                  <input type="text" id="inspNameInput" class="input-text" placeholder="Name / Rolle der Figur">
-                  <span id="inspTypeSubtitle" class="fig-type-badge">Eckig Groß • Holz</span>
-                </div>
-              </div>
-
-              <!-- BLICKRICHTUNG & ROTATION -->
-              <div class="inspector-card">
-                <div class="card-title-row">
-                  <label class="card-title">Blickrichtung / Augen</label>
-                  <span id="inspRotationAngle" class="badge-angle">0° (Norden)</span>
-                </div>
-                
-                <div class="rotation-dial-container">
-                  <div class="rotation-dial" id="rotationDial">
-                    <div class="dial-marker" id="dialMarker"></div>
-                    <div class="dial-needle"></div>
-                    <div class="dial-compass-points">
-                      <span class="cp n">N</span>
-                      <span class="cp o">O</span>
-                      <span class="cp s">S</span>
-                      <span class="cp w">W</span>
-                    </div>
-                  </div>
-                  <div class="quick-turn-buttons">
-                    <button class="btn btn-xs btn-outline" id="btnTurnLeft45" title="45° nach links drehen">↶ -45°</button>
-                    <button class="btn btn-xs btn-outline" id="btnTurnRight45" title="45° nach rechts drehen">↷ +45°</button>
-                    <button class="btn btn-xs btn-outline btn-block" id="btnTurn180" title="Um 180 Grad umdrehen (Blick abwenden)">180° Wenden</button>
-                  </div>
-                </div>
-
-                <div class="target-look-row mt-2">
-                  <label class="text-xs">Blick ausrichten auf:</label>
-                  <div class="flex gap-1">
-                    <select id="inspTargetLookSelect" class="select-sm flex-1">
-                      <option value="">-- Andere Figur wählen --</option>
-                    </select>
-                    <button id="btnAlignLookTo" class="btn btn-xs btn-secondary">Ausrichten</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- SYSTEMISCHE PERSPEKTIVE (EGO-VIEW) -->
-              <div class="inspector-card highlight-card">
-                <div class="card-title-row">
-                  <label class="card-title">Perspektivenwechsel</label>
-                  <span class="badge-systemic">Subjektive Sicht</span>
-                </div>
-                <p class="card-desc">Wie erlebt diese Figur die Aufstellung? Was nimmt sie wahr, wer steht in ihrem Rücken?</p>
-                <button id="btnActivatePov" class="btn btn-primary btn-sm btn-block">
-                  <svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:middle;margin-right:4px;"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 13c-3.03 0-5.5-2.47-5.5-5.5S8.97 6.5 12 6.5 17.5 8.97 17.5 12s-2.47 5.5-5.5 5.5z"/></svg>
-                  Blick aus den Augen dieser Figur
-                </button>
-                <div id="povSummaryBox" class="pov-summary-box mt-2">
-                  <div class="pov-field">
-                    <span class="label">Im Blickfeld:</span>
-                    <span id="povVisibleList" class="val">Keine</span>
-                  </div>
-                  <div class="pov-field">
-                    <span class="label">Im Rücken:</span>
-                    <span id="povBackList" class="val">Keine</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- BEFINDEN & SKALIERUNG -->
-              <div class="inspector-card">
-                <div class="card-title-row">
-                  <label class="card-title">Skalierung / Befinden</label>
-                  <span id="inspScaleValue" class="badge-scale">5 / 10</span>
-                </div>
-                <p class="card-desc">Wie gut steht die Figur an diesem Platz? (1 = sehr belastet, 10 = vollkommen kraftvoll)</p>
-                <input type="range" id="inspScaleSlider" min="1" max="10" value="5" class="slider-input">
-                <div class="scale-labels">
-                  <span>1 (schwer)</span>
-                  <span>5 (neutral)</span>
-                  <span>10 (gelöst)</span>
-                </div>
-              </div>
-
-              <!-- GESTALTUNG DER FIGUR (FARBE, FORM, GRÖSSE) -->
-              <div class="inspector-card">
-                <label class="card-title">Erscheinungsbild anpassen</label>
-                
-                <div class="builder-row mt-2">
-                  <label>Form:</label>
-                  <div class="btn-group insp-shape-select">
-                    <button class="btn btn-xs" data-shape="eckig">Eckig</button>
-                    <button class="btn btn-xs" data-shape="rund">Rund</button>
-                    <button class="btn btn-xs" data-shape="kegel">Kegel</button>
-                    <button class="btn btn-xs" data-shape="prisma">Prisma</button>
-                  </div>
-                </div>
-
-                <div class="builder-row">
-                  <label>Größe:</label>
-                  <div class="btn-group insp-size-select">
-                    <button class="btn btn-xs" data-size="gross">Groß</button>
-                    <button class="btn btn-xs" data-size="mittel">Mittel</button>
-                    <button class="btn btn-xs" data-size="klein">Klein</button>
-                  </div>
-                </div>
-
-                <div class="builder-row">
-                  <label>Farbe:</label>
-                  <div class="color-palette-selector compact" id="inspColorPicker">
-                    <span class="color-dot" data-color="#2c3e50" style="background:#2c3e50"></span>
-                    <span class="color-dot" data-color="#c0392b" style="background:#c0392b"></span>
-                    <span class="color-dot" data-color="#2980b9" style="background:#2980b9"></span>
-                    <span class="color-dot" data-color="#27ae60" style="background:#27ae60"></span>
-                    <span class="color-dot" data-color="#f39c12" style="background:#f39c12"></span>
-                    <span class="color-dot" data-color="#8e44ad" style="background:#8e44ad"></span>
-                    <span class="color-dot" data-color="#ecf0f1" style="background:#ecf0f1; border:1px solid #ccc;"></span>
-                    <span class="color-dot" data-color="#111111" style="background:#111111"></span>
-                    <span class="color-dot" data-color="wood-light" style="background:#d8b182"></span>
-                    <span class="color-dot" data-color="wood-dark" style="background:#5c3a21"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- FIGUR NOTIZEN -->
-              <div class="inspector-card">
-                <label class="card-title">Figuren-Notiz & Körpergefühl</label>
-                <textarea id="inspNotesInput" class="textarea-sm" placeholder="z.B. Druck auf der Brust, schaut nach unten, Loyalitätskonflikt..."></textarea>
-              </div>
-
-              <!-- AKTIONEN -->
-              <div class="inspector-actions">
-                <button id="btnDuplicateFigure" class="btn btn-secondary btn-sm">Duplizieren</button>
-                <button id="btnDeleteFigure" class="btn btn-danger btn-sm">Löschen</button>
-              </div>
-            </div>
-
-          </div>
 
           <!-- TAB 2: SYSTEMIK-COACH & FRAGEN -->
-          <div id="tab-impulses" class="tab-pane">
+          <div id="tab-impulses" class="tab-pane active">
             <div class="pane-header">
               <h3>Systemischer Coach</h3>
               <p class="pane-hint">Automatische Phänomen-Analyse & wirksame zirkuläre Fragen.</p>
@@ -781,23 +811,23 @@
               <p class="pane-hint">Dokumentation von Hypothesen, Klientenaussagen und Vereinbarungen.</p>
             </div>
 
-            <div class="form-group">
-              <label>Klient / Kontext:</label>
+            <div class="pane-header">
+              <h4>Klient / Kontext:</h4>
               <input type="text" id="notesClientName" class="input-text-sm" placeholder="Name des Klienten / Anliegen">
             </div>
 
-            <div class="form-group">
-              <label>Kernanliegen & Fragestellung:</label>
+            <div class="pane-header">
+              <h4>Kernanliegen & Fragestellung:</h4>
               <textarea id="notesProblem" class="textarea-sm" placeholder="Was soll heute durch das Systembrett geklärt werden?"></textarea>
             </div>
 
-            <div class="form-group">
-              <label>Hypothesen & Beobachtungen:</label>
+            <div class="pane-header">
+              <h4>Hypothesen & Beobachtungen:</h4>
               <textarea id="notesHypothesis" class="textarea-sm" rows="4" placeholder="Wichtigste Dynamiken, Koalitionen, ausgeschlossene Elemente..."></textarea>
             </div>
 
-            <div class="form-group">
-              <label>Erkenntnisse aus dem Lösungsbild:</label>
+            <div class="pane-header">
+              <h4>Erkenntnisse aus dem Lösungsbild:</h4>
               <textarea id="notesSolution" class="textarea-sm" rows="3" placeholder="Welche Neuausrichtung brachte Erleichterung? Hausaufgaben/Nächste Schritte..."></textarea>
             </div>
 

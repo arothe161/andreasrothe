@@ -2,8 +2,8 @@
  * VIRTUELLES SYSTEMBRETT
  * Systemische Aufstellungen & Coaching
  * 
- * Inspiriert und gestaltet nach dem Original "Systembrett - Der Klassiker"
- * von ideen.kollektiv (Echtholz, gewellte Trennlinie, gelaserte Randlinie & Augenfiguren).
+ * Klassisches Holz-Systembrett mit gewellter Trennlinie, gelaserter Randlinie
+ * und Figuren mit aufgemalten Augen.
  */
 
 (function () {
@@ -14,11 +14,11 @@
   // ==========================================================================
 
   const STATE = {
-    sessionTitle: 'Ideen-Kollektiv - Systemische Aufstellung',
-    boardType: 'ideen-kollektiv',   // 'ideen-kollektiv' | 'single' | 'round' | 'split'
+    sessionTitle: 'Neue Aufstellung',
+    boardType: 'classic',           // 'classic' | 'single' | 'round' | 'split'
     splitDistance: 0,               // DEFAULT: 0 mm = EIN GANZES ZUSAMMENHÄNGENDES BRETT!
-    showLaserBorder: true,          // DEFAULT: true (gelaserte Randlinie wie DSC1833)
-    woodType: 'buche-hell',         // DEFAULT: Helle Buche / Birke wie im Foto DSC1833
+    showLaserBorder: true,          // DEFAULT: true (gelaserte Randlinie)
+    woodType: 'buche-hell',         // DEFAULT: Helle Buche / Birke
     viewMode: '2d',                 // '2d' | '25d'
     showCones: true,
     showSightLines: false,
@@ -26,6 +26,17 @@
     soundEnabled: true,
     
     // Zoom & Pan
+    autoFit: true,                  // true = Brett wird automatisch bildschirmfüllend eingepasst
+    viewYaw: -16,                   // 3D: Drehung des Bretts (Grad)
+    viewTilt: 46,                   // 3D: Neigung des Bretts (Grad)
+    isRotatingView: false,
+    rotStart: null,
+    viewRotation: 0,                // Drehung der Ansicht (Perspektivenwechsel: Blickrichtung zeigt nach oben)
+    povPrevView: null,
+    povCamRot: null,
+    relationHoverId: null,
+    pointerClient: null,
+    focusMode: false,
     zoom: 1.0,
     panX: 0,
     panY: 0,
@@ -62,7 +73,7 @@
     }
   };
 
-  // Brett-Abmessungen im SVG-Koordinatensystem (quadratisch wie in DSC1833)
+  // Brett-Abmessungen im SVG-Koordinatensystem (quadratisch)
   const BOARD_GEO = {
     cx: 800,
     cy: 600,
@@ -70,8 +81,8 @@
     height: 820,
     radius: 390,
     halfWidth: 410,
-    waveA: 65,         // Amplitude der geschwungenen Trennlinie
-    laserInset: 28,    // Abstand der gelaserten Randlinie vom Rand
+    waveA: 55,         // Amplitude der geschwungenen Trennlinie
+    laserInset: 20,    // Abstand der gelaserten Randlinie vom Rand
     cornerR: 18        // Eckenabrundung
   };
 
@@ -211,7 +222,7 @@
         y >= y_top &&
         y <= y_bottom
       );
-    } else if (STATE.boardType === 'ideen-kollektiv') {
+    } else if (STATE.boardType === 'classic') {
       if (y < y_top || y > y_bottom) return false;
       const x_left = cx - width / 2;
       const x_right = cx + width / 2;
@@ -237,11 +248,12 @@
     switch (woodType) {
       case 'buche-hell':
       default:
-        // Exakt abgestimmt auf das helle Buchenholz aus dem DSC1833 Foto
         return {
           base: '#f6ebd9',
           gradLeft: 'url(#birchGradLeft)',
           gradRight: 'url(#birchGradRight)',
+          gradFull: 'url(#birchGradFull)',
+          grainOpacity: 0.05,
           border: '#bfa17c',
           laser: '#6d4826',
           seam: '#7a542b'
@@ -251,6 +263,8 @@
           base: '#b48a56',
           gradLeft: '#c49a65',
           gradRight: '#b48a56',
+          gradFull: '#bc9160',
+          grainOpacity: 0.05,
           border: '#6c4b24',
           laser: '#4a2f13',
           seam: '#5c3a19'
@@ -260,6 +274,8 @@
           base: '#5c3a21',
           gradLeft: '#6e4729',
           gradRight: '#5c3a21',
+          gradFull: '#653f25',
+          grainOpacity: 0.04,
           border: '#2d1a0c',
           laser: '#1e1006',
           seam: '#2d1a0c'
@@ -269,6 +285,8 @@
           base: '#334155',
           gradLeft: '#475569',
           gradRight: '#334155',
+          gradFull: '#3b4a5f',
+          grainOpacity: 0.12,
           border: '#0f172a',
           laser: '#090d16',
           seam: '#0f172a'
@@ -298,17 +316,53 @@
   const figuresGroup = document.getElementById('figuresGroup');
   const controlsOverlayGroup = document.getElementById('controlsOverlayGroup');
 
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.keys(attrs || {}).forEach(k => el.setAttribute(k, attrs[k]));
+    return el;
+  }
+
+  // Holzmaserung als Overlay: Kopie der Brettform, gefüllt durch den Faser-Filter
+  function makeGrain(el, colors) {
+    const g = el.cloneNode(false);
+    ['class', 'stroke', 'stroke-width', 'fill'].forEach(a => g.removeAttribute(a));
+    g.setAttribute('fill', '#000');
+    g.setAttribute('filter', 'url(#woodGrainTex)');
+    g.setAttribute('opacity', colors.grainOpacity !== undefined ? colors.grainOpacity : 0.5);
+    g.setAttribute('pointer-events', 'none');
+    g.setAttribute('class', 'board-grain');
+    return g;
+  }
+
+  // Brett-Einstellungen im Menü immer passend zum aktuellen Zustand anzeigen
+  function syncBoardSettingsUI() {
+    document.querySelectorAll('.board-shape-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-shape') === STATE.boardType);
+    });
+    document.querySelectorAll('.wood-choice').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-wood') === STATE.woodType);
+    });
+    const laser = document.getElementById('checkLaserBorder');
+    if (laser) laser.checked = !!STATE.showLaserBorder;
+    const canSplit = STATE.boardType === 'classic' || STATE.boardType === 'split';
+    ['splitDistanceGroup', 'boardStateGroup'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = canSplit ? '' : 'none';
+    });
+  }
+
   function renderBoard() {
+    syncBoardSettingsUI();
     const { cx, cy, width, height, radius, halfWidth, waveA, laserInset, cornerR } = BOARD_GEO;
     const colors = getWoodColors(STATE.woodType);
     boardGraphicsGroup.innerHTML = '';
 
-    if (STATE.boardType === 'ideen-kollektiv') {
-      // DAS ORIGINAL IDEEN-KOLLEKTIV BRETT (GEWELLTE TRENNLINIE & LASERRAND WIE DSC1833)
-      const x_left = cx - width / 2;       // 390
-      const x_right = cx + width / 2;      // 1210
-      const y_top = cy - height / 2;       // 190
-      const y_bottom = cy + height / 2;    // 1010
+    if (STATE.boardType === 'classic') {
+      // KLASSISCHES BRETT MIT GEWELLTER TRENNLINIE
+      const x_left = cx - width / 2;
+      const x_right = cx + width / 2;
+      const y_top = cy - height / 2;
+      const y_bottom = cy + height / 2;
       const gap = STATE.splitDistance;     // 0 = vereint, >0 = getrennt
 
       const c1y = y_top + height * 0.22;
@@ -318,94 +372,66 @@
 
       const waveForward = `C ${cx - waveA},${c1y} ${cx - waveA},${c2y} ${cx},${cy} C ${cx + waveA},${c3y} ${cx + waveA},${c4y} ${cx},${y_bottom}`;
       const waveReverse = `C ${cx + waveA},${c4y} ${cx + waveA},${c3y} ${cx},${cy} C ${cx - waveA},${c2y} ${cx - waveA},${c1y} ${cx},${y_top}`;
-
-      // 1. LINKE HÄLFTE PFAD
-      const leftPath = `M ${cx},${y_top} ${waveForward} L ${x_left + cornerR},${y_bottom} A ${cornerR},${cornerR} 0 0,1 ${x_left},${y_bottom - cornerR} L ${x_left},${y_top + cornerR} A ${cornerR},${cornerR} 0 0,1 ${x_left + cornerR},${y_top} Z`;
-
-      // 2. RECHTE HÄLFTE PFAD
-      const rightPath = `M ${cx},${y_top} L ${x_right - cornerR},${y_top} A ${cornerR},${cornerR} 0 0,1 ${x_right},${y_top + cornerR} L ${x_right},${y_bottom - cornerR} A ${cornerR},${cornerR} 0 0,1 ${x_right - cornerR},${y_bottom} L ${cx},${y_bottom} ${waveReverse} Z`;
-
-      // GELASERTE RANDLINIEN
-      const lx_left = x_left + laserInset;
-      const lx_right = x_right - laserInset;
-      const ly_top = y_top + laserInset;
-      const ly_bottom = y_bottom - laserInset;
       const lr = cornerR * 0.7;
 
-      const leftLaserWave = `C ${cx - waveA - laserInset},${c1y} ${cx - waveA - laserInset},${c2y} ${cx - laserInset},${cy} C ${cx + waveA - laserInset},${c3y} ${cx + waveA - laserInset},${c4y} ${cx - laserInset},${ly_bottom}`;
-      const leftLaserPath = `M ${cx - laserInset},${ly_top} ${leftLaserWave} L ${lx_left + lr},${ly_bottom} A ${lr},${lr} 0 0,1 ${lx_left},${ly_bottom - lr} L ${lx_left},${ly_top + lr} A ${lr},${lr} 0 0,1 ${lx_left + lr},${ly_top} Z`;
-
-      const rightLaserWave = `C ${cx + waveA + laserInset},${c4y} ${cx + waveA + laserInset},${c3y} ${cx + laserInset},${cy} C ${cx - waveA + laserInset},${c2y} ${cx - waveA + laserInset},${c1y} ${cx + laserInset},${ly_top}`;
-      const rightLaserPath = `M ${cx + laserInset},${ly_top} L ${lx_right - lr},${ly_top} A ${lr},${lr} 0 0,1 ${lx_right},${ly_top + lr} L ${lx_right},${ly_bottom - lr} A ${lr},${lr} 0 0,1 ${lx_right - lr},${ly_bottom} L ${cx + laserInset},${ly_bottom} ${rightLaserWave} Z`;
-
-      // LINKE BRETTHÄLFTE
-      const leftGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      leftGroup.setAttribute('transform', `translate(${-gap / 2}, 0)`);
-      leftGroup.setAttribute('class', 'board-half-group');
-
-      const leftShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      leftShape.setAttribute('d', leftPath);
-      leftShape.setAttribute('fill', colors.gradLeft || colors.base);
-      leftShape.setAttribute('stroke', colors.border);
-      leftShape.setAttribute('stroke-width', '4');
-      leftShape.setAttribute('class', 'board-half');
-      leftGroup.appendChild(leftShape);
-
-      const leftGrain = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      leftGrain.setAttribute('d', leftPath);
-      leftGrain.setAttribute('fill', 'url(#birchGrainOverlay)');
-      leftGrain.setAttribute('pointer-events', 'none');
-      leftGroup.appendChild(leftGrain);
-
-      if (STATE.showLaserBorder) {
-        const leftLaser = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        leftLaser.setAttribute('d', leftLaserPath);
-        leftLaser.setAttribute('class', 'laser-border-line');
-        leftLaser.setAttribute('stroke', colors.laser);
-        leftGroup.appendChild(leftLaser);
-      }
-
-      boardGraphicsGroup.appendChild(leftGroup);
-
-      // RECHTE BRETTHÄLFTE
-      const rightGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      rightGroup.setAttribute('transform', `translate(${gap / 2}, 0)`);
-      rightGroup.setAttribute('class', 'board-half-group');
-
-      const rightShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      rightShape.setAttribute('d', rightPath);
-      rightShape.setAttribute('fill', colors.gradRight || colors.base);
-      rightShape.setAttribute('stroke', colors.border);
-      rightShape.setAttribute('stroke-width', '4');
-      rightShape.setAttribute('class', 'board-half');
-      rightGroup.appendChild(rightShape);
-
-      const rightGrain = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      rightGrain.setAttribute('d', rightPath);
-      rightGrain.setAttribute('fill', 'url(#birchGrainOverlay)');
-      rightGrain.setAttribute('pointer-events', 'none');
-      rightGroup.appendChild(rightGrain);
-
-      if (STATE.showLaserBorder) {
-        const rightLaser = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        rightLaser.setAttribute('d', rightLaserPath);
-        rightLaser.setAttribute('class', 'laser-border-line');
-        rightLaser.setAttribute('stroke', colors.laser);
-        rightGroup.appendChild(rightLaser);
-      }
-
-      boardGraphicsGroup.appendChild(rightGroup);
-
-      // NAHTSTELLE IN DER MITTE (WENN VEREINT ALS 1 BRETT)
       if (gap === 0) {
-        const seam = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        seam.setAttribute('d', `M ${cx},${y_top} ${waveForward}`);
-        seam.setAttribute('stroke', colors.seam || '#704928');
-        seam.setAttribute('stroke-width', '1.4');
-        seam.setAttribute('fill', 'none');
-        seam.setAttribute('opacity', '0.7');
-        seam.setAttribute('pointer-events', 'none');
-        boardGraphicsGroup.appendChild(seam);
+        // ---- EIN GANZES BRETT: nur Außenkante + eine schmale Naht ----
+        const full = svgEl('rect', {
+          x: x_left, y: y_top, width: width, height: height, rx: cornerR,
+          fill: colors.gradFull || colors.base,
+          stroke: colors.border, 'stroke-width': 4, class: 'board-half'
+        });
+        boardGraphicsGroup.appendChild(full);
+        boardGraphicsGroup.appendChild(makeGrain(full, colors));
+
+        if (STATE.showLaserBorder) {
+          boardGraphicsGroup.appendChild(svgEl('rect', {
+            x: x_left + laserInset, y: y_top + laserInset,
+            width: width - 2 * laserInset, height: height - 2 * laserInset, rx: lr,
+            class: 'laser-border-line', stroke: colors.laser
+          }));
+        }
+
+        // Die einzige sichtbare Trennlinie: schmale, feine Naht
+        boardGraphicsGroup.appendChild(svgEl('path', {
+          d: `M ${cx},${y_top} ${waveForward}`,
+          fill: 'none', stroke: colors.seam || '#704928',
+          'stroke-width': 1.1, 'stroke-linecap': 'round',
+          opacity: 0.55, 'pointer-events': 'none', class: 'board-seam'
+        }));
+
+      } else {
+        // ---- GETRENNT: zwei einzelne Bretthälften ----
+        const leftPath = `M ${cx},${y_top} ${waveForward} L ${x_left + cornerR},${y_bottom} A ${cornerR},${cornerR} 0 0,1 ${x_left},${y_bottom - cornerR} L ${x_left},${y_top + cornerR} A ${cornerR},${cornerR} 0 0,1 ${x_left + cornerR},${y_top} Z`;
+        const rightPath = `M ${cx},${y_top} L ${x_right - cornerR},${y_top} A ${cornerR},${cornerR} 0 0,1 ${x_right},${y_top + cornerR} L ${x_right},${y_bottom - cornerR} A ${cornerR},${cornerR} 0 0,1 ${x_right - cornerR},${y_bottom} L ${cx},${y_bottom} ${waveReverse} Z`;
+
+        const lx_left = x_left + laserInset;
+        const lx_right = x_right - laserInset;
+        const ly_top = y_top + laserInset;
+        const ly_bottom = y_bottom - laserInset;
+
+        const leftLaserWave = `C ${cx - waveA - laserInset},${c1y} ${cx - waveA - laserInset},${c2y} ${cx - laserInset},${cy} C ${cx + waveA - laserInset},${c3y} ${cx + waveA - laserInset},${c4y} ${cx - laserInset},${ly_bottom}`;
+        const leftLaserPath = `M ${cx - laserInset},${ly_top} ${leftLaserWave} L ${lx_left + lr},${ly_bottom} A ${lr},${lr} 0 0,1 ${lx_left},${ly_bottom - lr} L ${lx_left},${ly_top + lr} A ${lr},${lr} 0 0,1 ${lx_left + lr},${ly_top} Z`;
+
+        const rightLaserWave = `C ${cx + waveA + laserInset},${c4y} ${cx + waveA + laserInset},${c3y} ${cx + laserInset},${cy} C ${cx - waveA + laserInset},${c2y} ${cx - waveA + laserInset},${c1y} ${cx + laserInset},${ly_top}`;
+        const rightLaserPath = `M ${cx + laserInset},${ly_top} L ${lx_right - lr},${ly_top} A ${lr},${lr} 0 0,1 ${lx_right},${ly_top + lr} L ${lx_right},${ly_bottom - lr} A ${lr},${lr} 0 0,1 ${lx_right - lr},${ly_bottom} L ${cx + laserInset},${ly_bottom} ${rightLaserWave} Z`;
+
+        [
+          { path: leftPath, laser: leftLaserPath, fill: colors.gradLeft || colors.base, dx: -gap / 2 },
+          { path: rightPath, laser: rightLaserPath, fill: colors.gradRight || colors.base, dx: gap / 2 }
+        ].forEach(half => {
+          const grp = svgEl('g', { transform: `translate(${half.dx}, 0)`, class: 'board-half-group' });
+          const shape = svgEl('path', {
+            d: half.path, fill: half.fill, stroke: colors.border,
+            'stroke-width': 4, class: 'board-half'
+          });
+          grp.appendChild(shape);
+          grp.appendChild(makeGrain(shape, colors));
+          if (STATE.showLaserBorder) {
+            grp.appendChild(svgEl('path', { d: half.laser, class: 'laser-border-line', stroke: colors.laser }));
+          }
+          boardGraphicsGroup.appendChild(grp);
+        });
       }
 
     } else if (STATE.boardType === 'round') {
@@ -418,6 +444,7 @@
       circle.setAttribute('stroke-width', '8');
       circle.setAttribute('class', 'board-half');
       boardGraphicsGroup.appendChild(circle);
+      boardGraphicsGroup.appendChild(makeGrain(circle, colors));
 
       if (STATE.showLaserBorder) {
         const innerRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -441,6 +468,7 @@
       rect.setAttribute('stroke-width', '8');
       rect.setAttribute('class', 'board-half');
       boardGraphicsGroup.appendChild(rect);
+      boardGraphicsGroup.appendChild(makeGrain(rect, colors));
 
       if (STATE.showLaserBorder) {
         const innerRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -470,7 +498,9 @@
       leftHalf.setAttribute('fill', colors.base);
       leftHalf.setAttribute('stroke', colors.border);
       leftHalf.setAttribute('stroke-width', '6');
+      leftHalf.setAttribute('class', 'board-half');
       boardGraphicsGroup.appendChild(leftHalf);
+      boardGraphicsGroup.appendChild(makeGrain(leftHalf, colors));
 
       const rightHalf = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rightHalf.setAttribute('x', rightX);
@@ -481,7 +511,9 @@
       rightHalf.setAttribute('fill', colors.base);
       rightHalf.setAttribute('stroke', colors.border);
       rightHalf.setAttribute('stroke-width', '6');
+      rightHalf.setAttribute('class', 'board-half');
       boardGraphicsGroup.appendChild(rightHalf);
+      boardGraphicsGroup.appendChild(makeGrain(rightHalf, colors));
     }
 
     renderGrid();
@@ -524,7 +556,7 @@
   }
 
   // ==========================================================================
-  // 5. FIGUREN RENDERN & DESIGN (PEG DOLLS MIT AUFGEMALTEN AUGEN WIE DSC1833)
+  // 5. FIGUREN RENDERN & DESIGN (PEG DOLLS MIT AUFGEMALTEN AUGEN)
   // ==========================================================================
 
   function renderFigures() {
@@ -536,16 +568,36 @@
     const phase = getCurrentPhase();
     if (!phase) return;
 
-    if (STATE.showCones) {
-      phase.figures.forEach(fig => renderVisionCone(fig));
+    // Perspektivenwechsel: Beobachter bestimmen
+    let observer = null;
+    if (STATE.povFigureId) {
+      observer = getFigureById(STATE.povFigureId);
+      if (!observer) setTimeout(() => exitPovMode(), 0);
     }
 
-    if (STATE.showSightLines) {
-      renderSightLines(phase.figures);
+    if (observer && STATE.povCamRot !== observer.rotation && !STATE.rotatingFigureId) {
+      applyPovCamera(false);
+    }
+
+    if (observer) {
+      renderPovZones(observer, phase.figures);
+    } else {
+      if (STATE.showCones) {
+        phase.figures.forEach(fig => renderVisionCone(fig));
+      }
+      if (STATE.showSightLines) {
+        renderSightLines(phase.figures);
+      }
     }
 
     phase.figures.forEach(fig => {
       const g = createFigureSvgElement(fig);
+      if (observer) {
+        if (fig.id === observer.id) g.classList.add('figure-in-pov');
+        else if (isTargetInView(observer, fig)) g.classList.add('figure-in-sight');
+        else if (isTargetBehind(observer, fig)) g.classList.add('figure-in-blindspot');
+        else g.classList.add('figure-in-periphery');
+      }
       figuresGroup.appendChild(g);
 
       if (fig.id === STATE.selectedFigureId) {
@@ -555,6 +607,10 @@
 
     renderRelationships();
     updateSessionMeta();
+    updateRubberband();
+    syncInspectorOverlay();
+
+    if (observer) renderEgoView();
   }
 
   function createFigureSvgElement(fig) {
@@ -587,7 +643,7 @@
       eyeColor = '#ffffff';
     }
 
-    // AUTHENTISCHE FIGUREN AUS DEM IDEEN-KOLLEKTIV SET (DSC1833)
+    // FIGUREN-GESTALTUNG
     if (fig.shape === 'kegel' || fig.shape === 'pegdoll') {
       // 1. KEGELFIGUR (SPIELFIGUR MIT KOPF UND AUFGEMALTEN AUGEN ••)
       // Körper-Basis
@@ -752,12 +808,15 @@
     g.appendChild(rotGroup);
 
     // BESCHRIFTUNG (bleibt horizontal lesbar)
+    // Beschriftung bleibt auch bei gedrehter Ansicht aufrecht lesbar
+    const labelWrap = svgEl('g', { transform: `rotate(${-STATE.viewRotation})`, class: 'fig-label-wrap' });
+
     const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     labelText.setAttribute('x', 0);
     labelText.setAttribute('y', sizePx + 16);
     labelText.setAttribute('class', 'figure-label-text');
     labelText.textContent = fig.name || 'Figur';
-    g.appendChild(labelText);
+    labelWrap.appendChild(labelText);
 
     // SKALEN-BADGE (falls != 5)
     if (fig.scale && fig.scale !== 5) {
@@ -780,9 +839,10 @@
       badgeText.textContent = fig.scale;
       scaleBadge.appendChild(badgeText);
 
-      g.appendChild(scaleBadge);
+      labelWrap.appendChild(scaleBadge);
     }
 
+    g.appendChild(labelWrap);
     return g;
   }
 
@@ -941,6 +1001,39 @@
   // 7. BEZIEHUNGSBÄNDER & KORDELN
   // ==========================================================================
 
+  function styleRelationPath(path, type, color) {
+    switch (type) {
+      case 'conflict':
+        path.setAttribute('stroke', '#ef4444');
+        path.setAttribute('stroke-width', '2.5');
+        path.setAttribute('stroke-dasharray', '8 4');
+        break;
+      case 'arrow':
+        path.setAttribute('stroke', '#3b82f6');
+        path.setAttribute('stroke-width', '2.5');
+        path.setAttribute('marker-end', 'url(#arrowHead)');
+        break;
+      case 'mutual':
+        path.setAttribute('stroke', '#10b981');
+        path.setAttribute('stroke-width', '2.5');
+        path.setAttribute('marker-start', 'url(#circleMarker)');
+        path.setAttribute('marker-end', 'url(#circleMarker)');
+        break;
+      case 'barrier':
+        path.setAttribute('stroke', '#f59e0b');
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-dasharray', '12 6');
+        break;
+      case 'solid':
+      default:
+        path.setAttribute('stroke', color || '#c2955d');
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-linecap', 'round');
+        break;
+    }
+    path.style.color = path.getAttribute('stroke');   // Pfeilspitzen übernehmen die Linienfarbe
+  }
+
   function renderRelationships() {
     relationshipLinesGroup.innerHTML = '';
     const phase = getCurrentPhase();
@@ -958,35 +1051,7 @@
       const d = `M ${figA.x},${figA.y} L ${figB.x},${figB.y}`;
       path.setAttribute('d', d);
 
-      switch (rel.type) {
-        case 'conflict':
-          path.setAttribute('stroke', '#ef4444');
-          path.setAttribute('stroke-width', '2.5');
-          path.setAttribute('stroke-dasharray', '8 4');
-          break;
-        case 'arrow':
-          path.setAttribute('stroke', '#3b82f6');
-          path.setAttribute('stroke-width', '2.5');
-          path.setAttribute('marker-end', 'url(#arrowHead)');
-          break;
-        case 'mutual':
-          path.setAttribute('stroke', '#10b981');
-          path.setAttribute('stroke-width', '2.5');
-          path.setAttribute('marker-start', 'url(#circleMarker)');
-          path.setAttribute('marker-end', 'url(#circleMarker)');
-          break;
-        case 'barrier':
-          path.setAttribute('stroke', '#f59e0b');
-          path.setAttribute('stroke-width', '3');
-          path.setAttribute('stroke-dasharray', '12 6');
-          break;
-        case 'solid':
-        default:
-          path.setAttribute('stroke', rel.color || '#c2955d');
-          path.setAttribute('stroke-width', '3');
-          path.setAttribute('stroke-linecap', 'round');
-          break;
-      }
+      styleRelationPath(path, rel.type, rel.color);
 
       path.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1040,10 +1105,7 @@
   // ==========================================================================
 
   function getSvgPoint(evt) {
-    const pt = svgElem.createSVGPoint();
-    pt.x = evt.clientX;
-    pt.y = evt.clientY;
-    return pt.matrixTransform(svgElem.getScreenCTM().inverse());
+    return clientToBoard(evt.clientX, evt.clientY);
   }
 
   function setupInteractions() {
@@ -1052,6 +1114,14 @@
     svgElem.addEventListener('mousedown', (e) => {
       initAudio();
       const svgPt = getSvgPoint(e);
+
+      const viewHandle = e.target.closest('[data-view-handle]');
+      if (viewHandle) {
+        e.stopPropagation();
+        e.preventDefault();
+        startCornerRotate(e);
+        return;
+      }
 
       const handleTarget = e.target.closest('[data-handle-id]');
       if (handleTarget) {
@@ -1066,6 +1136,7 @@
         const figId = figTarget.getAttribute('data-id');
 
         if (STATE.activeRelationMode) {
+          STATE.pointerClient = { x: e.clientX, y: e.clientY };
           handleRelationClick(figId);
           return;
         }
@@ -1082,13 +1153,55 @@
 
       if (e.target.id === 'outerSpace' || e.target.classList.contains('board-half') || e.target.id === 'boardSvg') {
         selectFigure(null);
-        STATE.isPanning = true;
-        STATE.startPanX = e.clientX - STATE.panX;
-        STATE.startPanY = e.clientY - STATE.panY;
+        startViewDrag(e);
       }
     });
 
+    // Auch die Fläche um das Brett herum nimmt Ziehen entgegen
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.target === viewport || e.target.id === 'boardTransform') {
+        initAudio();
+        selectFigure(null);
+        startViewDrag(e);
+      }
+    });
+
+    // Freie Fläche ziehen: Brett verschieben
+    function startViewDrag(e) {
+      STATE.isPanning = true;
+      STATE.startPanX = e.clientX - STATE.panX;
+      STATE.startPanY = e.clientY - STATE.panY;
+    }
+
+    // 3D: An einer Brett-Ecke anfassen und ziehen dreht das Brett
+    function startCornerRotate(e) {
+      const pt = clientToBoard(e.clientX, e.clientY);
+      STATE.isRotatingView = true;
+      STATE.rotStart = { a0: Math.atan2(pt.y - BOARD_GEO.cy, pt.x - BOARD_GEO.cx) * 180 / Math.PI };
+      boardTransformEl.classList.add('no-transition');
+      document.body.classList.add('view-rotating');
+    }
+
+    // Doppelklick auf freie Fläche: Ausgangsansicht der 3D-Perspektive
+    svgElem.addEventListener('dblclick', (e) => {
+      if (STATE.viewMode !== '25d') return;
+      if (e.target.id === 'outerSpace' || e.target.classList.contains('board-half') || e.target.id === 'boardSvg') {
+        STATE.viewYaw = -16;
+        STATE.viewTilt = 46;
+        fitToView(true);
+      }
+    });
+
+    viewport.addEventListener('contextmenu', (e) => {
+      if (STATE.viewMode === '25d') e.preventDefault();
+    });
+
     window.addEventListener('mousemove', (e) => {
+      STATE.pointerClient = { x: e.clientX, y: e.clientY };
+      if (STATE.activeRelationMode && STATE.relationFirstFigureId) {
+        updateRubberband();
+      }
+
       if (STATE.rotatingFigureId) {
         const fig = getFigureById(STATE.rotatingFigureId);
         if (fig) {
@@ -1116,7 +1229,19 @@
         return;
       }
 
+      if (STATE.isRotatingView && STATE.rotStart) {
+        // Die gegriffene Ecke bleibt unter dem Mauszeiger: Winkelunterschied in der Brettebene
+        const pt = clientToBoard(e.clientX, e.clientY);
+        const a = Math.atan2(pt.y - BOARD_GEO.cy, pt.x - BOARD_GEO.cx) * 180 / Math.PI;
+        const d = ((a - STATE.rotStart.a0 + 540) % 360) - 180;
+        STATE.viewYaw += d;
+        if (STATE.autoFit) fitToView(false);   // Brett bleibt dabei bildschirmfüllend
+        else updateTransform();
+        return;
+      }
+
       if (STATE.isPanning) {
+        STATE.autoFit = false;
         STATE.panX = e.clientX - STATE.startPanX;
         STATE.panY = e.clientY - STATE.startPanY;
         updateTransform();
@@ -1134,8 +1259,13 @@
         playWoodClick(1.2);
         STATE.rotatingFigureId = null;
         runSystemicAnalysis();
+        if (STATE.povFigureId) applyPovCamera(true);
       }
       STATE.isPanning = false;
+      STATE.isRotatingView = false;
+      STATE.rotStart = null;
+      boardTransformEl.classList.remove('no-transition');
+      document.body.classList.remove('view-rotating');
     });
 
     viewport.addEventListener('wheel', (e) => {
@@ -1154,15 +1284,64 @@
         }
       }
 
+      const unit = e.deltaMode === 1 ? 33 : 1;   // Zeilen- statt Pixel-Scrollen (Firefox)
+      const dY = e.deltaY * unit;
+      const dX = e.deltaX * unit;
+
+      // Pinch-Geste am Trackpad (oder Strg + Mausrad): Zoom
+      if (e.ctrlKey) {
+        STATE.autoFit = false;
+        STATE.zoom = clamp(STATE.zoom * Math.exp(clamp(-dY * 0.01, -0.25, 0.25)), MIN_ZOOM, MAX_ZOOM);
+        updateTransform();
+        return;
+      }
+
+      // 3D: Mausrad / Zwei-Finger-Scrollen ändert den Blickwinkel (seitlich: Drehung)
+      if (STATE.viewMode === '25d' && !STATE.povFigureId) {
+        STATE.viewTilt = clamp(STATE.viewTilt + dY * 0.12, 10, 75);
+        STATE.viewYaw += dX * 0.25;
+        if (STATE.autoFit) fitToView(false);
+        else updateTransform();
+        return;
+      }
+
       const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-      const newZoom = Math.min(2.5, Math.max(0.4, STATE.zoom * zoomFactor));
-      STATE.zoom = newZoom;
+      STATE.autoFit = false;
+      STATE.zoom = clamp(STATE.zoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
       updateTransform();
-      document.getElementById('zoomLevel').textContent = `${Math.round(STATE.zoom * 100)}%`;
     }, { passive: false });
 
     window.addEventListener('keydown', (e) => {
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      // ESC funktioniert immer – auch wenn ein Textfeld den Fokus hat
+      if (e.key === 'Escape') {
+        if (STATE.activeRelationMode) {
+          e.preventDefault();
+          cancelRelationMode();
+          return;
+        }
+        if (STATE.povFigureId) {
+          e.preventDefault();
+          exitPovMode();
+          return;
+        }
+        const modal = document.getElementById('exportModal');
+        if (modal && modal.style.display !== 'none') {
+          modal.style.display = 'none';
+          return;
+        }
+        if (STATE.focusMode) {
+          e.preventDefault();
+          exitFocusMode();
+          return;
+        }
+        if (STATE.selectedFigureId) {
+          selectFigure(null);
+        }
+        return;
+      }
+
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (STATE.selectedFigureId) {
@@ -1185,29 +1364,265 @@
         }
       }
 
-      if (e.key === 'Escape') {
-        cancelRelationMode();
-        exitPovMode();
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFocusMode();
       }
+    });
+
+    // Rechtsklick bricht die Beziehungswahl ab
+    svgElem.addEventListener('contextmenu', (e) => {
+      if (STATE.activeRelationMode) {
+        e.preventDefault();
+        cancelRelationMode();
+      }
+    });
+
+    setupDragAndDrop();
+  }
+
+  // --------------------------------------------------------------------------
+  // ANSICHT: TRANSFORM, BILDSCHIRMFÜLLENDES EINPASSEN, KOORDINATEN-UMRECHNUNG
+  // --------------------------------------------------------------------------
+
+  const boardTransformEl = document.getElementById('boardTransform');
+  const boardViewportEl = document.getElementById('boardViewport');
+  const boardFitProxy = document.getElementById('boardFitProxy');
+  const CONTAINER_W = 1600;
+  const CONTAINER_H = 1200;
+  const MIN_ZOOM = 0.1;
+  const MAX_ZOOM = 4;
+  const FIT_FILL = 0.94;       // Anteil des Bildschirms, den das Brett füllt
+  let animTimer = null;
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function buildTransformString() {
+    const is3d = STATE.viewMode === '25d';
+    const tilt = is3d ? STATE.viewTilt : 0;
+    const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
+    // Immer dieselbe Funktionsliste -> weiche Übergänge zwischen 2D, 3D und Perspektivenwechsel
+    return `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) rotateX(${tilt}deg) rotateZ(${rotZ}deg) scale(${STATE.zoom})`;
+  }
+
+  function updateZoomLabel() {
+    const label = document.getElementById('zoomLevel');
+    if (label) label.textContent = `${Math.round(STATE.zoom * 100)}%`;
+  }
+
+  // Eck-Griffe zum Drehen (nur in der 3D-Ansicht)
+  const viewHandlesGroup = svgEl('g', { id: 'viewHandlesGroup' });
+  svgElem.appendChild(viewHandlesGroup);
+
+  function renderViewHandles() {
+    viewHandlesGroup.innerHTML = '';
+    if (STATE.viewMode !== '25d' || STATE.povFigureId) return;
+
+    const b = getBoardBounds();
+    const r = clamp(19 / STATE.zoom, 14, 38);     // bleibt auf dem Bildschirm etwa gleich groß
+    const off = r * 0.55;
+    const corners = [
+      [b.x - off, b.y - off], [b.x + b.w + off, b.y - off],
+      [b.x + b.w + off, b.y + b.h + off], [b.x - off, b.y + b.h + off]
+    ];
+    corners.forEach(([x, y]) => {
+      const g = svgEl('g', { transform: `translate(${x}, ${y})`, 'data-view-handle': '1', class: 'view-handle' });
+      const title = svgEl('title', {});
+      title.textContent = 'Ecke ziehen: Brett drehen';
+      g.appendChild(title);
+      g.appendChild(svgEl('circle', { r: r, fill: 'rgba(255,255,255,0.92)', stroke: '#b9803f', 'stroke-width': r * 0.14 }));
+      // Dreh-Symbol (Kreisbogen mit Pfeilspitze)
+      const k = r * 0.52;
+      g.appendChild(svgEl('path', {
+        d: `M ${-k},${-k * 0.1} A ${k},${k} 0 1 1 ${k * 0.15},${k}`,
+        fill: 'none', stroke: '#7a4a1c', 'stroke-width': r * 0.16, 'stroke-linecap': 'round'
+      }));
+      g.appendChild(svgEl('path', {
+        d: `M ${k * 0.15 - r * 0.3},${k - r * 0.3} L ${k * 0.15 + r * 0.05},${k + r * 0.05} L ${k * 0.15 - r * 0.38},${k + r * 0.3}`,
+        fill: 'none', stroke: '#7a4a1c', 'stroke-width': r * 0.16, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+      }));
+      viewHandlesGroup.appendChild(g);
     });
   }
 
   function updateTransform() {
-    const container = document.getElementById('boardTransform');
-    if (!container) return;
-    if (STATE.viewMode === '25d') {
-      container.style.transform = `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) rotateX(46deg) rotateZ(-16deg) scale(${STATE.zoom * 0.9})`;
-    } else {
-      container.style.transform = `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) scale(${STATE.zoom})`;
+    if (!boardTransformEl) return;
+    boardTransformEl.style.transform = buildTransformString();
+    updateZoomLabel();
+    renderViewHandles();
+    if (STATE.activeRelationMode && STATE.relationFirstFigureId) updateRubberband();
+  }
+
+  // Aktueller Brettbereich im SVG-Koordinatensystem (inkl. Spalt)
+  function getBoardBounds() {
+    const { cx, cy, width, height, radius, halfWidth } = BOARD_GEO;
+    const gap = STATE.splitDistance || 0;
+    if (STATE.boardType === 'round') {
+      return { x: cx - radius, y: cy - radius, w: radius * 2, h: radius * 2 };
     }
+    if (STATE.boardType === 'single') {
+      return { x: cx - width / 2, y: cy - height / 2, w: width, h: height };
+    }
+    if (STATE.boardType === 'split') {
+      return { x: cx - gap / 2 - halfWidth, y: cy - height / 2, w: halfWidth * 2 + gap, h: height };
+    }
+    return { x: cx - width / 2 - gap / 2, y: cy - height / 2, w: width + gap, h: height };
+  }
+
+  function syncFitProxy() {
+    const b = getBoardBounds();
+    const pad = (STATE.viewMode === '25d' && !STATE.povFigureId) ? 46 : 10;   // in 3D Platz für die Eck-Griffe
+    boardFitProxy.style.left = (b.x - pad) + 'px';
+    boardFitProxy.style.top = (b.y - pad) + 'px';
+    boardFitProxy.style.width = (b.w + pad * 2) + 'px';
+    boardFitProxy.style.height = (b.h + pad * 2) + 'px';
+  }
+
+  // Passt das Brett so ein, dass es in jeder Ansicht (2D / 3D) den Bildschirm füllt und zentriert ist.
+  // Gemessen wird die tatsächlich projizierte Fläche, daher funktioniert es auch mit Perspektive.
+  function fitToView(animate) {
+    const vr = boardViewportEl.getBoundingClientRect();
+    if (vr.width < 60 || vr.height < 60) return;
+
+    const el = boardTransformEl;
+    const oldTransform = el.style.transform || buildTransformString();
+    el.classList.remove('animating');
+    el.style.transition = 'none';
+
+    STATE.viewRotation = 0;
+    syncFitProxy();
+    STATE.zoom = 1;
+    STATE.panX = 0;
+    STATE.panY = 0;
+
+    for (let i = 0; i < 5; i++) {
+      el.style.transform = buildTransformString();
+      let r = boardFitProxy.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) break;
+      const f = Math.min((vr.width * FIT_FILL) / r.width, (vr.height * FIT_FILL) / r.height);
+      STATE.zoom = clamp(STATE.zoom * f, MIN_ZOOM, MAX_ZOOM);
+
+      el.style.transform = buildTransformString();
+      r = boardFitProxy.getBoundingClientRect();
+      STATE.panX += (vr.left + vr.width / 2) - (r.left + r.width / 2);
+      STATE.panY += (vr.top + vr.height / 2) - (r.top + r.height / 2);
+    }
+
+    const finalTransform = buildTransformString();
+    el.style.transform = finalTransform;
+    STATE.autoFit = true;
+    updateZoomLabel();
+    renderViewHandles();
+
+    if (animate) {
+      el.style.transform = oldTransform;
+      void el.offsetWidth;
+      el.style.transition = '';
+      el.classList.add('animating');
+      el.style.transform = finalTransform;
+      clearTimeout(animTimer);
+      animTimer = setTimeout(() => el.classList.remove('animating'), 620);
+    } else {
+      void el.offsetWidth;
+      el.style.transition = '';
+    }
+    if (STATE.activeRelationMode && STATE.relationFirstFigureId) updateRubberband();
   }
 
   function resetZoomAndPan() {
-    STATE.zoom = 1.0;
-    STATE.panX = 0;
-    STATE.panY = 0;
-    updateTransform();
-    document.getElementById('zoomLevel').textContent = '100%';
+    if (STATE.povFigureId) {
+      applyPovCamera(true, true);
+    } else {
+      fitToView(true);
+    }
+  }
+
+  function setViewMode(mode, opts) {
+    opts = opts || {};
+    if (STATE.povFigureId && !opts.fromPov) exitPovMode({ keepView: true });
+    STATE.viewMode = mode;
+    document.body.classList.toggle('view-25d', mode === '25d');
+    renderViewHandles();
+    document.getElementById('btnView2D')?.classList.toggle('active', mode === '2d');
+    document.getElementById('btnView25D')?.classList.toggle('active', mode === '25d');
+    if (!opts.skipFit) fitToView(true);
+    if (!opts.silent) playWoodClick(1.0);
+  }
+
+  // --- Projektion: Bildschirm <-> Brett-Koordinaten (inkl. 3D-Perspektive und Drehung) ---
+  function solveHomography(src, dst) {
+    // Löst H (3x3, h33 = 1) mit dst ~ H * src für 4 Punktpaare
+    const A = [];
+    const b = [];
+    for (let i = 0; i < 4; i++) {
+      const [x, y] = src[i];
+      const [u, v] = dst[i];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
+      b.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
+      b.push(v);
+    }
+    const n = 8;
+    for (let i = 0; i < n; i++) {
+      let piv = i;
+      for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
+      [A[i], A[piv]] = [A[piv], A[i]];
+      [b[i], b[piv]] = [b[piv], b[i]];
+      for (let r = i + 1; r < n; r++) {
+        const f = A[r][i] / A[i][i];
+        for (let c = i; c < n; c++) A[r][c] -= f * A[i][c];
+        b[r] -= f * b[i];
+      }
+    }
+    const h = new Array(n);
+    for (let i = n - 1; i >= 0; i--) {
+      let sum = b[i];
+      for (let c = i + 1; c < n; c++) sum -= A[i][c] * h[c];
+      h[i] = sum / A[i][i];
+    }
+    return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+  }
+
+  function invert3(m) {
+    const [a, b, c, d, e, f, g, h, i] = m;
+    const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
+    const det = a * A + b * B + c * C;
+    return [
+      A / det, -(b * i - c * h) / det, (b * f - c * e) / det,
+      B / det, (a * i - c * g) / det, -(a * f - c * d) / det,
+      C / det, -(a * h - b * g) / det, (a * e - b * d) / det
+    ];
+  }
+
+  function clientToBoard(clientX, clientY) {
+    const cs = getComputedStyle(boardTransformEl);
+    const m = new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform);
+    const vr = boardViewportEl.getBoundingClientRect();
+    const persp = parseFloat(getComputedStyle(boardViewportEl).perspective) || 1e9;
+    const ox = CONTAINER_W / 2;
+    const oy = CONTAINER_H / 2;
+
+    const forward = (lx, ly) => {
+      const x = lx - ox;
+      const y = ly - oy;
+      const X = m.m11 * x + m.m21 * y + m.m41;
+      const Y = m.m12 * x + m.m22 * y + m.m42;
+      const Z = m.m13 * x + m.m23 * y + m.m43;
+      const k = persp / (persp - Z);
+      return [vr.left + vr.width / 2 + (ox + X) * k, vr.top + vr.height / 2 + (oy + Y) * k];
+    };
+
+    const src = [[0, 0], [CONTAINER_W, 0], [CONTAINER_W, CONTAINER_H], [0, CONTAINER_H]];
+    const dst = src.map(p => forward(p[0], p[1]));
+    const H = solveHomography(src, dst);
+    const inv = invert3(H);
+    const w = inv[6] * clientX + inv[7] * clientY + inv[8];
+    return {
+      x: (inv[0] * clientX + inv[1] * clientY + inv[2]) / w,
+      y: (inv[3] * clientX + inv[4] * clientY + inv[5]) / w
+    };
   }
 
   // ==========================================================================
@@ -1254,6 +1669,7 @@
         renderBoard();
         updateSplitUI();
         playWoodClick(targetGap === 0 ? 0.9 : 1.15);
+        if (STATE.autoFit && !STATE.povFigureId) fitToView(true);
       }
     }
 
@@ -1300,7 +1716,7 @@
   // 10. FIGUREN-MANAGEMENT
   // ==========================================================================
 
-  function addFigure(config = {}) {
+  function addFigure(config = {}, opts) {
     const phase = getCurrentPhase();
     if (!phase) return;
 
@@ -1316,16 +1732,53 @@
       rotation: config.rotation !== undefined ? config.rotation : 0,
       scale: config.scale || 5,
       notes: config.notes || '',
-      x: config.x || (BOARD_GEO.cx + scatterX),
-      y: config.y || (BOARD_GEO.cy + scatterY)
+      x: config.x !== undefined ? config.x : (BOARD_GEO.cx + scatterX),
+      y: config.y !== undefined ? config.y : (BOARD_GEO.cy + scatterY)
     };
 
     phase.figures.push(newFig);
-    selectFigure(newFig.id);
+    if (!opts || opts.select !== false) selectFigure(newFig.id);
     renderFigures();
     playWoodClick(0.9);
     runSystemicAnalysis();
     return newFig;
+  }
+
+  // Inspektor liegt über dem linken Menü, solange eine Figur ausgewählt ist
+  let lastInspectorFigId = null;
+
+  function syncInspectorOverlay() {
+    const left = document.getElementById('sidebarLeft');
+    if (!left) return;
+    const has = !!getFigureById(STATE.selectedFigureId);
+    left.classList.toggle('inspector-open', has);
+    // Ist das Menü eingeklappt, wird es für den Inspektor automatisch geöffnet
+    if (has && lastInspectorFigId !== STATE.selectedFigureId && left.classList.contains('collapsed')) {
+      setSidebarCollapsed('left', false);
+    }
+    lastInspectorFigId = has ? STATE.selectedFigureId : null;
+  }
+
+  // Akkordeon-Eintrag der linken Leiste öffnen oder schließen
+  function setAccordion(bodyId, open) {
+    const body = document.getElementById(bodyId);
+    const header = document.querySelector(`.acc-header[data-acc="${bodyId}"]`);
+    if (body) body.classList.toggle('open', open);
+    if (header) {
+      header.classList.toggle('open', open);
+      header.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+  }
+
+  function setSidebarCollapsed(side, collapsed) {
+    const el = document.getElementById(side === 'left' ? 'sidebarLeft' : 'sidebarRight');
+    if (!el) return;
+    el.classList.toggle('collapsed', collapsed);
+    // Brett an den neuen Platz anpassen (bei automatischer Einpassung)
+    requestAnimationFrame(() => {
+      if (STATE.povFigureId) applyPovCamera(false);
+      else if (STATE.autoFit) fitToView(false);
+    });
   }
 
   function selectFigure(figId) {
@@ -1474,11 +1927,198 @@
   // 12. PERSPEKTIVENWECHSEL & BEZIEHUNGEN
   // ==========================================================================
 
+  // ---- Perspektivenwechsel -------------------------------------------------
+
+  const SYMBOL_EMOJI = {
+    stern: '⭐', herz: '❤️', diamant: '💎', stein: '🪨', wolke: '⚡',
+    kiste: '📦', anker: '⚓', fragezeichen: '❓', barriere: '🚧', licht: '💡'
+  };
+
+  function figureDisplayColor(fig) {
+    if (fig.color === 'wood-light' || fig.color === 'buche-hell') return '#eedbc0';
+    if (fig.color === 'wood-dark') return '#5c3a21';
+    return fig.color || '#eedbc0';
+  }
+
+  // Dreht und zentriert die Ansicht so, dass die Figur nach oben schaut und im unteren Drittel steht.
+  function applyPovCamera(animate, resetZoom) {
+    const fig = getFigureById(STATE.povFigureId);
+    if (!fig) return;
+    const vr = boardViewportEl.getBoundingClientRect();
+    const el = boardTransformEl;
+
+    // fortlaufende Drehung: immer auf kürzestem Weg
+    let target = -fig.rotation;
+    target += 360 * Math.round((STATE.viewRotation - target) / 360);
+    STATE.viewRotation = target;
+    STATE.povCamRot = fig.rotation;
+    STATE.autoFit = false;
+
+    if (resetZoom) {
+      STATE.zoom = clamp(Math.min(vr.width / 1000, vr.height / 760), 0.55, 1.5);
+    }
+
+    const th = degToRad(STATE.viewRotation);
+    const dx = fig.x - BOARD_GEO.cx;
+    const dy = fig.y - BOARD_GEO.cy;
+    const rx = dx * Math.cos(th) - dy * Math.sin(th);
+    const ry = dx * Math.sin(th) + dy * Math.cos(th);
+    STATE.panX = -rx * STATE.zoom;
+    STATE.panY = vr.height * 0.17 - ry * STATE.zoom;
+
+    if (animate) {
+      el.classList.add('animating');
+      clearTimeout(animTimer);
+      animTimer = setTimeout(() => el.classList.remove('animating'), 620);
+    }
+    updateTransform();
+  }
+
+  function renderPovZones(obs, figures) {
+    const sector = (centerDeg, halfDeg, len, fill, stroke, dash) => {
+      const a1 = degToRad(centerDeg - halfDeg);
+      const a2 = degToRad(centerDeg + halfDeg);
+      const path = svgEl('path', {
+        d: `M 0,0 L ${Math.cos(a1) * len},${Math.sin(a1) * len} A ${len},${len} 0 0,1 ${Math.cos(a2) * len},${Math.sin(a2) * len} Z`,
+        fill: fill, stroke: stroke, 'stroke-width': 1.5,
+        class: 'vision-cone highlighted',
+        transform: `translate(${obs.x}, ${obs.y}) rotate(${obs.rotation})`,
+        'pointer-events': 'none'
+      });
+      if (dash) path.setAttribute('stroke-dasharray', dash);
+      sightConesGroup.appendChild(path);
+    };
+
+    sector(-90, 35, 560, 'rgba(59, 130, 246, 0.34)', 'rgba(96, 165, 250, 0.95)');   // Blickfeld
+    sector(90, 45, 230, 'rgba(239, 68, 68, 0.24)', 'rgba(248, 113, 113, 0.8)', '6 5'); // Rücken
+
+    figures.forEach(f => {
+      if (f.id !== obs.id && isTargetInView(obs, f)) {
+        sightLinesGroup.appendChild(svgEl('line', {
+          x1: obs.x, y1: obs.y, x2: f.x, y2: f.y,
+          stroke: 'rgba(250, 204, 21, 0.9)', 'stroke-width': 2, 'stroke-dasharray': '3 5',
+          'pointer-events': 'none'
+        }));
+      }
+    });
+  }
+
+  // Ich-Perspektive: Panorama dessen, was die Figur sieht (±90° vor ihr)
+  function renderEgoView() {
+    const box = document.getElementById('egoView');
+    const svg = document.getElementById('egoSvg');
+    if (!box || !svg) return;
+    const obs = STATE.povFigureId ? getFigureById(STATE.povFigureId) : null;
+    if (!obs) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+
+    const nameEl = document.getElementById('egoName');
+    if (nameEl) nameEl.textContent = obs.name;
+
+    const phase = getCurrentPhase();
+    const HOR = 84, HALF = 90, CX = 320, SPAN = 300;
+    const coneX = (35 / HALF) * SPAN;
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="egoSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e293b"/><stop offset="1" stop-color="#3b4a63"/></linearGradient>
+        <linearGradient id="egoFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c7a67a"/><stop offset="1" stop-color="#ead6b6"/></linearGradient>
+      </defs>
+      <rect x="0" y="0" width="640" height="${HOR}" fill="url(#egoSky)"/>
+      <rect x="0" y="${HOR}" width="640" height="${150 - HOR}" fill="url(#egoFloor)"/>
+      <line x1="0" y1="${HOR}" x2="640" y2="${HOR}" stroke="rgba(0,0,0,0.35)"/>
+      <line x1="${CX - coneX}" y1="0" x2="${CX - coneX}" y2="150" stroke="rgba(255,255,255,0.45)" stroke-dasharray="4 4"/>
+      <line x1="${CX + coneX}" y1="0" x2="${CX + coneX}" y2="150" stroke="rgba(255,255,255,0.45)" stroke-dasharray="4 4"/>
+      <text x="${CX}" y="11" fill="rgba(255,255,255,0.6)" font-size="9" text-anchor="middle">Blickfeld 70°</text>
+      <text x="8" y="11" fill="rgba(255,255,255,0.45)" font-size="9">← links</text>
+      <text x="632" y="11" fill="rgba(255,255,255,0.45)" font-size="9" text-anchor="end">rechts →</text>`;
+
+    const visible = [];
+    const peripheral = [];
+    const back = [];
+    const items = [];
+
+    phase.figures.forEach(f => {
+      if (f.id === obs.id) return;
+      const dist = Math.max(getDistance(obs.x, obs.y, f.x, f.y), 50);
+      const ang = getAngleToTarget(obs.x, obs.y, f.x, f.y);
+      const rel = ((ang - obs.rotation + 540) % 360) - 180;   // -180..180, positiv = rechts
+      const inCone = isTargetInView(obs, f);
+      if (inCone) visible.push(f.name);
+      else if (isTargetBehind(obs, f)) back.push(f.name);
+      else peripheral.push(f.name);
+      if (Math.abs(rel) <= HALF) items.push({ f, dist, rel, inCone });
+    });
+
+    items.sort((a, b) => b.dist - a.dist);   // Ferne zuerst zeichnen
+
+    items.forEach(({ f, dist, rel, inCone }) => {
+      const x = CX + (rel / HALF) * SPAN;
+      const sf = (SIZE_MAP[f.size] || 27) / 27;
+      const figH = clamp((11000 / dist) * sf, 16, 82);
+      const baseY = HOR + clamp(3600 / dist, 4, 56);
+      const fill = figureDisplayColor(f);
+      const dark = ['#1a1a1a', '#111111', '#5c3a21', '#2c3e50'].includes(fill);
+      const g = svgEl('g', { opacity: inCone ? 1 : 0.55 });
+
+      if (SYMBOL_EMOJI[f.shape]) {
+        const t = svgEl('text', { x: x, y: baseY - figH * 0.1, 'font-size': figH * 0.75, 'text-anchor': 'middle' });
+        t.textContent = SYMBOL_EMOJI[f.shape];
+        g.appendChild(t);
+      } else if (f.shape === 'block') {
+        g.appendChild(svgEl('rect', {
+          x: x - figH * 0.22, y: baseY - figH * 0.6, width: figH * 0.44, height: figH * 0.6,
+          rx: 2, fill: fill, stroke: 'rgba(0,0,0,0.45)', 'stroke-width': 1
+        }));
+      } else {
+        const bw = figH * 0.5;
+        const topY = baseY - figH * 0.62;
+        const hr = figH * 0.17;
+        const bodyD = (f.shape === 'kegel' || f.shape === 'pegdoll' || f.shape === 'prisma')
+          ? `M ${x - bw / 2},${baseY} L ${x + bw / 2},${baseY} L ${x + bw * 0.26},${topY} L ${x - bw * 0.26},${topY} Z`
+          : `M ${x - bw * 0.36},${baseY} L ${x + bw * 0.36},${baseY} L ${x + bw * 0.36},${topY} L ${x - bw * 0.36},${topY} Z`;
+        g.appendChild(svgEl('path', { d: bodyD, fill: fill, stroke: 'rgba(0,0,0,0.45)', 'stroke-width': 1 }));
+        g.appendChild(svgEl('circle', { cx: x, cy: topY - hr * 0.85, r: hr, fill: fill, stroke: 'rgba(0,0,0,0.45)', 'stroke-width': 1 }));
+        // Augen nur, wenn die andere Figur zum Beobachter schaut
+        if (isTargetInView(f, obs, 160)) {
+          const ey = topY - hr * 0.85;
+          const ec = dark ? '#ffffff' : '#1a1a1a';
+          g.appendChild(svgEl('circle', { cx: x - hr * 0.38, cy: ey, r: Math.max(1.1, hr * 0.16), fill: ec }));
+          g.appendChild(svgEl('circle', { cx: x + hr * 0.38, cy: ey, r: Math.max(1.1, hr * 0.16), fill: ec }));
+        }
+      }
+
+      const label = svgEl('text', { x: x, y: Math.min(baseY + 12, 147), class: 'ego-label' });
+      label.textContent = (f.name || '').length > 16 ? f.name.slice(0, 15) + '…' : f.name;
+      g.appendChild(label);
+      svg.appendChild(g);
+    });
+
+    // Zentrale Blickmarke
+    svg.appendChild(svgEl('line', { x1: CX, y1: HOR - 6, x2: CX, y2: HOR + 6, stroke: 'rgba(255,255,255,0.7)' }));
+
+    const sum = document.getElementById('egoSummary');
+    if (sum) {
+      const fmt = arr => (arr.length ? arr.join(', ') : '–');
+      sum.textContent = `Im Blick: ${fmt(visible)}  ·  Peripher: ${fmt(peripheral)}  ·  Im Rücken: ${fmt(back)}`;
+    }
+  }
+
   function activatePovMode(figId) {
     const fig = getFigureById(figId);
     if (!fig) return;
 
+    if (!STATE.povFigureId) {
+      STATE.povPrevView = STATE.viewMode;
+    }
+    // Die Ich-Sicht arbeitet in der Draufsicht
+    if (STATE.viewMode !== '2d') {
+      setViewMode('2d', { fromPov: true, skipFit: true, silent: true });
+    }
+
+    const firstActivation = !STATE.povFigureId;
     STATE.povFigureId = figId;
+
     const banner = document.getElementById('povBanner');
     const text = document.getElementById('povText');
     if (banner && text) {
@@ -1486,43 +2126,147 @@
       banner.style.display = 'flex';
     }
 
+    applyPovCamera(true, firstActivation);
     renderFigures();
     playWoodClick(1.3);
   }
 
-  function exitPovMode() {
+  function exitPovMode(opts) {
+    opts = opts || {};
+    const wasActive = !!STATE.povFigureId;
     STATE.povFigureId = null;
+    STATE.povCamRot = null;
+
     const banner = document.getElementById('povBanner');
     if (banner) banner.style.display = 'none';
+    const ego = document.getElementById('egoView');
+    if (ego) ego.style.display = 'none';
+
+    if (wasActive && !opts.keepView) {
+      // Drehung ohne sichtbaren Sprung normalisieren, dann animiert zurück zur Gesamtansicht
+      const el = boardTransformEl;
+      el.classList.remove('animating');
+      el.style.transition = 'none';
+      STATE.viewRotation = ((((STATE.viewRotation % 360) + 540) % 360) - 180);
+      updateTransform();
+      void el.offsetWidth;
+      el.style.transition = '';
+
+      const prev = STATE.povPrevView;
+      STATE.povPrevView = null;
+      if (prev === '25d') setViewMode('25d', { silent: true });
+      else fitToView(true);
+    } else if (wasActive) {
+      STATE.povPrevView = null;
+      STATE.viewRotation = 0;
+    }
+
+    // Beschriftungen mit der endgültigen Ansichtsdrehung neu zeichnen
     renderFigures();
+  }
+
+  // ---- Beziehungen: Linie folgt dem Mauszeiger ------------------------------
+
+  const rubberbandGroup = document.getElementById('rubberbandGroup');
+
+  function findFigureAt(x, y, excludeId) {
+    const phase = getCurrentPhase();
+    if (!phase) return null;
+    let best = null;
+    let bestDist = Infinity;
+    phase.figures.forEach(f => {
+      if (f.id === excludeId) return;
+      const r = (SIZE_MAP[f.size] || 27) + 10;
+      const d = getDistance(x, y, f.x, f.y);
+      if (d <= r && d < bestDist) {
+        best = f;
+        bestDist = d;
+      }
+    });
+    return best;
+  }
+
+  function updateRubberband() {
+    if (!rubberbandGroup) return;
+    rubberbandGroup.innerHTML = '';
+    document.querySelectorAll('.system-figure.relation-source, .system-figure.relation-target-candidate')
+      .forEach(el => el.classList.remove('relation-source', 'relation-target-candidate'));
+
+    if (!STATE.activeRelationMode || !STATE.relationFirstFigureId) {
+      STATE.relationHoverId = null;
+      return;
+    }
+    const first = getFigureById(STATE.relationFirstFigureId);
+    if (!first) return;
+
+    let tx = first.x;
+    let ty = first.y;
+    let hover = null;
+    const pc = STATE.pointerClient;
+    if (pc) {
+      const pt = clientToBoard(pc.x, pc.y);
+      tx = pt.x;
+      ty = pt.y;
+      hover = findFigureAt(pt.x, pt.y, first.id);
+      if (hover) {            // rastet auf der Zielfigur ein
+        tx = hover.x;
+        ty = hover.y;
+      }
+    }
+    STATE.relationHoverId = hover ? hover.id : null;
+
+    const path = svgEl('path', {
+      d: `M ${first.x},${first.y} L ${tx},${ty}`,
+      class: 'relation-wire rubberband-line',
+      fill: 'none'
+    });
+    styleRelationPath(path, STATE.activeRelationMode, STATE.activeRelationColor);
+    rubberbandGroup.appendChild(path);
+
+    const col = path.getAttribute('stroke') || '#c2955d';
+    rubberbandGroup.appendChild(svgEl('circle', { cx: first.x, cy: first.y, r: 7, fill: col, stroke: '#fff', 'stroke-width': 2, class: 'rubberband-dot' }));
+    if (!hover) {
+      rubberbandGroup.appendChild(svgEl('circle', { cx: tx, cy: ty, r: 5, fill: '#fff', stroke: col, 'stroke-width': 2.5, class: 'rubberband-dot' }));
+    }
+
+    const srcEl = document.querySelector(`.system-figure[data-id="${first.id}"]`);
+    if (srcEl) srcEl.classList.add('relation-source');
+    if (hover) {
+      const tgtEl = document.querySelector(`.system-figure[data-id="${hover.id}"]`);
+      if (tgtEl) tgtEl.classList.add('relation-target-candidate');
+    }
   }
 
   function startRelationMode(type, color) {
     STATE.activeRelationMode = type;
     STATE.activeRelationColor = color;
     STATE.relationFirstFigureId = null;
+    document.body.classList.add('relation-mode');
 
     const banner = document.getElementById('relationActiveBanner');
     const text = document.getElementById('relationModeText');
     if (banner && text) {
-      text.textContent = '1. Klicke auf die erste Figur...';
+      text.textContent = '1. Klicke auf die erste Figur…  (Esc bricht ab)';
       banner.style.display = 'flex';
     }
 
     document.querySelectorAll('.relation-mode-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-relation-type') === type);
+      btn.classList.toggle('active', btn.getAttribute('data-relation-type') === type && btn.getAttribute('data-color') === color);
     });
   }
 
   function cancelRelationMode() {
     STATE.activeRelationMode = null;
     STATE.relationFirstFigureId = null;
+    STATE.relationHoverId = null;
+    document.body.classList.remove('relation-mode');
     const banner = document.getElementById('relationActiveBanner');
     if (banner) banner.style.display = 'none';
 
     document.querySelectorAll('.relation-mode-btn').forEach(btn => {
       btn.classList.remove('active');
     });
+    updateRubberband();
   }
 
   function handleRelationClick(figId) {
@@ -1530,8 +2274,9 @@
       STATE.relationFirstFigureId = figId;
       const f1 = getFigureById(figId);
       const text = document.getElementById('relationModeText');
-      if (text) text.textContent = `2. Klicke auf zweite Figur (Start: ${f1 ? f1.name : ''})...`;
+      if (text) text.textContent = `2. Ziehe die Linie zur Zielfigur und klicke sie an (Start: ${f1 ? f1.name : ''}) – Esc bricht ab`;
       playWoodClick(1.2);
+      updateRubberband();
     } else {
       if (STATE.relationFirstFigureId === figId) return;
       const phase = getCurrentPhase();
@@ -1547,6 +2292,54 @@
       cancelRelationMode();
       renderFigures();
     }
+  }
+
+  // ---- Fokus-Modus (Vollbild: nur Brett und Notizen) -------------------------
+
+  function enterFocusMode() {
+    if (STATE.focusMode) return;
+    STATE.focusMode = true;
+    document.body.classList.add('focus-mode');
+
+    const root = document.documentElement;
+    if (root.requestFullscreen) {
+      root.requestFullscreen().then(() => {
+        // Esc soll im Vollbild beim Brett ankommen (Beziehung/Perspektive abbrechen)
+        try {
+          if (navigator.keyboard && navigator.keyboard.lock) {
+            navigator.keyboard.lock(['Escape']).catch(() => {});
+          }
+        } catch (err) { /* nicht unterstützt */ }
+      }).catch(() => { /* Vollbild nicht erlaubt – Fokus-Ansicht bleibt trotzdem aktiv */ });
+    }
+    playWoodClick(1.1);
+    refitAfterLayout();
+  }
+
+  function exitFocusMode() {
+    if (!STATE.focusMode) return;
+    STATE.focusMode = false;
+    document.body.classList.remove('focus-mode');
+    try {
+      if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+    } catch (err) { /* ignorieren */ }
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    playWoodClick(0.9);
+    refitAfterLayout();
+  }
+
+  function toggleFocusMode() {
+    if (STATE.focusMode) exitFocusMode();
+    else enterFocusMode();
+  }
+
+  function refitAfterLayout() {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (STATE.povFigureId) applyPovCamera(false, true);
+      else fitToView(true);
+    }));
   }
 
   // ==========================================================================
@@ -1804,7 +2597,7 @@
   }
 
   // ==========================================================================
-  // 15. VORLAGEN (TEMPLATES - INKL. ORIGINAL DSC1833 SETUP)
+  // 15. VORLAGEN (TEMPLATES)
   // ==========================================================================
 
   function loadTemplate(templateId) {
@@ -1817,63 +2610,17 @@
     const { cx, cy } = BOARD_GEO;
 
     switch (templateId) {
-      case 'ideen-kollektiv':
+      case 'leer':
       default:
-        // EXAKTES SETUP WIE AUF DEM PRODUKTFOTO DSC1833 (DEFAULT: 1 GANZES BRETT)
-        STATE.boardType = 'ideen-kollektiv';
-        STATE.splitDistance = 0; // DEFAULT = 0 mm (1 ganzes Brett!)
+        // Unberührtes Brett: ein ganzes Brett, helle Buche, gelaserte Randlinie
+        STATE.boardType = 'classic';
+        STATE.splitDistance = 0;
         STATE.woodType = 'buche-hell';
         STATE.showLaserBorder = true;
-
-        phase.figures = [
-          // LINKE HÄLFTE: FARBIGE SPIELFIGUREN (OBEN LINKS WIE IM FOTO)
-          { id: 'c_red1', name: 'Rot 1', shape: 'kegel', size: 'gross', color: '#c0392b', rotation: 180, scale: 6, x: cx - 280, y: cy - 250 },
-          { id: 'c_red2', name: 'Rot 2', shape: 'kegel', size: 'gross', color: '#c0392b', rotation: 180, scale: 6, x: cx - 245, y: cy - 235 },
-          { id: 'c_blue1', name: 'Blau 1', shape: 'kegel', size: 'mittel', color: '#2980b9', rotation: 180, scale: 7, x: cx - 265, y: cy - 290 },
-          { id: 'c_blue2', name: 'Blau 2', shape: 'kegel', size: 'mittel', color: '#2980b9', rotation: 180, scale: 7, x: cx - 230, y: cy - 290 },
-          { id: 'c_green1', name: 'Grün 1', shape: 'kegel', size: 'mittel', color: '#27ae60', rotation: 180, scale: 8, x: cx - 195, y: cy - 285 },
-          { id: 'c_black', name: 'Schwarz', shape: 'kegel', size: 'mittel', color: '#1a1a1a', rotation: 180, scale: 4, x: cx - 210, y: cy - 240 },
-          { id: 'c_white', name: 'Weiß', shape: 'kegel', size: 'mittel', color: '#f4f4f4', rotation: 180, scale: 7, x: cx - 170, y: cy - 250 },
-
-          // LINKE HÄLFTE: HOLZ-ZYLINDER MIT AUGEN (MITTE LINKS)
-          { id: 'z1', name: 'Zylinder A', shape: 'zylinder', size: 'gross', color: 'wood-light', rotation: 180, scale: 6, x: cx - 180, y: cy - 80 },
-          { id: 'z2', name: 'Zylinder B', shape: 'zylinder', size: 'gross', color: 'wood-light', rotation: 180, scale: 6, x: cx - 130, y: cy - 90 },
-          { id: 'z3', name: 'Zylinder C', shape: 'zylinder', size: 'gross', color: 'wood-light', rotation: 180, scale: 6, x: cx - 75, y: cy - 80 },
-          { id: 'z4', name: 'Zylinder D', shape: 'zylinder', size: 'mittel', color: 'wood-light', rotation: 180, scale: 5, x: cx - 150, y: cy - 30 },
-          { id: 'z5', name: 'Zylinder E', shape: 'zylinder', size: 'mittel', color: 'wood-light', rotation: 180, scale: 5, x: cx - 95, y: cy - 30 },
-
-          // LINKE HÄLFTE UNTEN: 2 KINDER-MINI-KEGEL & 2 SÄULEN
-          { id: 'k_mini1', name: 'Kind 1', shape: 'kegel', size: 'klein', color: 'wood-light', rotation: 0, scale: 7, x: cx - 95, y: cy + 190 },
-          { id: 'k_mini2', name: 'Kind 2', shape: 'kegel', size: 'klein', color: 'wood-light', rotation: 0, scale: 7, x: cx - 55, y: cy + 200 },
-          { id: 'b_col1', name: 'Säule 1', shape: 'block', size: 'mittel', color: 'wood-light', rotation: 90, scale: 5, x: cx - 25, y: cy + 180 },
-          { id: 'b_col2', name: 'Säule 2', shape: 'block', size: 'mittel', color: 'wood-light', rotation: 90, scale: 5, x: cx + 5, y: cy + 185 },
-
-          // RECHTE HÄLFTE OBEN: 3 GROSSE NATURHOLZ-KEGELFIGUREN (MIT AUGEN ••)
-          { id: 't_tall1', name: 'Erwachsene 1', shape: 'kegel', size: 'gross', color: 'wood-light', rotation: 180, scale: 7, x: cx + 60, y: cy - 290 },
-          { id: 't_tall2', name: 'Erwachsene 2', shape: 'kegel', size: 'gross', color: 'wood-light', rotation: 180, scale: 8, x: cx + 110, y: cy - 280 },
-          { id: 't_tall3', name: 'Erwachsene 3', shape: 'kegel', size: 'gross', color: 'wood-light', rotation: 180, scale: 7, x: cx + 155, y: cy - 290 },
-
-          // RECHTE HÄLFTE MITTE: 6 MITTLERE KEGELFIGUREN MIT AUGEN
-          { id: 'm1', name: 'Figur 1', shape: 'kegel', size: 'mittel', color: 'wood-light', rotation: 180, scale: 6, x: cx + 110, y: cy - 60 },
-          { id: 'm2', name: 'Figur 2', shape: 'kegel', size: 'mittel', color: 'wood-light', rotation: 180, scale: 6, x: cx + 150, y: cy - 70 },
-          { id: 'm3', name: 'Figur 3', shape: 'kegel', size: 'mittel', color: 'wood-light', rotation: 180, scale: 6, x: cx + 180, y: cy - 50 },
-          { id: 'm4', name: 'Figur 4', shape: 'kegel', size: 'mittel', color: 'wood-light', rotation: 180, scale: 6, x: cx + 225, y: cy - 65 },
-          { id: 'm5', name: 'Figur 5', shape: 'kegel', size: 'mittel', color: 'wood-light', rotation: 180, scale: 6, x: cx + 265, y: cy - 75 },
-          { id: 'm6', name: 'Figur 6', shape: 'kegel', size: 'mittel', color: 'wood-light', rotation: 180, scale: 6, x: cx + 310, y: cy - 60 },
-
-          // RECHTE HÄLFTE UNTEN: 2 HOLZKLÖTZCHEN
-          { id: 'block_r1', name: 'Klötzchen 1', shape: 'block', size: 'mittel', color: 'wood-light', rotation: 0, scale: 5, x: cx + 240, y: cy + 130 },
-          { id: 'block_r2', name: 'Klötzchen 2', shape: 'block', size: 'mittel', color: 'wood-light', rotation: 0, scale: 5, x: cx + 290, y: cy + 120 }
-        ];
-
-        phase.relations = [
-          // Rote Verbindungskordel (wie im Foto)
-          { fromId: 'c_red1', toId: 'c_red2', type: 'solid', color: '#c0392b' }
-        ];
         break;
 
       case 'herkunftsfamilie':
-        STATE.boardType = 'ideen-kollektiv';
+        STATE.boardType = 'classic';
         STATE.splitDistance = 0;
         phase.figures = [
           { id: 'f1', name: 'Vater', shape: 'kegel', size: 'gross', color: 'wood-light', rotation: 180, scale: 6, x: cx - 180, y: cy - 140 },
@@ -1885,8 +2632,8 @@
         break;
 
       case 'patchwork':
-        STATE.boardType = 'ideen-kollektiv';
-        STATE.splitDistance = 50; // Bei Patchwork leicht geöffnet
+        STATE.boardType = 'classic';
+        STATE.splitDistance = 20; // Bei Patchwork leicht geöffnet
         phase.figures = [
           { id: 'p1', name: 'Klient', shape: 'kegel', size: 'gross', color: '#2c3e50', rotation: 90, scale: 5, x: cx - 140, y: cy },
           { id: 'p2', name: 'Partnerin', shape: 'kegel', size: 'gross', color: '#c0392b', rotation: 270, scale: 8, x: cx + 140, y: cy },
@@ -1901,7 +2648,7 @@
         break;
 
       case 'organisation':
-        STATE.boardType = 'ideen-kollektiv';
+        STATE.boardType = 'classic';
         STATE.splitDistance = 0;
         phase.figures = [
           { id: 'o1', name: 'Teamleitung', shape: 'kegel', size: 'gross', color: '#2c3e50', rotation: 180, scale: 5, x: cx, y: cy - 150 },
@@ -1918,7 +2665,7 @@
         break;
 
       case 'inneres-team':
-        STATE.boardType = 'ideen-kollektiv';
+        STATE.boardType = 'classic';
         STATE.splitDistance = 0;
         phase.figures = [
           { id: 'it1', name: 'Ich-Zentrum (Selbst)', shape: 'kegel', size: 'gross', color: 'wood-light', rotation: 0, scale: 6, x: cx, y: cy },
@@ -1930,7 +2677,7 @@
         break;
 
       case 'tetralemma':
-        STATE.boardType = 'ideen-kollektiv';
+        STATE.boardType = 'classic';
         STATE.splitDistance = 0;
         phase.figures = [
           { id: 't1', name: '1. Das Eine (Option A)', shape: 'kegel', size: 'gross', color: '#2980b9', rotation: 90, scale: 6, x: cx - 220, y: cy - 80 },
@@ -1942,8 +2689,8 @@
         break;
 
       case 'symptomaufstellung':
-        STATE.boardType = 'ideen-kollektiv';
-        STATE.splitDistance = 40;
+        STATE.boardType = 'classic';
+        STATE.splitDistance = 20;
         phase.figures = [
           { id: 's1', name: 'Klient', shape: 'kegel', size: 'gross', color: '#2c3e50', rotation: 90, scale: 4, x: cx - 180, y: cy },
           { id: 's2', name: 'Symptom (z.B. Erschöpfung)', shape: 'wolke', size: 'gross', color: '#c0392b', rotation: 270, scale: 2, x: cx + 180, y: cy },
@@ -1955,8 +2702,6 @@
         ];
         break;
 
-      case 'leer':
-        break;
     }
 
     updateSplitUI();
@@ -1970,36 +2715,102 @@
   // 16. EXPORT, JSON SPEICHERN / LADEN & DRUCK
   // ==========================================================================
 
+  // CSS, das beim Export direkt in die SVG eingebettet wird (die Seiten-Stylesheets fehlen im Bild)
+  const EXPORT_CSS = `
+    .laser-border-line { fill: none; stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
+    .figure-label-text { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600;
+      fill: #f0f2f5; text-anchor: middle; paint-order: stroke; stroke: rgba(0,0,0,0.75); stroke-width: 3px; stroke-linejoin: round; }
+    .figure-scale-badge { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 9px; font-weight: 700; fill: #fff; text-anchor: middle; }
+    .vision-cone { opacity: 0.35; }
+    .vision-cone.highlighted { opacity: 0.65; }
+    .sight-line { stroke-width: 1.5; }
+    .relation-wire { fill: none; }
+    .figure-in-blindspot { opacity: 0.42; }
+    .figure-in-periphery { opacity: 0.82; }
+  `;
+
+  // Baut eine eigenständige SVG (inkl. Holzmaserung, Filter und Styles) für PNG-Export und Druck.
+  function buildExportSvg(scale) {
+    const clone = svgElem.cloneNode(true);
+
+    ['controlsOverlayGroup', 'rubberbandGroup', 'viewHandlesGroup'].forEach(id => {
+      const g = clone.querySelector('#' + id);
+      if (g) g.innerHTML = '';
+    });
+    clone.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+    const outer = clone.querySelector('#outerSpace');
+    if (outer) outer.remove();
+
+    // Ausschnitt: Brett + alle Figuren, mit Rand
+    const b = getBoardBounds();
+    let minX = b.x - 70, maxX = b.x + b.w + 70, minY = b.y - 70, maxY = b.y + b.h + 70;
+    const phase = getCurrentPhase();
+    if (phase) {
+      phase.figures.forEach(f => {
+        minX = Math.min(minX, f.x - 90);
+        maxX = Math.max(maxX, f.x + 90);
+        minY = Math.min(minY, f.y - 90);
+        maxY = Math.max(maxY, f.y + 110);
+      });
+    }
+    minX = Math.max(0, minX);
+    minY = Math.max(0, minY);
+    maxX = Math.min(CONTAINER_W, maxX);
+    maxY = Math.min(CONTAINER_H, maxY + 34);   // Platz für die Beschriftungszeile
+    const w = maxX - minX;
+    const h = maxY - minY;
+
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`);
+    clone.setAttribute('width', Math.round(w * scale));
+    clone.setAttribute('height', Math.round(h * scale));
+    clone.removeAttribute('class');
+
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.textContent = EXPORT_CSS;
+    clone.insertBefore(style, clone.firstChild);
+
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    return { svgStr, w, h, minX, minY, scale };
+  }
+
   function exportAsPng() {
-    const serializer = new XMLSerializer();
-    const svgStr = serializer.serializeToString(svgElem);
-    const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-    const URL = window.URL || window.webkitURL || window;
-    const blobURL = URL.createObjectURL(svgBlob);
+    const SCALE = 2;
+    const exp = buildExportSvg(SCALE);
+    const urlApi = window.URL || window.webkitURL;
+    const blobURL = urlApi.createObjectURL(new Blob([exp.svgStr], { type: 'image/svg+xml;charset=utf-8' }));
 
     const img = new Image();
     img.onload = function () {
       const canvas = document.createElement('canvas');
-      canvas.width = 1600;
-      canvas.height = 1200;
+      canvas.width = Math.round(exp.w * SCALE);
+      canvas.height = Math.round(exp.h * SCALE);
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#1e1f24';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      ctx.font = '14px sans-serif';
-      ctx.fillText(`${STATE.sessionTitle} • Phase: ${getCurrentPhase().name} • ${new Date().toLocaleDateString('de-DE')}`, 30, 1170);
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = `${13 * SCALE}px sans-serif`;
+      ctx.fillText(`${STATE.sessionTitle} • ${getCurrentPhase().name} • ${new Date().toLocaleDateString('de-DE')}`, 22 * SCALE, canvas.height - 14 * SCALE);
 
-      URL.revokeObjectURL(blobURL);
+      urlApi.revokeObjectURL(blobURL);
 
-      const pngUrl = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.download = `Systembrett_${sanitizeFilename(STATE.sessionTitle)}_${Date.now()}.png`;
-      a.href = pngUrl;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        const dl = urlApi.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.download = `Systembrett_${sanitizeFilename(STATE.sessionTitle)}_${Date.now()}.png`;
+        a.href = dl;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => urlApi.revokeObjectURL(dl), 2000);
+      }, 'image/png');
+    };
+    img.onerror = function () {
+      urlApi.revokeObjectURL(blobURL);
+      alert('Das Bild konnte nicht erzeugt werden.');
     };
     img.src = blobURL;
   }
@@ -2044,7 +2855,7 @@
         }
 
         STATE.sessionTitle = data.sessionTitle || 'Geladene Aufstellung';
-        STATE.boardType = data.boardType || 'ideen-kollektiv';
+        STATE.boardType = ['classic', 'single', 'round', 'split'].includes(data.boardType) ? data.boardType : 'classic';
         STATE.splitDistance = data.splitDistance !== undefined ? data.splitDistance : 0;
         STATE.woodType = data.woodType || 'buche-hell';
         STATE.phases = data.phases;
@@ -2074,11 +2885,10 @@
   }
 
   function printReport() {
-    const serializer = new XMLSerializer();
-    const svgStr = serializer.serializeToString(svgElem);
-    const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-    const URL = window.URL || window.webkitURL || window;
-    const blobURL = URL.createObjectURL(svgBlob);
+    const exp = buildExportSvg(1.5);
+    const svgBlob = new Blob([exp.svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const urlApi = window.URL || window.webkitURL;
+    const blobURL = urlApi.createObjectURL(svgBlob);
 
     const img = new Image();
     img.onload = function () {
@@ -2120,7 +2930,7 @@
       }
 
       window.print();
-      URL.revokeObjectURL(blobURL);
+      urlApi.revokeObjectURL(blobURL);
     };
     img.src = blobURL;
   }
@@ -2146,6 +2956,87 @@
   // 17. UI EVENT LISTENERS
   // ==========================================================================
 
+  // --------------------------------------------------------------------------
+  // FIGUREN-VORLAGEN (Klick UND Drag & Drop)
+  // --------------------------------------------------------------------------
+
+  const QUICK_PRESETS = {
+    'kegel-gross-holz': { shape: 'kegel', size: 'gross', color: 'wood-light', name: 'Kegel Groß' },
+    'kegel-mittel-holz': { shape: 'kegel', size: 'mittel', color: 'wood-light', name: 'Kegel Mittel' },
+    'kegel-klein-holz': { shape: 'kegel', size: 'klein', color: 'wood-light', name: 'Kind / Klein' },
+    'zylinder-gross-holz': { shape: 'zylinder', size: 'gross', color: 'wood-light', name: 'Zylinder Groß' },
+    'zylinder-mittel-holz': { shape: 'zylinder', size: 'mittel', color: 'wood-light', name: 'Zylinder Mittel' },
+    'kloetzchen-holz': { shape: 'block', size: 'mittel', color: 'wood-light', name: 'Holzklötzchen' },
+    'kegel-rot': { shape: 'kegel', size: 'mittel', color: '#c0392b', name: 'Rot' },
+    'kegel-blau': { shape: 'kegel', size: 'mittel', color: '#2980b9', name: 'Blau' },
+    'kegel-gruen': { shape: 'kegel', size: 'mittel', color: '#27ae60', name: 'Grün' },
+    'kegel-schwarz': { shape: 'kegel', size: 'mittel', color: '#1a1a1a', name: 'Schwarz' },
+    'kegel-weiss': { shape: 'kegel', size: 'mittel', color: '#f4f4f4', name: 'Weiß' },
+    'eckig-gross-holz': { shape: 'eckig', size: 'gross', color: 'wood-light', name: 'Eckig Groß' }
+  };
+
+  function presetFromElement(el) {
+    if (!el) return null;
+    if (el.hasAttribute('data-create')) {
+      const p = QUICK_PRESETS[el.getAttribute('data-create')];
+      return p ? Object.assign({}, p) : null;
+    }
+    if (el.hasAttribute('data-create-symbol')) {
+      const nameEl = el.querySelector('.symbol-name');
+      return {
+        shape: el.getAttribute('data-create-symbol'),
+        size: 'mittel',
+        color: el.getAttribute('data-color'),
+        name: nameEl ? nameEl.textContent : 'Symbol'
+      };
+    }
+    return null;
+  }
+
+  let draggedPreset = null;
+
+  function setupDragAndDrop() {
+    document.querySelectorAll('.quick-figure-btn[draggable="true"], .symbol-card[draggable="true"]').forEach(btn => {
+      btn.addEventListener('dragstart', (e) => {
+        draggedPreset = presetFromElement(btn);
+        if (!draggedPreset) { e.preventDefault(); return; }
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', 'systembrett-figur:' + draggedPreset.name);
+        initAudio();
+      });
+      btn.addEventListener('dragend', () => {
+        draggedPreset = null;
+        boardViewportEl.classList.remove('drag-over');
+      });
+    });
+
+    boardViewportEl.addEventListener('dragover', (e) => {
+      if (!draggedPreset) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      boardViewportEl.classList.add('drag-over');
+    });
+
+    boardViewportEl.addEventListener('dragleave', (e) => {
+      if (!boardViewportEl.contains(e.relatedTarget)) {
+        boardViewportEl.classList.remove('drag-over');
+      }
+    });
+
+    boardViewportEl.addEventListener('drop', (e) => {
+      boardViewportEl.classList.remove('drag-over');
+      if (!draggedPreset) return;
+      e.preventDefault();
+      const pt = clientToBoard(e.clientX, e.clientY);
+      const preset = draggedPreset;
+      draggedPreset = null;
+      addFigure(Object.assign({}, preset, {
+        x: Math.round(clamp(pt.x, 40, CONTAINER_W - 40)),
+        y: Math.round(clamp(pt.y, 40, CONTAINER_H - 40))
+      }), { select: false });
+    });
+  }
+
   function setupUiListeners() {
     const titleInput = document.getElementById('sessionTitle');
     if (titleInput) {
@@ -2159,24 +3050,9 @@
     document.getElementById('btnSetUnified')?.addEventListener('click', setBoardUnified);
     document.getElementById('btnSetSplit')?.addEventListener('click', setBoardSplit);
 
-    // View-Modes
-    document.getElementById('btnView2D')?.addEventListener('click', () => {
-      STATE.viewMode = '2d';
-      document.body.classList.remove('view-25d');
-      document.getElementById('btnView2D').classList.add('active');
-      document.getElementById('btnView25D').classList.remove('active');
-      updateTransform();
-      playWoodClick(1.0);
-    });
-
-    document.getElementById('btnView25D')?.addEventListener('click', () => {
-      STATE.viewMode = '25d';
-      document.body.classList.add('view-25d');
-      document.getElementById('btnView25D').classList.add('active');
-      document.getElementById('btnView2D').classList.remove('active');
-      updateTransform();
-      playWoodClick(1.0);
-    });
+    // View-Modes (Brett wird bei jedem Wechsel bildschirmfüllend eingepasst)
+    document.getElementById('btnView2D')?.addEventListener('click', () => setViewMode('2d'));
+    document.getElementById('btnView25D')?.addEventListener('click', () => setViewMode('25d'));
 
     // Overlays
     document.getElementById('btnToggleCones')?.addEventListener('click', (e) => {
@@ -2207,21 +3083,38 @@
 
     // Zoom
     document.getElementById('btnZoomIn')?.addEventListener('click', () => {
-      STATE.zoom = Math.min(2.5, STATE.zoom + 0.15);
+      STATE.autoFit = false;
+      STATE.zoom = clamp(STATE.zoom * 1.18, MIN_ZOOM, MAX_ZOOM);
       updateTransform();
-      document.getElementById('zoomLevel').textContent = `${Math.round(STATE.zoom * 100)}%`;
     });
 
     document.getElementById('btnZoomOut')?.addEventListener('click', () => {
-      STATE.zoom = Math.max(0.4, STATE.zoom - 0.15);
+      STATE.autoFit = false;
+      STATE.zoom = clamp(STATE.zoom / 1.18, MIN_ZOOM, MAX_ZOOM);
       updateTransform();
-      document.getElementById('zoomLevel').textContent = `${Math.round(STATE.zoom * 100)}%`;
     });
 
     document.getElementById('btnCenterBoard')?.addEventListener('click', resetZoomAndPan);
-    document.getElementById('btnZoomReset')?.addEventListener('click', resetZoomAndPan);
 
-    // Sidebar Tabs
+    // Linke Leiste: Akkordeon (unabhängig auf- und zuklappbar)
+    document.querySelectorAll('.acc-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const open = !header.classList.contains('open');
+        header.classList.toggle('open', open);
+        header.setAttribute('aria-expanded', open ? 'true' : 'false');
+        const body = document.getElementById(header.getAttribute('data-acc'));
+        if (body) body.classList.toggle('open', open);
+      });
+    });
+
+    // Menüs ein- und ausklappen
+    document.getElementById('btnCollapseLeft')?.addEventListener('click', () => setSidebarCollapsed('left', true));
+    document.getElementById('btnExpandLeft')?.addEventListener('click', () => setSidebarCollapsed('left', false));
+    document.getElementById('btnCollapseRight')?.addEventListener('click', () => setSidebarCollapsed('right', true));
+    document.getElementById('btnExpandRight')?.addEventListener('click', () => setSidebarCollapsed('right', false));
+    document.getElementById('btnCloseInspector')?.addEventListener('click', () => selectFigure(null));
+
+    // Rechte Leiste: Tabs
     document.querySelectorAll('.sidebar-tabs').forEach(tabsNav => {
       tabsNav.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2235,22 +3128,11 @@
       });
     });
 
-    // Schnell-Figuren Button Klick (linke Leiste - DSC1833 Set)
+    // Schnell-Figuren: Klick setzt die Figur ins Brett (Drag & Drop siehe setupDragAndDrop)
     document.querySelectorAll('.quick-figure-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const type = btn.getAttribute('data-create');
-        if (type === 'kegel-gross-holz') addFigure({ shape: 'kegel', size: 'gross', color: 'wood-light', name: 'Kegel Groß' });
-        else if (type === 'kegel-mittel-holz') addFigure({ shape: 'kegel', size: 'mittel', color: 'wood-light', name: 'Kegel Mittel' });
-        else if (type === 'kegel-klein-holz') addFigure({ shape: 'kegel', size: 'klein', color: 'wood-light', name: 'Kind / Klein' });
-        else if (type === 'zylinder-gross-holz') addFigure({ shape: 'zylinder', size: 'gross', color: 'wood-light', name: 'Zylinder Groß' });
-        else if (type === 'zylinder-mittel-holz') addFigure({ shape: 'zylinder', size: 'mittel', color: 'wood-light', name: 'Zylinder Mittel' });
-        else if (type === 'kloetzchen-holz') addFigure({ shape: 'block', size: 'mittel', color: 'wood-light', name: 'Holzklötzchen' });
-        else if (type === 'kegel-rot') addFigure({ shape: 'kegel', size: 'mittel', color: '#c0392b', name: 'Rot' });
-        else if (type === 'kegel-blau') addFigure({ shape: 'kegel', size: 'mittel', color: '#2980b9', name: 'Blau' });
-        else if (type === 'kegel-gruen') addFigure({ shape: 'kegel', size: 'mittel', color: '#27ae60', name: 'Grün' });
-        else if (type === 'kegel-schwarz') addFigure({ shape: 'kegel', size: 'mittel', color: '#1a1a1a', name: 'Schwarz' });
-        else if (type === 'kegel-weiss') addFigure({ shape: 'kegel', size: 'mittel', color: '#f4f4f4', name: 'Weiß' });
-        else if (type === 'eckig-gross-holz') addFigure({ shape: 'eckig', size: 'gross', color: 'wood-light', name: 'Eckig Groß' });
+        const preset = presetFromElement(btn);
+        if (preset) addFigure(preset, { select: false });
       });
     });
 
@@ -2294,15 +3176,8 @@
 
     document.querySelectorAll('.symbol-card').forEach(btn => {
       btn.addEventListener('click', () => {
-        const sym = btn.getAttribute('data-create-symbol');
-        const color = btn.getAttribute('data-color');
-        const name = btn.querySelector('.symbol-name').textContent;
-        addFigure({
-          name: name,
-          shape: sym,
-          size: 'mittel',
-          color: color
-        });
+        const preset = presetFromElement(btn);
+        if (preset) addFigure(preset, { select: false });
       });
     });
 
@@ -2333,6 +3208,8 @@
       card.addEventListener('click', () => {
         const tId = card.getAttribute('data-template');
         loadTemplate(tId);
+        setAccordion('tab-templates', false);
+        setAccordion('tab-figures', true);
       });
     });
 
@@ -2342,9 +3219,8 @@
         document.querySelectorAll('.board-shape-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         STATE.boardType = btn.getAttribute('data-shape');
-        const canSplit = STATE.boardType === 'ideen-kollektiv' || STATE.boardType === 'split';
-        document.getElementById('splitDistanceGroup').style.display = canSplit ? 'block' : 'none';
         renderBoard();
+        if (STATE.autoFit && !STATE.povFigureId) fitToView(true);
         playWoodClick(1.0);
       });
     });
@@ -2355,6 +3231,9 @@
         STATE.splitDistance = parseInt(e.target.value, 10);
         updateSplitUI();
         renderBoard();
+      });
+      splitSlider.addEventListener('change', () => {
+        if (STATE.autoFit && !STATE.povFigureId) fitToView(true);
       });
     }
 
@@ -2559,6 +3438,14 @@
     });
 
     document.getElementById('btnExportProtocol')?.addEventListener('click', printReport);
+
+    // Fokus-Modus
+    document.getElementById('btnEnterFocus')?.addEventListener('click', enterFocusMode);
+    document.getElementById('btnExitFocus')?.addEventListener('click', exitFocusMode);
+    document.addEventListener('fullscreenchange', () => {
+      // Vollbild wurde vom Browser beendet (z. B. durch Esc) -> Fokus-Modus ebenfalls beenden
+      if (!document.fullscreenElement && STATE.focusMode) exitFocusMode();
+    });
   }
 
   // ==========================================================================
@@ -2567,16 +3454,24 @@
 
   function init() {
     renderBoard();
-    loadTemplate('ideen-kollektiv'); // Lädt standardmäßig das authentische DSC1833 Set als 1 ganzes Brett
+    loadTemplate('leer'); // Startet mit einem leeren, ganzen Brett
     renderPhasesUI();
     setupInteractions();
     setupUiListeners();
     pickRandomQuestion('all');
     runSystemicAnalysis();
-    resetZoomAndPan();
     updateSplitUI();
 
-    console.log('Virtuelles Systembrett (Ideen-Kollektiv Style) erfolgreich initialisiert.');
+    // Brett immer bildschirmfüllend: beim Start, bei Größenänderung und bei Ansichtswechsel
+    fitToView(false);
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => {
+        if (STATE.povFigureId) applyPovCamera(false);
+        else if (STATE.autoFit) fitToView(false);
+      }).observe(boardViewportEl);
+    }
+
+    console.log('Virtuelles Systembrett erfolgreich initialisiert.');
   }
 
   window.addEventListener('DOMContentLoaded', init);
