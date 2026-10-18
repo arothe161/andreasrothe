@@ -654,6 +654,19 @@
                   <feComposite in="streaks" in2="SourceAlpha" operator="in"/>
                 </filter>
 
+                <!-- HOLZMASERUNG FÜR FIGUREN (senkrechte Fasern) -->
+                <pattern id="pegGrain" width="34" height="96" patternUnits="userSpaceOnUse">
+                  <path d="M3 0 C5 24 1 60 3 96" stroke="#5a3512" stroke-opacity="0.34" stroke-width="1.1" fill="none"/>
+                  <path d="M9 0 C8 30 11 62 9 96" stroke="#7a4a1c" stroke-opacity="0.22" stroke-width="2.2" fill="none"/>
+                  <path d="M15 0 C17 20 13 70 15 96" stroke="#5a3512" stroke-opacity="0.30" stroke-width="0.8" fill="none"/>
+                  <path d="M21 0 C20 35 24 55 21 96" stroke="#6b4220" stroke-opacity="0.26" stroke-width="1.6" fill="none"/>
+                  <path d="M27 0 C29 28 25 64 27 96" stroke="#5a3512" stroke-opacity="0.36" stroke-width="0.9" fill="none"/>
+                  <path d="M32 0 C31 40 34 58 32 96" stroke="#7a4a1c" stroke-opacity="0.20" stroke-width="1.8" fill="none"/>
+                </pattern>
+                <radialGradient id="glossGrad"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+                <filter id="solidBlur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+                <filter id="solidBlurSm" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.2"/></filter>
+
                 <!-- DROP SHADOW FILTERS -->
                 <filter id="figureShadow" x="-30%" y="-30%" width="160%" height="180%">
                   <feDropShadow dx="3" dy="8" stdDeviation="5" flood-color="#000000" flood-opacity="0.28"/>
@@ -713,6 +726,21 @@
           </div>
         </div>
 
+        <!-- 3D-NAVIGATION (nur in der 3D-Ansicht) -->
+        <div id="nav3d" class="nav3d">
+          <button id="btnRotLeft" class="nav3d-btn" title="Nach links drehen (Shift + ←)">⟲</button>
+          <button id="btnCompass" class="nav3d-btn nav3d-compass" title="Ansicht zurücksetzen">
+            <svg id="compassNeedle" viewBox="0 0 24 24" width="22" height="22">
+              <polygon points="12,2 16,13 12,11 8,13" fill="#c0392b"/>
+              <polygon points="12,22 8,11 12,13 16,11" fill="#8a8f98"/>
+            </svg>
+          </button>
+          <button id="btnRotRight" class="nav3d-btn" title="Nach rechts drehen (Shift + →)">⟳</button>
+          <span class="nav3d-sep"></span>
+          <button id="btnTiltUp" class="nav3d-btn" title="Mehr Neigung – Blick zum Horizont (Shift + ↑)">⤒</button>
+          <button id="btnTiltDown" class="nav3d-btn" title="Weniger Neigung – Draufsicht (Shift + ↓)">⤓</button>
+        </div>
+
         <!-- EGO-VIEW (Perspektivenwechsel: Sicht aus den Augen der Figur) -->
         <div id="egoView" class="ego-view" style="display:none;">
           <div class="ego-head">
@@ -730,8 +758,8 @@
             <span><kbd>Shift+Mausrad</kbd> Stufenlos drehen</span>
             <span><kbd>Esc</kbd> Abbrechen</span>
             <span><kbd>F</kbd> Fokus-Modus</span>
-            <span class="hint-3d"><kbd>Ecke ziehen</kbd> Brett drehen</span>
-            <span class="hint-3d"><kbd>Mausrad / 2 Finger</kbd> Blickwinkel</span>
+            <span class="hint-3d"><kbd>Rechtsklick</kbd> / <kbd>Strg</kbd>+Ziehen drehen &amp; neigen</span>
+            <span class="hint-3d"><kbd>Mausrad</kbd> Zoom</span>
           </div>
         </div>
       </main>

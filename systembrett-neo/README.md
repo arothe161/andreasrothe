@@ -7,6 +7,7 @@ Ein interaktives virtuelles **Systembrett** für Psychotherapeuten, systemische 
 - **Ein ganzes Brett:** Beim Start liegt ein quadratisches Holzbrett mit feiner Maserung auf dem Tisch. Von der gewellten Trennung bleibt nur **eine schmale Naht** sichtbar.
 - **Trennen & vereinen:** Über `🔗 1 Brett` oder den Schieberegler (Reiter *Brett*) lassen sich die Hälften auseinanderschieben.
 - **Gelaserte Randlinie**, abgerundete Ecken, Holzarten Buche, Eiche, Nussbaum und Slate.
+- **3D-Holzobjekte:** In der 3D-Ansicht stehen alle Figuren und Symbole als Körper aus Holz auf dem Brett – Kegelfiguren mit Kugelkopf, gedrechselte Zylinder, Klötze und Kisten, Symbole als dicke ausgesägte Holzplatten auf einem Fuß. Mit Maserung, Lackglanz bei farbigen Figuren, Schlagschatten und aufrechten Beschriftungen. Die aufgemalten Augen sitzen am Kopf in Blickrichtung und sind sichtbar, sobald die Figur zum Betrachter schaut. Export und 2D-Ansicht zeigen weiterhin die Draufsicht.
 - **Figuren mit Augen:** Kegel, Zylinder, Eckfiguren, Klötzchen, farbige Spielfiguren und Symbole (Ziel, Hindernis, Ressource …).
 - **Kordeln & Beziehungen:** rot, naturweiß, schwarz sowie Konflikt, Hinwendung, Austausch, Blockade.
 
@@ -33,9 +34,9 @@ Ein interaktives virtuelles **Systembrett** für Psychotherapeuten, systemische 
 | Figur aus Palette setzen | anklicken oder aufs Brett ziehen |
 | Blickrichtung drehen | Knopf am Ring ziehen, `R` / `Shift+R`, `Shift + Mausrad` |
 | Figur löschen | `Entf` |
-| Brett verschieben / zoomen | freie Fläche ziehen / Mausrad |
-| 3D-Ansicht: Brett drehen | eine der vier Brett-Ecken anfassen und ziehen (Doppelklick auf freie Fläche = Ausgangsansicht) |
-| 3D-Ansicht: Blickwinkel ändern | Mausrad oder Zwei-Finger-Scrollen am Trackpad (seitlich scrollen dreht) |
-| Zoom (Trackpad) | Pinch-Geste, oder `Strg` + Mausrad, oder +/− |
+| Brett verschieben | freie Fläche greifen und ziehen (mit sanftem Nachgleiten) |
+| Zoom | Mausrad, Pinch-Geste am Trackpad oder +/− – zoomt zum Mauszeiger hin; Doppelklick zoomt hinein |
+| 3D: Brett drehen und neigen | rechte Maustaste oder `Strg` + ziehen (links/rechts = drehen, hoch/runter = neigen) |
+| 3D: Feinsteuerung | Buttons unten rechts (⟲ ⟳ ⤒ ⤓), `Shift` + Pfeiltasten, `Shift` + Mausrad (Neigung); Kompass setzt die Ansicht zurück |
 | Fokus-Modus | `F` oder Button |
 | Beziehung / Perspektive / Fokus abbrechen | `Esc` |

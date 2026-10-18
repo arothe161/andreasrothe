@@ -31,6 +31,8 @@
     viewTilt: 46,                   // 3D: Neigung des Bretts (Grad)
     isRotatingView: false,
     rotStart: null,
+    forceFlat: false,               // true = Figuren flach zeichnen (z. B. für den PNG-Export)
+    solidKey: null,
     viewRotation: 0,                // Drehung der Ansicht (Perspektivenwechsel: Blickrichtung zeigt nach oben)
     povPrevView: null,
     povCamRot: null,
@@ -590,7 +592,17 @@
       }
     }
 
-    phase.figures.forEach(fig => {
+    STATE.solidKey = currentSolidKey();
+    if (useSolids()) STATE.solidProj = getTargetProjection();
+    let drawOrder = phase.figures;
+    if (useSolids()) {
+      // Hintere Figuren zuerst, damit vordere sie korrekt verdecken
+      const yw = (STATE.viewYaw * Math.PI) / 180;
+      const depth = f => f.x * Math.sin(yw) + f.y * Math.cos(yw);
+      drawOrder = phase.figures.slice().sort((p, q) => depth(p) - depth(q));
+    }
+
+    drawOrder.forEach(fig => {
       const g = createFigureSvgElement(fig);
       if (observer) {
         if (fig.id === observer.id) g.classList.add('figure-in-pov');
@@ -613,7 +625,530 @@
     if (observer) renderEgoView();
   }
 
+  // ==========================================================================
+  // 3D-KÖRPER: Figuren und Symbole als Objekte aus Holz (nur in der 3D-Ansicht)
+  //
+  // Die Figuren stehen aufrecht auf dem Brett. Gezeichnet wird im bildschirm-
+  // parallelen Koordinatensystem des Bretts: Höhen werden um tan(Neigung)
+  // verlängert, damit sie nach der Kippung des Bretts richtig erscheinen.
+  // Kugeln sind Ellipsen (1/cos), waagerechte Scheiben bleiben Kreise.
+  // ==========================================================================
+
+  let solidUid = 0;
+
+  function useSolids() {
+    return STATE.viewMode === '25d' && !STATE.povFigureId && !STATE.forceFlat && STATE.viewTilt >= 8;
+  }
+
+  function currentSolidKey() {
+    return useSolids()
+      ? `${STATE.isRotatingView ? 'f' : 'q'}|${Math.round(STATE.viewYaw * 2)}|${Math.round(STATE.viewTilt * 2)}|${Math.round(STATE.panX / 20)}|${Math.round(STATE.panY / 20)}|${Math.round(STATE.zoom * 50)}`
+      : 'flat';
+  }
+
+  // Figuren neu zeichnen, wenn sich Drehung/Neigung der 3D-Ansicht geändert hat
+  let solidRefreshRaf = null;
+  function refreshSolidsIfNeeded() {
+    if (currentSolidKey() === STATE.solidKey || solidRefreshRaf) return;
+    // höchstens einmal pro Bildschirm-Frame neu zeichnen
+    solidRefreshRaf = requestAnimationFrame(() => {
+      solidRefreshRaf = null;
+      if (currentSolidKey() !== STATE.solidKey) renderFigures();
+    });
+  }
+
+  function parseHexColor(c) {
+    let h = /^#[0-9a-f]{3,6}$/i.test(c || '') ? c.slice(1) : 'c2955d';
+    if (h.length === 3) h = h.split('').map(x => x + x).join('');
+    const n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  // amt > 0: aufhellen, amt < 0: abdunkeln
+  function shade(c, amt) {
+    const [r, g, b] = parseHexColor(c);
+    const t = amt > 0 ? 255 : 0;
+    const k = Math.abs(amt);
+    const f = v => Math.round(v + (t - v) * k).toString(16).padStart(2, '0');
+    return '#' + f(r) + f(g) + f(b);
+  }
+
+  function materialFor(fig) {
+    let base, grain, gloss, eye = '#1a1006';
+    if (fig.color === 'wood-light' || fig.color === 'buche-hell') {
+      base = '#e6cb9c'; grain = 0.6; gloss = 0.16;
+    } else if (fig.color === 'wood-dark') {
+      base = '#6a4426'; grain = 0.38; gloss = 0.2; eye = '#f5ead8';
+    } else {
+      base = /^#/.test(fig.color || '') ? fig.color : '#c2955d';
+      grain = 0.3; gloss = 0.42;
+      const [r, g, b] = parseHexColor(base);
+      if (r * 0.3 + g * 0.59 + b * 0.11 < 70) eye = '#f5f5f5';
+    }
+    return { base, grain, gloss, eye, dark: shade(base, -0.38), edge: shade(base, -0.58) };
+  }
+
+  function addLinearGradient(defs, id, mat) {
+    const g = svgEl('linearGradient', { id: id, x1: 0, y1: 0, x2: 1, y2: 0 });
+    [[0, -0.36], [0.2, 0.3], [0.42, 0.02], [0.74, -0.2], [1, -0.5]].forEach(([o, a]) => {
+      g.appendChild(svgEl('stop', { offset: o, 'stop-color': shade(mat.base, a) }));
+    });
+    defs.appendChild(g);
+  }
+
+  function addRadialGradient(defs, id, mat) {
+    const g = svgEl('radialGradient', { id: id, cx: 0.5, cy: 0.5, r: 0.62, fx: 0.36, fy: 0.3 });
+    [[0, 0.62], [0.32, 0.14], [0.7, -0.24], [1, -0.52]].forEach(([o, a]) => {
+      g.appendChild(svgEl('stop', { offset: o, 'stop-color': shade(mat.base, a) }));
+    });
+    defs.appendChild(g);
+  }
+
+  // Umriss zweier Kreise (Kegelstumpf / Kapsel) als geschlossener Pfad
+  function hullPath(x1, y1, r1, x2, y2, r2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const L = Math.hypot(dx, dy);
+    const circ = (x, y, r) => `M ${x - r},${y} A ${r},${r} 0 1,0 ${x + r},${y} A ${r},${r} 0 1,0 ${x - r},${y} Z`;
+    if (L <= Math.abs(r1 - r2) + 0.01) return r1 >= r2 ? circ(x1, y1, r1) : circ(x2, y2, r2);
+    const a = Math.atan2(dy, dx);
+    const gam = Math.acos((r1 - r2) / L);
+    const pt = (x, y, r, t) => [x + r * Math.cos(t), y + r * Math.sin(t)];
+    const p1a = pt(x1, y1, r1, a + gam), p2a = pt(x2, y2, r2, a + gam);
+    const p2b = pt(x2, y2, r2, a - gam), p1b = pt(x1, y1, r1, a - gam);
+    const large2 = 2 * gam > Math.PI ? 1 : 0;
+    const large1 = 2 * Math.PI - 2 * gam > Math.PI ? 1 : 0;
+    return `M ${p1a[0]},${p1a[1]} L ${p2a[0]},${p2a[1]} A ${r2},${r2} 0 ${large2},0 ${p2b[0]},${p2b[1]} L ${p1b[0]},${p1b[1]} A ${r1},${r1} 0 ${large1},0 ${p1a[0]},${p1a[1]} Z`;
+  }
+
+  // Holzmaserung als Overlay auf einer Kopie des Elements
+  function grainOver(parent, el, mat, patternId) {
+    if (STATE.isRotatingView) return null;      // beim Drehen/Neigen vereinfacht zeichnen (flüssiger)
+    const c = el.cloneNode(false);
+    ['stroke', 'stroke-width', 'stroke-opacity', 'filter', 'class'].forEach(a => c.removeAttribute(a));
+    c.setAttribute('fill', `url(#${patternId || 'pegGrain'})`);
+    c.setAttribute('opacity', mat.grain);
+    c.setAttribute('pointer-events', 'none');
+    parent.appendChild(c);
+    return c;
+  }
+
+  function glossSpot(parent, ctx, x, y, r, mat) {
+    if (STATE.isRotatingView) return;
+    parent.appendChild(svgEl('ellipse', {
+      cx: x, cy: y, rx: r, ry: (r * 0.62) / ctx.cosT,
+      fill: 'url(#glossGrad)', opacity: Math.min(0.95, mat.gloss * 1.6 + 0.2), 'pointer-events': 'none'
+    }));
+  }
+
+  // Augen auf einer Kugel in Blickrichtung (nur sichtbar, wenn die Figur zum Betrachter schaut)
+  function sphereEyes(parent, ctx, fig, mat, cx, cy, hr, latDeg, spreadDeg, er) {
+    const phi = (fig.rotation || 0) + ctx.yaw;
+    const psi = Math.PI - (phi * Math.PI) / 180;
+    const lat = (latDeg * Math.PI) / 180;
+    [-1, 1].forEach(sg => {
+      const fe = psi + (sg * spreadDeg * Math.PI) / 180;
+      const vis = Math.sin(lat) * Math.sin(ctx.elev) + Math.cos(lat) * Math.cos(fe) * Math.cos(ctx.elev);
+      if (vis <= 0.04) return;
+      const xs = Math.cos(lat) * Math.sin(fe);
+      const ys = Math.sin(lat) * Math.cos(ctx.elev) - Math.cos(lat) * Math.cos(fe) * Math.sin(ctx.elev);
+      parent.appendChild(svgEl('ellipse', {
+        cx: cx + hr * xs * 0.97,
+        cy: cy - (hr * ys) / ctx.cosT,
+        rx: er * Math.max(0.35, vis),
+        ry: (er / ctx.cosT) * Math.max(0.55, Math.min(1, vis * 1.1)),
+        fill: mat.eye, 'pointer-events': 'none'
+      }));
+    });
+  }
+
+  // ---- Kegelfigur: Kegelkörper mit Kugelkopf und aufgemalten Augen ----
+  function solidPeg(root, defs, fig, s, mat, ctx) {
+    const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
+    const R = s * 0.95, Hb = s * 1.35, rn = s * 0.3, hr = s * 0.6, hc = Hb + hr * 0.5;
+    const lg = `lg${ctx.uid}`, rg = `rg${ctx.uid}`;
+    addLinearGradient(defs, lg, mat);
+    addRadialGradient(defs, rg, mat);
+
+    const body = svgEl('path', {
+      d: hullPath(0, 0, R, X(Hb), Y(Hb), rn), fill: `url(#${lg})`,
+      stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45
+    });
+    root.appendChild(body);
+    grainOver(root, body, mat);
+
+    // Fuge zwischen Hals und Kopf
+    root.appendChild(svgEl('circle', { cx: X(Hb), cy: Y(Hb) + 0.5, r: rn * 1.12, fill: shade(mat.base, -0.5), opacity: 0.5 }));
+
+    const head = svgEl('ellipse', {
+      cx: X(hc), cy: Y(hc), rx: hr, ry: hr / ctx.cosT, fill: `url(#${rg})`,
+      stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.4
+    });
+    root.appendChild(head);
+    grainOver(root, head, mat);
+    glossSpot(root, ctx, X(hc) - hr * 0.34, Y(hc) - (0.4 * hr) / ctx.cosT, hr * 0.27, mat);
+    sphereEyes(root, ctx, fig, mat, X(hc), Y(hc), hr, 6, 30, Math.max(1.7, s * 0.085));
+
+    return { height: hc + hr, badge: { x: X(hc) + hr * 0.95, y: Y(hc) - (hr * 0.9) / ctx.cosT } };
+  }
+
+  // ---- Zylinder (mit abgesetztem Kopf und Augen) bzw. runder Stein mit Blickkerbe ----
+  function solidCylinder(root, defs, fig, s, mat, ctx, turned) {
+    const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
+    const lg = `lg${ctx.uid}`;
+    addLinearGradient(defs, lg, mat);
+    const Rb = s * 0.95;
+    const part = (r1, h1, r2, h2, fill) => {
+      const p = svgEl('path', { d: hullPath(X(h1), Y(h1), r1, X(h2), Y(h2), r2), fill: fill, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
+      root.appendChild(p);
+      return p;
+    };
+    const cap = (r, h, amt) => {
+      const c = svgEl('circle', { cx: X(h), cy: Y(h), r: r, fill: shade(mat.base, amt), stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.4 });
+      root.appendChild(c);
+      grainOver(root, c, mat);
+      return c;
+    };
+    const eyeAt = (cylR, h, spread, er) => {
+      const psi = Math.PI - (((fig.rotation || 0) + ctx.yaw) * Math.PI) / 180;
+      [-1, 1].forEach(sg => {
+        const fe = psi + (sg * spread * Math.PI) / 180;
+        const cs = Math.cos(fe);
+        if (cs <= 0.12) return;
+        root.appendChild(svgEl('ellipse', {
+          cx: X(h) + cylR * Math.sin(fe), cy: Y(h) + cylR * cs,
+          rx: er * Math.max(0.4, cs), ry: Math.max(er * 0.6, er * ctx.tanT),
+          fill: mat.eye, 'pointer-events': 'none'
+        }));
+      });
+    };
+
+    if (turned) {
+      const Hb = s * 1.1, gap = s * 0.11, Rh = s * 0.8, Hh = s * 0.62, top = Hb + gap + Hh;
+      const b1 = part(Rb, 0, Rb, Hb, `url(#${lg})`);
+      grainOver(root, b1, mat);
+      part(Rb * 0.7, Hb, Rb * 0.7, Hb + gap, shade(mat.base, -0.4));       // Drechsel-Rille
+      const b2 = part(Rh, Hb + gap, Rh, top, `url(#${lg})`);
+      grainOver(root, b2, mat);
+      cap(Rh, top, 0.2);
+      eyeAt(Rh, Hb + gap + Hh * 0.55, 27, Math.max(1.7, s * 0.08));
+      return { height: top, badge: { x: X(top) + Rh * 0.9, y: Y(top) - 4 } };
+    }
+
+    const H = s * 1.0;
+    const b = part(Rb, 0, Rb, H, `url(#${lg})`);
+    grainOver(root, b, mat);
+    cap(Rb, H, 0.2);
+    // Blickkerbe (dunkles Dreieck) an der Vorderseite
+    const psi = Math.PI - (((fig.rotation || 0) + ctx.yaw) * Math.PI) / 180;
+    const cs = Math.cos(psi);
+    if (cs > 0.15) {
+      const x = X(H * 0.62) + Rb * Math.sin(psi), y = Y(H * 0.62) + Rb * cs;
+      const nw = s * 0.3 * cs, nh = s * 0.42 * Math.max(0.5, ctx.tanT);
+      root.appendChild(svgEl('polygon', {
+        points: `${x - nw},${y - nh / 2} ${x + nw},${y - nh / 2} ${x},${y + nh / 2}`,
+        fill: '#1a1006', opacity: 0.9, 'pointer-events': 'none'
+      }));
+    }
+    return { height: H, badge: { x: X(H) + Rb * 0.9, y: Y(H) - 4 } };
+  }
+
+  // ---- Quader: Klötzchen, eckige Säule, Kiste ----
+  function solidBox(root, defs, fig, hw, hd, H, mat, ctx, opts) {
+    opts = opts || {};
+    const a = (((fig.rotation || 0) + ctx.yaw) * Math.PI) / 180;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const rot = (x, y) => [x * ca - y * sa, x * sa + y * ca];
+    const base = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(p => rot(p[0], p[1]));
+    const top = base.map(p => ctx.at(p[0], p[1], H));
+    const normals = [[0, -1], [1, 0], [0, 1], [-1, 0]].map(n => rot(n[0], n[1]));
+    const poly = pts => pts.map(p => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join(' ');
+    const stroke = { stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.5, 'stroke-linejoin': 'round' };
+
+    const visible = [];
+    for (let i = 0; i < 4; i++) if (normals[i][1] > 0.02) visible.push(i);
+    visible.sort((p, q) => normals[p][1] - normals[q][1]);
+
+    visible.forEach(i => {
+      const j = (i + 1) % 4;
+      const nx = normals[i][0];
+      const amt = Math.max(-0.5, Math.min(0.14, -0.2 - 0.32 * nx));
+      const face = svgEl('polygon', Object.assign({ points: poly([base[i], base[j], top[j], top[i]]), fill: shade(mat.base, amt) }, stroke));
+      root.appendChild(face);
+      grainOver(root, face, mat);
+
+      const P = (u, v) => {
+        const pi = [base[i][0] + (top[i][0] - base[i][0]) * v, base[i][1] + (top[i][1] - base[i][1]) * v];
+        const pj = [base[j][0] + (top[j][0] - base[j][0]) * v, base[j][1] + (top[j][1] - base[j][1]) * v];
+        return [pi[0] + (pj[0] - pi[0]) * u, pi[1] + (pj[1] - pi[1]) * u];
+      };
+      if (opts.planks) {
+        [1 / 3, 2 / 3].forEach(v => {
+          const p1 = P(0, v), p2 = P(1, v);
+          root.appendChild(svgEl('line', { x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1], stroke: shade(mat.base, -0.55), 'stroke-width': 1.3, opacity: 0.6, 'pointer-events': 'none' }));
+        });
+      }
+      if (opts.notch && i === 0) {
+        const pts = [P(0.31, 0.92), P(0.69, 0.92), P(0.5, 0.58)];
+        root.appendChild(svgEl('polygon', { points: poly(pts), fill: '#1a1006', opacity: 0.9, 'pointer-events': 'none' }));
+      }
+    });
+
+    const topFace = svgEl('polygon', Object.assign({ points: poly(top), fill: shade(mat.base, 0.22) }, stroke));
+    root.appendChild(topFace);
+    grainOver(root, topFace, mat);
+    if (opts.planks) {
+      const m1 = [(top[0][0] + top[3][0]) / 2, (top[0][1] + top[3][1]) / 2], m2 = [(top[1][0] + top[2][0]) / 2, (top[1][1] + top[2][1]) / 2];
+      root.appendChild(svgEl('line', { x1: m1[0], y1: m1[1], x2: m2[0], y2: m2[1], stroke: shade(mat.base, -0.5), 'stroke-width': 1.2, opacity: 0.5, 'pointer-events': 'none' }));
+    }
+
+    return { height: H, badge: { x: Math.max(...top.map(p => p[0])) * 0.85, y: Math.min(...top.map(p => p[1])) } };
+  }
+
+  // ---- Stein: gedrechselte Kuppel ----
+  function solidDome(root, defs, fig, s, mat, ctx) {
+    const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
+    const lg = `lg${ctx.uid}`, rg = `rg${ctx.uid}`;
+    addLinearGradient(defs, lg, mat);
+    addRadialGradient(defs, rg, mat);
+    const R = s * 1.0, cr = s * 0.82, ch = s * 0.62;
+    const body = svgEl('path', { d: hullPath(0, 0, R, X(ch), Y(ch), cr), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
+    root.appendChild(body);
+    grainOver(root, body, mat);
+    const dome = svgEl('ellipse', { cx: X(ch), cy: Y(ch), rx: cr, ry: cr / ctx.cosT, fill: `url(#${rg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.4 });
+    root.appendChild(dome);
+    grainOver(root, dome, mat);
+    glossSpot(root, ctx, X(ch) - cr * 0.3, Y(ch) - (0.42 * cr) / ctx.cosT, cr * 0.25, mat);
+    return { height: ch + cr, badge: { x: X(ch) + cr * 0.9, y: Y(ch) - cr / ctx.cosT * 0.8 } };
+  }
+
+  // ---- Licht: gedrechselte Holzbirne auf Fuß ----
+  function solidBulb(root, defs, fig, s, mat, ctx) {
+    const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
+    const lg = `lg${ctx.uid}`, rg = `rg${ctx.uid}`;
+    addLinearGradient(defs, lg, mat);
+    addRadialGradient(defs, rg, mat);
+    const foot = svgEl('path', { d: hullPath(0, 0, s * 0.7, X(s * 0.2), Y(s * 0.2), s * 0.58), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
+    root.appendChild(foot);
+    grainOver(root, foot, mat);
+    const neck = svgEl('path', { d: hullPath(X(s * 0.2), Y(s * 0.2), s * 0.3, X(s * 0.95), Y(s * 0.95), s * 0.34), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
+    root.appendChild(neck);
+    grainOver(root, neck, mat);
+    const hr = s * 0.74, hc = s * 1.62;
+    const bulb = svgEl('ellipse', { cx: X(hc), cy: Y(hc), rx: hr, ry: hr / ctx.cosT, fill: `url(#${rg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.4 });
+    root.appendChild(bulb);
+    grainOver(root, bulb, mat);
+    glossSpot(root, ctx, X(hc) - hr * 0.32, Y(hc) - (0.4 * hr) / ctx.cosT, hr * 0.26, mat);
+    return { height: hc + hr, badge: { x: X(hc) + hr * 0.95, y: Y(hc) - hr / ctx.cosT * 0.85 } };
+  }
+
+  // ---- Symbole als ausgesägte, dicke Holzplatten auf einem Fuß ----
+  function plateSpec(shape) {
+    switch (shape) {
+      case 'stern': {
+        const pts = [];
+        for (let i = 0; i < 10; i++) {
+          const ang = -Math.PI / 2 + (i * Math.PI) / 5;
+          const r = i % 2 === 0 ? 1.02 : 0.44;
+          pts.push([Math.cos(ang) * r, -1.08 + Math.sin(ang) * r]);
+        }
+        return { parts: [{ poly: pts }] };
+      }
+      case 'herz':
+        return { parts: [{ d: 'M 0,-0.12 C -1.2,-0.95 -0.95,-2.0 0,-1.5 C 0.95,-2.0 1.2,-0.95 0,-0.12 Z' }] };
+      case 'diamant':
+        return {
+          parts: [{ poly: [[-0.62, -1.78], [0.62, -1.78], [1.02, -1.22], [0, -0.1], [-1.02, -1.22]] }],
+          details: ['M -1.02,-1.22 L 1.02,-1.22', 'M -0.36,-1.22 L -0.62,-1.78', 'M 0.36,-1.22 L 0.62,-1.78', 'M -0.36,-1.22 L 0,-0.1', 'M 0.36,-1.22 L 0,-0.1']
+        };
+      case 'wolke':
+        return { parts: [{ poly: [[0.42, -2.0], [-0.72, -0.95], [-0.1, -0.95], [-0.42, -0.04], [0.74, -1.2], [0.1, -1.2]] }] };
+      case 'anker':
+        return {
+          parts: [
+            { d: 'M 0,-1.65 L 0,-0.25 M -0.48,-1.38 L 0.48,-1.38 M -0.9,-0.8 C -0.9,-0.2 -0.35,-0.1 0,-0.25 C 0.35,-0.1 0.9,-0.2 0.9,-0.8', stroke: 0.24 },
+            { circle: [0, -1.86, 0.2], stroke: 0.2 }
+          ]
+        };
+      case 'fragezeichen':
+        return {
+          parts: [
+            { d: 'M -0.55,-1.5 C -0.55,-2.1 0.62,-2.1 0.62,-1.5 C 0.62,-1.05 0,-1.05 0,-0.62', stroke: 0.3 },
+            { circle: [0, -0.2, 0.2] }
+          ]
+        };
+      case 'barriere':
+      default:
+        return { parts: [{ rect: [-0.95, -1.65, 0.22, 1.65] }, { rect: [0.73, -1.65, 0.22, 1.65] }, { rect: [-0.95, -1.5, 1.9, 0.34] }, { rect: [-0.95, -0.9, 1.9, 0.34] }] };
+    }
+  }
+
+  function plateElement(part, color, paint) {
+    let el;
+    if (part.poly) el = svgEl('polygon', { points: part.poly.map(p => p[0] + ',' + p[1]).join(' ') });
+    else if (part.d) el = svgEl('path', { d: part.d });
+    else if (part.circle) el = svgEl('circle', { cx: part.circle[0], cy: part.circle[1], r: part.circle[2] });
+    else el = svgEl('rect', { x: part.rect[0], y: part.rect[1], width: part.rect[2], height: part.rect[3] });
+    if (part.stroke) {
+      el.setAttribute('fill', 'none');
+      el.setAttribute('stroke', color);
+      el.setAttribute('stroke-width', part.stroke);
+      el.setAttribute('stroke-linecap', 'round');
+      el.setAttribute('stroke-linejoin', 'round');
+    } else {
+      el.setAttribute('fill', color);
+      el.setAttribute('stroke', paint === 'face' ? color : color);
+      el.setAttribute('stroke-width', 0.05);
+      el.setAttribute('stroke-linejoin', 'round');
+    }
+    return el;
+  }
+
+  function solidPlate(root, defs, fig, s, mat, ctx) {
+    const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
+    const lg = `lg${ctx.uid}`;
+    addLinearGradient(defs, lg, mat);
+    const spec = plateSpec(fig.shape);
+    s = s * 1.16;                                   // Platten wirken sonst klein neben den Figuren
+
+    // Standfuß
+    const footH = s * 0.2;
+    const foot = svgEl('path', { d: hullPath(0, 0, s * 0.66, X(footH), Y(footH), s * 0.58), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
+    root.appendChild(foot);
+    root.appendChild(svgEl('circle', { cx: X(footH), cy: Y(footH), r: s * 0.58, fill: shade(mat.base, 0.15), stroke: mat.edge, 'stroke-opacity': 0.4, 'stroke-width': 1 }));
+
+    // Maserung der Platte: waagerecht, im Einheitssystem der Platte skaliert
+    const pid = `pg${ctx.uid}`;
+    const pat = svgEl('pattern', { id: pid, href: '#pegGrain', patternTransform: `scale(${1 / s}) rotate(90)` });
+    defs.appendChild(pat);
+
+    const a = (((fig.rotation || 0) + ctx.yaw) * Math.PI) / 180;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const fl = [sa, -ca];                          // Blickrichtung (Vorderseite) im Bildschirmsystem
+    const T = s * 0.34;                            // Plattendicke
+    const N = 6;
+    const offs = [];
+    for (let k = 0; k <= N; k++) offs.push(-T / 2 + (T * k) / N);   // letzte = Vorderseite
+    const frontNearest = fl[1] > 0;
+    const order = frontNearest ? offs : offs.slice().reverse();     // hinten zuerst, zur Kamera hin zuletzt
+    // senkrechte Achse der Platte: Bild einer Strecke der Länge s über dem Fuß
+    const vx = X(footH + s) - X(footH), vy = Y(footH + s) - Y(footH);
+    const matrix = off => `matrix(${-s * ca} ${-s * sa} ${-vx} ${-vy} ${X(footH) + fl[0] * off} ${Y(footH) + fl[1] * off})`;
+
+    order.forEach((off, idx) => {
+      const g = svgEl('g', { transform: matrix(off) });
+      const nearest = idx === order.length - 1;
+      if (!nearest) {
+        spec.parts.forEach(p => g.appendChild(plateElement(p, mat.dark)));
+      } else {
+        spec.parts.forEach(p => g.appendChild(plateElement(p, mat.base, 'face')));
+        // Maserung und Glanz auf der sichtbaren Fläche
+        if (!STATE.isRotatingView) spec.parts.forEach(p => {
+          const el = plateElement(p, '#000', 'face');
+          if (p.stroke) { el.setAttribute('stroke', `url(#${pid})`); } else { el.setAttribute('fill', `url(#${pid})`); el.setAttribute('stroke', 'none'); }
+          el.setAttribute('opacity', mat.grain);
+          el.setAttribute('pointer-events', 'none');
+          g.appendChild(el);
+        });
+        if (frontNearest && spec.details) {
+          spec.details.forEach(d => g.appendChild(svgEl('path', { d: d, fill: 'none', stroke: shade(mat.base, -0.5), 'stroke-width': 0.05, 'stroke-linecap': 'round', opacity: 0.7 })));
+        }
+        // dunkle Kontur der Vorderfläche
+        spec.parts.forEach(p => {
+          const o = plateElement(p, 'none', 'face');
+          o.setAttribute('fill', 'none');
+          o.setAttribute('stroke', mat.edge);
+          o.setAttribute('stroke-opacity', 0.35);
+          o.setAttribute('stroke-width', p.stroke ? p.stroke + 0.07 : 0.07);
+          if (p.stroke) { o.setAttribute('stroke-opacity', 0); }
+          g.appendChild(o);
+        });
+      }
+      root.appendChild(g);
+    });
+    return { height: footH + s * 2, badge: { x: X(footH + s * 2) + s * 0.9, y: Y(footH + s * 2) } };
+  }
+
+  // ---- Zusammenbau einer 3D-Figur ----
+  function createSolidFigureElement(fig) {
+    const g = svgEl('g', {
+      class: `system-figure solid ${fig.id === STATE.selectedFigureId ? 'selected' : ''}`,
+      'data-id': fig.id,
+      transform: `translate(${fig.x}, ${fig.y})`
+    });
+    const s = SIZE_MAP[fig.size] || 27;
+    const T = (clamp(STATE.viewTilt, 0, 70) * Math.PI) / 180;
+    const ctx = { tanT: Math.tan(T), cosT: Math.cos(T), elev: Math.PI / 2 - T, yaw: STATE.viewYaw, uid: ++solidUid };
+    // Punkt (lx, ly) im Figuren-Bildschirmsystem in Höhe h -> Position, an der er tatsächlich erscheint
+    const proj = STATE.solidProj || getTargetProjection();
+    const yw = (STATE.viewYaw * Math.PI) / 180, cyw = Math.cos(yw), syw = Math.sin(yw);
+    ctx.at = (lx, ly, h) => {
+      const bx = fig.x + lx * cyw + ly * syw;
+      const by = fig.y - lx * syw + ly * cyw;
+      const S = proj.forward3(bx, by, h);
+      const P = proj.inverse(S.x, S.y);
+      const dx = P.x - fig.x, dy = P.y - fig.y;
+      return [dx * cyw - dy * syw, dx * syw + dy * cyw];
+    };
+    const mat = materialFor(fig);
+
+    const root = svgEl('g', { transform: `rotate(${-STATE.viewYaw})`, class: 'fig-solid-root' });
+    g.appendChild(root);
+    const defs = svgEl('defs', {});
+    root.appendChild(defs);
+
+    // Schlagschatten auf dem Brett (Licht von links oben)
+    const estH = s * 2.3;
+    [[1.3, 0.10], [1.05, 0.12], [0.8, 0.14]].forEach(([k, o]) => {
+      root.appendChild(svgEl('path', {
+        d: hullPath(0, 0, s * 1.02 * k, estH * 0.4 * k, estH * 0.17 * k, s * 0.5 * k),
+        fill: '#1c1006', opacity: o, 'pointer-events': 'none'
+      }));
+    });
+
+    // Standfläche: Trefferfläche und Auswahlring auf dem Brett
+    root.appendChild(svgEl('circle', { cx: 0, cy: 0, r: s * 1.16, fill: 'rgba(0,0,0,0.001)', class: 'fig-body' }));
+
+    let info;
+    switch (fig.shape) {
+      case 'kegel': case 'pegdoll': info = solidPeg(root, defs, fig, s, mat, ctx); break;
+      case 'zylinder': info = solidCylinder(root, defs, fig, s, mat, ctx, true); break;
+      case 'rund': info = solidCylinder(root, defs, fig, s, mat, ctx, false); break;
+      case 'block': case 'kloetzchen': info = solidBox(root, defs, fig, s * 0.75, s * 0.45, s * 1.5, mat, ctx, {}); break;
+      case 'kiste': info = solidBox(root, defs, fig, s * 0.95, s * 0.95, s * 1.4, mat, ctx, { planks: true }); break;
+      case 'stein': info = solidDome(root, defs, fig, s, mat, ctx); break;
+      case 'licht': info = solidBulb(root, defs, fig, s, mat, ctx); break;
+      default:
+        if (isSymbolShape(fig.shape)) info = solidPlate(root, defs, fig, s, mat, ctx);
+        else info = solidBox(root, defs, fig, s, s, s * 1.5, mat, ctx, { notch: true });
+    }
+
+    // Beschriftung unter der Figur (bleibt aufrecht lesbar)
+    // Aufrechtes, unverzerrtes Schild: Bildschirm-Pixel -> Brettebene an dieser Stelle (inkl. Perspektive)
+    const S0 = proj.forward(fig.x, fig.y);
+    const pX = proj.inverse(S0.x + 1, S0.y), pY = proj.inverse(S0.x, S0.y + 1);
+    const toLocal = (dx, dy) => [dx * cyw - dy * syw, dx * syw + dy * cyw];
+    const vxl = toLocal(pX.x - fig.x, pX.y - fig.y), vyl = toLocal(pY.x - fig.x, pY.y - fig.y);
+    const zf = STATE.zoom;
+    const billboard = `matrix(${vxl[0] * zf} ${vxl[1] * zf} ${vyl[0] * zf} ${vyl[1] * zf} 0 0)`;
+    const label = svgEl('g', { transform: `translate(0, ${s * 1.02}) ${billboard}`, class: 'fig-label-wrap' });
+    const text = svgEl('text', { x: 0, y: 15, class: 'figure-label-text' });
+    text.textContent = fig.name || 'Figur';
+    label.appendChild(text);
+    root.appendChild(label);
+
+    if (fig.scale && fig.scale !== 5) {
+      const b = svgEl('g', { transform: `translate(${info.badge.x}, ${info.badge.y}) ${billboard}` });
+      b.appendChild(svgEl('circle', { cx: 0, cy: 0, r: 9, fill: fig.scale >= 7 ? '#10b981' : (fig.scale <= 3 ? '#ef4444' : '#3b82f6'), stroke: '#ffffff', 'stroke-width': 1.5 }));
+      const bt = svgEl('text', { x: 0, y: 3, class: 'figure-scale-badge' });
+      bt.textContent = fig.scale;
+      b.appendChild(bt);
+      root.appendChild(b);
+    }
+    return g;
+  }
+
   function createFigureSvgElement(fig) {
+    if (useSolids()) return createSolidFigureElement(fig);
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', `system-figure ${fig.id === STATE.selectedFigureId ? 'selected' : ''}`);
     g.setAttribute('data-id', fig.id);
@@ -1115,14 +1650,6 @@
       initAudio();
       const svgPt = getSvgPoint(e);
 
-      const viewHandle = e.target.closest('[data-view-handle]');
-      if (viewHandle) {
-        e.stopPropagation();
-        e.preventDefault();
-        startCornerRotate(e);
-        return;
-      }
-
       const handleTarget = e.target.closest('[data-handle-id]');
       if (handleTarget) {
         e.stopPropagation();
@@ -1166,29 +1693,30 @@
       }
     });
 
-    // Freie Fläche ziehen: Brett verschieben
+    // Freie Fläche: Brett greifen und verschieben; in 3D mit rechter Maustaste oder Strg/Shift drehen und neigen
     function startViewDrag(e) {
-      STATE.isPanning = true;
-      STATE.startPanX = e.clientX - STATE.panX;
-      STATE.startPanY = e.clientY - STATE.panY;
+      stopViewMotion();
+      const is3d = STATE.viewMode === '25d' && !STATE.povFigureId;
+      if (is3d && (e.button === 2 || e.ctrlKey || e.metaKey || e.shiftKey)) {
+        const c = viewportCenterClient();
+        STATE.isRotatingView = true;
+        STATE.rotStart = {
+          x: e.clientX, y: e.clientY, yaw: STATE.viewYaw, tilt: STATE.viewTilt,
+          anchor: clientToBoard(c.x, c.y)
+        };
+        document.body.classList.add('view-rotating');
+      } else {
+        STATE.isPanning = true;
+        STATE.panAnchor = clientToBoard(e.clientX, e.clientY);
+        STATE.panVel = { x: 0, y: 0 };
+        STATE.panLastTime = 0;
+      }
     }
 
-    // 3D: An einer Brett-Ecke anfassen und ziehen dreht das Brett
-    function startCornerRotate(e) {
-      const pt = clientToBoard(e.clientX, e.clientY);
-      STATE.isRotatingView = true;
-      STATE.rotStart = { a0: Math.atan2(pt.y - BOARD_GEO.cy, pt.x - BOARD_GEO.cx) * 180 / Math.PI };
-      boardTransformEl.classList.add('no-transition');
-      document.body.classList.add('view-rotating');
-    }
-
-    // Doppelklick auf freie Fläche: Ausgangsansicht der 3D-Perspektive
+    // Doppelklick auf freie Fläche: hineinzoomen (wie bei Karten)
     svgElem.addEventListener('dblclick', (e) => {
-      if (STATE.viewMode !== '25d') return;
       if (e.target.id === 'outerSpace' || e.target.classList.contains('board-half') || e.target.id === 'boardSvg') {
-        STATE.viewYaw = -16;
-        STATE.viewTilt = 46;
-        fitToView(true);
+        zoomAt(1.6, e.clientX, e.clientY);
       }
     });
 
@@ -1230,21 +1758,22 @@
       }
 
       if (STATE.isRotatingView && STATE.rotStart) {
-        // Die gegriffene Ecke bleibt unter dem Mauszeiger: Winkelunterschied in der Brettebene
-        const pt = clientToBoard(e.clientX, e.clientY);
-        const a = Math.atan2(pt.y - BOARD_GEO.cy, pt.x - BOARD_GEO.cx) * 180 / Math.PI;
-        const d = ((a - STATE.rotStart.a0 + 540) % 360) - 180;
-        STATE.viewYaw += d;
-        if (STATE.autoFit) fitToView(false);   // Brett bleibt dabei bildschirmfüllend
-        else updateTransform();
+        // Horizontal: Drehen, vertikal: Neigen – um die Bildmitte
+        const st = STATE.rotStart;
+        STATE.autoFit = false;
+        STATE.viewYaw = st.yaw - (e.clientX - st.x) * 0.35;
+        STATE.viewTilt = clamp(st.tilt - (e.clientY - st.y) * 0.25, 0, 70);
+        pinPoint(st.anchor, viewportCenterClient());
         return;
       }
 
-      if (STATE.isPanning) {
+      if (STATE.isPanning && STATE.panAnchor) {
         STATE.autoFit = false;
-        STATE.panX = e.clientX - STATE.startPanX;
-        STATE.panY = e.clientY - STATE.startPanY;
-        updateTransform();
+        const px = STATE.panX;
+        const py = STATE.panY;
+        pinPoint(STATE.panAnchor, { x: e.clientX, y: e.clientY });   // gegriffener Punkt bleibt unter dem Zeiger
+        STATE.panVel = { x: STATE.panX - px, y: STATE.panY - py };
+        STATE.panLastTime = performance.now();
       }
     });
 
@@ -1261,11 +1790,15 @@
         runSystemicAnalysis();
         if (STATE.povFigureId) applyPovCamera(true);
       }
+      if (STATE.isPanning && STATE.panVel && performance.now() - STATE.panLastTime < 70
+          && Math.hypot(STATE.panVel.x, STATE.panVel.y) > 3) {
+        startInertia(STATE.panVel.x, STATE.panVel.y);   // sanftes Nachgleiten
+      }
       STATE.isPanning = false;
       STATE.isRotatingView = false;
       STATE.rotStart = null;
-      boardTransformEl.classList.remove('no-transition');
       document.body.classList.remove('view-rotating');
+      refreshSolidsIfNeeded();   // volle Qualität nach dem Drehen
     });
 
     viewport.addEventListener('wheel', (e) => {
@@ -1285,30 +1818,17 @@
       }
 
       const unit = e.deltaMode === 1 ? 33 : 1;   // Zeilen- statt Pixel-Scrollen (Firefox)
-      const dY = e.deltaY * unit;
-      const dX = e.deltaX * unit;
+      const dY = (e.deltaY || e.deltaX) * unit;
 
-      // Pinch-Geste am Trackpad (oder Strg + Mausrad): Zoom
-      if (e.ctrlKey) {
-        STATE.autoFit = false;
-        STATE.zoom = clamp(STATE.zoom * Math.exp(clamp(-dY * 0.01, -0.25, 0.25)), MIN_ZOOM, MAX_ZOOM);
-        updateTransform();
+      // 3D: Shift + Mausrad ändert die Neigung
+      if (e.shiftKey && STATE.viewMode === '25d' && !STATE.povFigureId) {
+        setViewAngles(STATE.viewYaw, STATE.viewTilt + dY * 0.1);
         return;
       }
 
-      // 3D: Mausrad / Zwei-Finger-Scrollen ändert den Blickwinkel (seitlich: Drehung)
-      if (STATE.viewMode === '25d' && !STATE.povFigureId) {
-        STATE.viewTilt = clamp(STATE.viewTilt + dY * 0.12, 10, 75);
-        STATE.viewYaw += dX * 0.25;
-        if (STATE.autoFit) fitToView(false);
-        else updateTransform();
-        return;
-      }
-
-      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-      STATE.autoFit = false;
-      STATE.zoom = clamp(STATE.zoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
-      updateTransform();
+      // Pinch-Geste (ctrlKey) bzw. Mausrad: Zoom zum Mauszeiger hin
+      const k = e.ctrlKey ? 0.01 : 0.0015;
+      zoomAt(Math.exp(clamp(-dY * k, -0.35, 0.35)), e.clientX, e.clientY);
     }, { passive: false });
 
     window.addEventListener('keydown', (e) => {
@@ -1342,6 +1862,14 @@
 
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.shiftKey && STATE.viewMode === '25d' && !STATE.povFigureId && e.key.startsWith('Arrow')) {
+        e.preventDefault();
+        const dYaw = e.key === 'ArrowLeft' ? 15 : e.key === 'ArrowRight' ? -15 : 0;
+        const dTilt = e.key === 'ArrowUp' ? 8 : e.key === 'ArrowDown' ? -8 : 0;
+        tweenViewAngles(STATE.viewYaw + dYaw, STATE.viewTilt + dTilt, 220);
+        return;
+      }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (STATE.selectedFigureId) {
@@ -1412,46 +1940,12 @@
     if (label) label.textContent = `${Math.round(STATE.zoom * 100)}%`;
   }
 
-  // Eck-Griffe zum Drehen (nur in der 3D-Ansicht)
-  const viewHandlesGroup = svgEl('g', { id: 'viewHandlesGroup' });
-  svgElem.appendChild(viewHandlesGroup);
-
-  function renderViewHandles() {
-    viewHandlesGroup.innerHTML = '';
-    if (STATE.viewMode !== '25d' || STATE.povFigureId) return;
-
-    const b = getBoardBounds();
-    const r = clamp(19 / STATE.zoom, 14, 38);     // bleibt auf dem Bildschirm etwa gleich groß
-    const off = r * 0.55;
-    const corners = [
-      [b.x - off, b.y - off], [b.x + b.w + off, b.y - off],
-      [b.x + b.w + off, b.y + b.h + off], [b.x - off, b.y + b.h + off]
-    ];
-    corners.forEach(([x, y]) => {
-      const g = svgEl('g', { transform: `translate(${x}, ${y})`, 'data-view-handle': '1', class: 'view-handle' });
-      const title = svgEl('title', {});
-      title.textContent = 'Ecke ziehen: Brett drehen';
-      g.appendChild(title);
-      g.appendChild(svgEl('circle', { r: r, fill: 'rgba(255,255,255,0.92)', stroke: '#b9803f', 'stroke-width': r * 0.14 }));
-      // Dreh-Symbol (Kreisbogen mit Pfeilspitze)
-      const k = r * 0.52;
-      g.appendChild(svgEl('path', {
-        d: `M ${-k},${-k * 0.1} A ${k},${k} 0 1 1 ${k * 0.15},${k}`,
-        fill: 'none', stroke: '#7a4a1c', 'stroke-width': r * 0.16, 'stroke-linecap': 'round'
-      }));
-      g.appendChild(svgEl('path', {
-        d: `M ${k * 0.15 - r * 0.3},${k - r * 0.3} L ${k * 0.15 + r * 0.05},${k + r * 0.05} L ${k * 0.15 - r * 0.38},${k + r * 0.3}`,
-        fill: 'none', stroke: '#7a4a1c', 'stroke-width': r * 0.16, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
-      }));
-      viewHandlesGroup.appendChild(g);
-    });
-  }
-
   function updateTransform() {
     if (!boardTransformEl) return;
     boardTransformEl.style.transform = buildTransformString();
     updateZoomLabel();
-    renderViewHandles();
+    updateCompass();
+    refreshSolidsIfNeeded();
     if (STATE.activeRelationMode && STATE.relationFirstFigureId) updateRubberband();
   }
 
@@ -1473,7 +1967,7 @@
 
   function syncFitProxy() {
     const b = getBoardBounds();
-    const pad = (STATE.viewMode === '25d' && !STATE.povFigureId) ? 46 : 10;   // in 3D Platz für die Eck-Griffe
+    const pad = 10;
     boardFitProxy.style.left = (b.x - pad) + 'px';
     boardFitProxy.style.top = (b.y - pad) + 'px';
     boardFitProxy.style.width = (b.w + pad * 2) + 'px';
@@ -1483,6 +1977,7 @@
   // Passt das Brett so ein, dass es in jeder Ansicht (2D / 3D) den Bildschirm füllt und zentriert ist.
   // Gemessen wird die tatsächlich projizierte Fläche, daher funktioniert es auch mit Perspektive.
   function fitToView(animate) {
+    stopViewMotion();
     const vr = boardViewportEl.getBoundingClientRect();
     if (vr.width < 60 || vr.height < 60) return;
 
@@ -1514,7 +2009,7 @@
     el.style.transform = finalTransform;
     STATE.autoFit = true;
     updateZoomLabel();
-    renderViewHandles();
+    refreshSolidsIfNeeded();
 
     if (animate) {
       el.style.transform = oldTransform;
@@ -1544,7 +2039,7 @@
     if (STATE.povFigureId && !opts.fromPov) exitPovMode({ keepView: true });
     STATE.viewMode = mode;
     document.body.classList.toggle('view-25d', mode === '25d');
-    renderViewHandles();
+    refreshSolidsIfNeeded();
     document.getElementById('btnView2D')?.classList.toggle('active', mode === '2d');
     document.getElementById('btnView25D')?.classList.toggle('active', mode === '25d');
     if (!opts.skipFit) fitToView(true);
@@ -1596,34 +2091,167 @@
     ];
   }
 
-  function clientToBoard(clientX, clientY) {
+  // Projektion zwischen Brett-Koordinaten und Bildschirm (berücksichtigt Neigung, Drehung und Perspektive)
+  function getProjection(matrix) {
     const cs = getComputedStyle(boardTransformEl);
-    const m = new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform);
+    const m = matrix || new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform);
     const vr = boardViewportEl.getBoundingClientRect();
     const persp = parseFloat(getComputedStyle(boardViewportEl).perspective) || 1e9;
     const ox = CONTAINER_W / 2;
     const oy = CONTAINER_H / 2;
 
-    const forward = (lx, ly) => {
+    // Punkt auf dem Brett (lz = Höhe über dem Brett) -> Bildschirm
+    const forward3 = (lx, ly, lz) => {
       const x = lx - ox;
       const y = ly - oy;
-      const X = m.m11 * x + m.m21 * y + m.m41;
-      const Y = m.m12 * x + m.m22 * y + m.m42;
-      const Z = m.m13 * x + m.m23 * y + m.m43;
+      const X = m.m11 * x + m.m21 * y + m.m31 * lz + m.m41;
+      const Y = m.m12 * x + m.m22 * y + m.m32 * lz + m.m42;
+      const Z = m.m13 * x + m.m23 * y + m.m33 * lz + m.m43;
       const k = persp / (persp - Z);
-      return [vr.left + vr.width / 2 + (ox + X) * k, vr.top + vr.height / 2 + (oy + Y) * k];
+      return { x: vr.left + vr.width / 2 + (ox + X) * k, y: vr.top + vr.height / 2 + (oy + Y) * k };
     };
+    const forward = (lx, ly) => forward3(lx, ly, 0);
 
     const src = [[0, 0], [CONTAINER_W, 0], [CONTAINER_W, CONTAINER_H], [0, CONTAINER_H]];
-    const dst = src.map(p => forward(p[0], p[1]));
-    const H = solveHomography(src, dst);
-    const inv = invert3(H);
-    const w = inv[6] * clientX + inv[7] * clientY + inv[8];
-    return {
-      x: (inv[0] * clientX + inv[1] * clientY + inv[2]) / w,
-      y: (inv[3] * clientX + inv[4] * clientY + inv[5]) / w
+    const dst = src.map(pt => { const c = forward(pt[0], pt[1]); return [c.x, c.y]; });
+    const inv = invert3(solveHomography(src, dst));
+
+    const inverse = (cx, cy) => {
+      const w = inv[6] * cx + inv[7] * cy + inv[8];
+      return { x: (inv[0] * cx + inv[1] * cy + inv[2]) / w, y: (inv[3] * cx + inv[4] * cy + inv[5]) / w };
     };
+    return { forward, forward3, inverse };
   }
+
+  // Projektion für den Zielzustand der Ansicht (unabhängig von laufenden CSS-Übergängen)
+  function getTargetProjection() {
+    const is3d = STATE.viewMode === '25d';
+    const tilt = is3d ? STATE.viewTilt : 0;
+    const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
+    const m = new DOMMatrix()
+      .translateSelf(STATE.panX - CONTAINER_W / 2, STATE.panY - CONTAINER_H / 2)
+      .rotateAxisAngleSelf(1, 0, 0, tilt)
+      .rotateAxisAngleSelf(0, 0, 1, rotZ)
+      .scaleSelf(STATE.zoom);
+    return getProjection(m);
+  }
+
+  function clientToBoard(clientX, clientY) {
+    return getProjection().inverse(clientX, clientY);
+  }
+
+  function boardToClient(x, y) {
+    return getProjection().forward(x, y);
+  }
+
+  // --------------------------------------------------------------------------
+  // KARTEN-NAVIGATION (wie bei Google Maps)
+  //  - Ziehen: Brett greifen und verschieben (der Punkt unter dem Zeiger bleibt darunter)
+  //  - Mausrad / Pinch: Zoom zum Mauszeiger hin
+  //  - Rechte Maustaste oder Strg/Shift + Ziehen (3D): Drehen und Neigen um die Bildmitte
+  // --------------------------------------------------------------------------
+  let inertiaRaf = null;
+  let zoomAnim = null;
+  let zoomRaf = null;
+  let tweenRaf = null;
+
+  function viewportCenterClient() {
+    const r = boardViewportEl.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  // Wendet den aktuellen Zustand an und verschiebt die Ansicht so,
+  // dass der Brettpunkt `anchor` an der Bildschirmposition `target` erscheint.
+  function pinPoint(anchor, target) {
+    boardTransformEl.style.transform = buildTransformString();
+    const c = boardToClient(anchor.x, anchor.y);
+    STATE.panX += target.x - c.x;
+    STATE.panY += target.y - c.y;
+    updateTransform();
+  }
+
+  function stopViewMotion() {
+    if (inertiaRaf) { cancelAnimationFrame(inertiaRaf); inertiaRaf = null; }
+    if (zoomRaf) { cancelAnimationFrame(zoomRaf); zoomRaf = null; }
+    if (tweenRaf) { cancelAnimationFrame(tweenRaf); tweenRaf = null; }
+    zoomAnim = null;
+  }
+
+  function startInertia(vx, vy) {
+    let v = { x: vx, y: vy };
+    const step = () => {
+      v.x *= 0.92;
+      v.y *= 0.92;
+      if (Math.hypot(v.x, v.y) < 0.4) { inertiaRaf = null; return; }
+      STATE.panX += v.x;
+      STATE.panY += v.y;
+      updateTransform();
+      inertiaRaf = requestAnimationFrame(step);
+    };
+    inertiaRaf = requestAnimationFrame(step);
+  }
+
+  // Sanfter Zoom, der den Punkt unter dem Zeiger festhält
+  function zoomAt(factor, clientX, clientY) {
+    STATE.autoFit = false;
+    if (inertiaRaf) { cancelAnimationFrame(inertiaRaf); inertiaRaf = null; }
+    const base = zoomAnim ? zoomAnim.target : STATE.zoom;
+    zoomAnim = { target: clamp(base * factor, MIN_ZOOM, MAX_ZOOM), cx: clientX, cy: clientY };
+    if (!zoomRaf) zoomRaf = requestAnimationFrame(stepZoom);
+  }
+
+  function stepZoom() {
+    zoomRaf = null;
+    if (!zoomAnim) return;
+    const a = zoomAnim;
+    const anchor = clientToBoard(a.cx, a.cy);
+    const diff = a.target - STATE.zoom;
+    STATE.zoom = Math.abs(diff) < a.target * 0.002 ? a.target : STATE.zoom + diff * 0.32;
+    pinPoint(anchor, { x: a.cx, y: a.cy });
+    if (STATE.zoom === a.target) zoomAnim = null;
+    else zoomRaf = requestAnimationFrame(stepZoom);
+  }
+
+  // Drehen und Neigen um die Bildmitte (Brettpunkt in der Bildmitte bleibt dort)
+  function setViewAngles(yaw, tilt) {
+    STATE.autoFit = false;
+    const c = viewportCenterClient();
+    const anchor = clientToBoard(c.x, c.y);
+    STATE.viewYaw = yaw;
+    STATE.viewTilt = clamp(tilt, 0, 70);
+    pinPoint(anchor, c);
+  }
+
+  function tweenViewAngles(targetYaw, targetTilt, ms) {
+    if (tweenRaf) cancelAnimationFrame(tweenRaf);
+    const y0 = STATE.viewYaw;
+    const t0 = STATE.viewTilt;
+    const t1 = clamp(targetTilt, 0, 70);
+    const start = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - start) / ms);
+      const e = 1 - Math.pow(1 - k, 3);
+      setViewAngles(y0 + (targetYaw - y0) * e, t0 + (t1 - t0) * e);
+      tweenRaf = k < 1 ? requestAnimationFrame(step) : null;
+    };
+    tweenRaf = requestAnimationFrame(step);
+  }
+
+  // Zurück zur Ausgangsansicht (Kompass-Klick)
+  function resetViewOrientation() {
+    stopViewMotion();
+    STATE.viewYaw = ((((STATE.viewYaw % 360) + 540) % 360) - 180);   // kürzester Weg, ohne sichtbaren Sprung
+    updateTransform();
+    STATE.viewYaw = -16;
+    STATE.viewTilt = 46;
+    fitToView(true);
+  }
+
+  function updateCompass() {
+    const needle = document.getElementById('compassNeedle');
+    if (needle) needle.style.transform = `rotate(${STATE.viewYaw}deg)`;
+  }
+
 
   // ==========================================================================
   // 9. BRETT TRENNEN / ZUSAMMENFÜGEN (1-BRETT DEFAULT LOGIK)
@@ -2731,9 +3359,13 @@
 
   // Baut eine eigenständige SVG (inkl. Holzmaserung, Filter und Styles) für PNG-Export und Druck.
   function buildExportSvg(scale) {
+    // Export zeigt das Brett von oben: Figuren dafür flach zeichnen
+    const wasSolid = useSolids();
+    if (wasSolid) { STATE.forceFlat = true; renderFigures(); }
     const clone = svgElem.cloneNode(true);
+    if (wasSolid) { STATE.forceFlat = false; renderFigures(); }
 
-    ['controlsOverlayGroup', 'rubberbandGroup', 'viewHandlesGroup'].forEach(id => {
+    ['controlsOverlayGroup', 'rubberbandGroup'].forEach(id => {
       const g = clone.querySelector('#' + id);
       if (g) g.innerHTML = '';
     });
@@ -3083,15 +3715,13 @@
 
     // Zoom
     document.getElementById('btnZoomIn')?.addEventListener('click', () => {
-      STATE.autoFit = false;
-      STATE.zoom = clamp(STATE.zoom * 1.18, MIN_ZOOM, MAX_ZOOM);
-      updateTransform();
+      const c = viewportCenterClient();
+      zoomAt(1.25, c.x, c.y);
     });
 
     document.getElementById('btnZoomOut')?.addEventListener('click', () => {
-      STATE.autoFit = false;
-      STATE.zoom = clamp(STATE.zoom / 1.18, MIN_ZOOM, MAX_ZOOM);
-      updateTransform();
+      const c = viewportCenterClient();
+      zoomAt(1 / 1.25, c.x, c.y);
     });
 
     document.getElementById('btnCenterBoard')?.addEventListener('click', resetZoomAndPan);
@@ -3106,6 +3736,13 @@
         if (body) body.classList.toggle('open', open);
       });
     });
+
+    // 3D-Navigation (Kompass, Drehen, Neigen)
+    document.getElementById('btnRotLeft')?.addEventListener('click', () => { stopViewMotion(); tweenViewAngles(STATE.viewYaw + 15, STATE.viewTilt, 260); });
+    document.getElementById('btnRotRight')?.addEventListener('click', () => { stopViewMotion(); tweenViewAngles(STATE.viewYaw - 15, STATE.viewTilt, 260); });
+    document.getElementById('btnTiltUp')?.addEventListener('click', () => { stopViewMotion(); tweenViewAngles(STATE.viewYaw, STATE.viewTilt + 8, 260); });
+    document.getElementById('btnTiltDown')?.addEventListener('click', () => { stopViewMotion(); tweenViewAngles(STATE.viewYaw, STATE.viewTilt - 8, 260); });
+    document.getElementById('btnCompass')?.addEventListener('click', resetViewOrientation);
 
     // Menüs ein- und ausklappen
     document.getElementById('btnCollapseLeft')?.addEventListener('click', () => setSidebarCollapsed('left', true));
