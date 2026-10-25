@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Virtuelles Systembrett | Systemische Aufstellungen & Coaching</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b48a56'/><circle cx='35' cy='50' r='18' fill='%232c3e50'/><polygon points='35,28 41,35 29,35' fill='%23f1c40f'/><rect x='60' y='32' width='25' height='36' rx='4' fill='%23c0392b'/></svg>">
@@ -38,11 +38,11 @@
 
       <!-- CENTER VIEW CONTROLS -->
       <div class="header-center">
-        <!-- 1-BRETT / TRENNUNG UMSCHALTER -->
+        <!-- 1-BRETT / TRENNUNG UMSCHALTER 
         <button id="btnToggleSplit" class="btn btn-sm btn-primary" title="Brett teilen (zwei Hälften) oder zu einem ganzen Brett zusammenfügen">
           <span id="splitIcon">🔗</span>
           <span id="splitText">1 Brett (Vereint)</span>
-        </button>
+        </button>-->
 
         <div class="btn-group view-modes">
           <button id="btnView2D" class="btn btn-sm btn-toggle active" title="Draufsicht (2D Vogelperspektive)">
@@ -64,10 +64,10 @@
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             Blickachsen
           </button>
-          <button id="btnToggleGrid" class="btn btn-sm btn-toggle" title="Subtiles Zentrier- & Hilfsraster">
+    <!--      <button id="btnToggleGrid" class="btn btn-sm btn-toggle" title="Subtiles Zentrier- & Hilfsraster">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z"/></svg>
             Raster
-          </button>
+          </button>-->
         </div>
       </div>
 
@@ -173,54 +173,29 @@
 
 			<!-- Farbige Figuren -->
             <div class="figure-quick-grid color-figures-row">
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-rot" title="Rote Spielfigur mit Augen (Vitalität, Herz, Konflikt)">
-                <div class="fig-preview pegdoll mittel" style="background:#c0392b;"><span class="eyes" style="color:#fff;">• •</span></div>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-holz" title="Holzfigur (Naturholz) mit Augen">
+                <span class="preview-slot"></span>
+                <span>Holz</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-rot" title="Rote Figur mit Augen">
+                <span class="preview-slot"></span>
                 <span>Rot</span>
               </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-blau" title="Blaue Spielfigur mit Augen (Klarheit, Struktur)">
-                <div class="fig-preview pegdoll mittel" style="background:#2980b9;"><span class="eyes" style="color:#fff;">• •</span></div>
-                <span>Blau</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-gruen" title="Grüne Spielfigur mit Augen (Wachstum, Hoffnung)">
-                <div class="fig-preview pegdoll mittel" style="background:#27ae60;"><span class="eyes" style="color:#fff;">• •</span></div>
-                <span>Grün</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-schwarz" title="Schwarze Spielfigur mit Augen (Grenze, Tiefe)">
-                <div class="fig-preview pegdoll mittel" style="background:#1a1a1a;"><span class="eyes" style="color:#fff;">• •</span></div>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-schwarz" title="Schwarze Figur mit Augen">
+                <span class="preview-slot"></span>
                 <span>Schwarz</span>
               </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-weiss" title="Weiße Spielfigur mit Augen (Neutralität, Neubeginn)">
-                <div class="fig-preview pegdoll mittel" style="background:#f4f4f4; border:1px solid #ccc;"><span class="eyes" style="color:#111;">• •</span></div>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-blau" title="Blaue Figur mit Augen">
+                <span class="preview-slot"></span>
+                <span>Blau</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-gruen" title="Grüne Figur mit Augen">
+                <span class="preview-slot"></span>
+                <span>Grün</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create="kegel-weiss" title="Weiße Figur mit Augen">
+                <span class="preview-slot"></span>
                 <span>Weiß</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="eckig-gross-holz" title="Klassische eckige Holzfigur">
-                <div class="fig-preview wood eckig gross"><span class="notch"></span></div>
-                <span>Holzwürfel</span>
-              </button>
-
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-gross-holz" title="Naturholz Kegelfigur Groß mit Augen (Erwachsene / Leitung)">
-                <div class="fig-preview wood pegdoll gross"><span class="eyes">• •</span></div>
-                <span>Kegel Groß</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="zylinder-gross-holz" title="Naturholz Zylinder Groß mit Augen">
-                <div class="fig-preview wood zylinder gross"><span class="eyes">• •</span></div>
-                <span>Zylinder Groß</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-mittel-holz" title="Naturholz Kegelfigur Mittel mit Augen (Jugendliche / Kollege)">
-                <div class="fig-preview wood pegdoll mittel"><span class="eyes">• •</span></div>
-                <span>Kegel Mittel</span>
-              </button>
-			  <button class="quick-figure-btn" draggable="true" data-create="zylinder-mittel-holz" title="Naturholz Zylinder Mittel mit Augen">
-                <div class="fig-preview wood zylinder mittel"><span class="eyes">• •</span></div>
-                <span>Zylinder Mittel</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kegel-klein-holz" title="Naturholz Kegelfigur Klein mit Augen (Kind / Aspekt)">
-                <div class="fig-preview wood pegdoll klein"><span class="eyes">• •</span></div>
-                <span>Kegel Klein</span>
-              </button>
-              <button class="quick-figure-btn" draggable="true" data-create="kloetzchen-holz" title="Rechteckiges Holzklötzchen / Säule (Barriere, Stufe, Ressource)">
-                <div class="fig-preview wood block"><span class="block-icon">🪵</span></div>
-                <span>Holzklötzchen</span>
               </button>
             </div>
 
@@ -281,46 +256,74 @@
               <p class="pane-hint">Für Werte, Ziele, Symptome, Hindernisse oder Ressourcensteine.</p>
             </div>
 
-            <div class="symbol-grid">
-              <button class="symbol-card" draggable="true" data-create-symbol="stern" data-color="#f1c40f">
+            <div class="figure-quick-grid color-figures-row">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="stern" data-color="#f1c40f">
                 <span class="symbol-icon">⭐</span>
                 <span class="symbol-name">Ziel / Vision</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="herz" data-color="#e74c3c">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="herz" data-color="#e74c3c">
                 <span class="symbol-icon">❤️</span>
                 <span class="symbol-name">Liebe / Loyalität</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="diamant" data-color="#3498db">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="diamant" data-color="#3498db">
                 <span class="symbol-icon">💎</span>
                 <span class="symbol-name">Ressource / Schatz</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="stein" data-color="#7f8c8d">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="stein" data-color="#7f8c8d">
                 <span class="symbol-icon">🪨</span>
                 <span class="symbol-name">Hindernis / Last</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="wolke" data-color="#95a5a6">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="wolke" data-color="#95a5a6">
                 <span class="symbol-icon">⚡</span>
                 <span class="symbol-name">Konflikt / Symptom</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="kiste" data-color="#8d6e63">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="kiste" data-color="#8d6e63">
                 <span class="symbol-icon">📦</span>
                 <span class="symbol-name">Geheimnis / Erbe</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="anker" data-color="#16a085">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="anker" data-color="#16a085">
                 <span class="symbol-icon">⚓</span>
                 <span class="symbol-name">Halt / Sicherheit</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="fragezeichen" data-color="#9b59b6">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="fragezeichen" data-color="#9b59b6">
                 <span class="symbol-icon">❓</span>
                 <span class="symbol-name">Unbekanntes Element</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="barriere" data-color="#c0392b">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="barriere" data-color="#c0392b">
                 <span class="symbol-icon">🚧</span>
                 <span class="symbol-name">Grenze / Blockade</span>
               </button>
-              <button class="symbol-card" draggable="true" data-create-symbol="licht" data-color="#f39c12">
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="licht" data-color="#f39c12">
                 <span class="symbol-icon">💡</span>
                 <span class="symbol-name">Lösung / Impuls</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="klotz" data-color="wood-light" title="Holzklötzchen">
+                <span class="symbol-icon"></span>
+                <span class="symbol-name">Holzklötzchen</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="walze" data-color="wood-light" title="Holzzylinder">
+                <span class="symbol-icon"></span>
+                <span class="symbol-name">Zylinder</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="baum" data-color="#2e7d32" title="Baum">
+                <span class="symbol-icon"></span>
+                <span class="symbol-name">Baum</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="tuer-zu" data-color="#a0703b" title="Geschlossene Tür">
+                <span class="symbol-icon"></span>
+                <span class="symbol-name">Tür (geschlossen)</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="tuer-offen" data-color="#a0703b" title="Offene Tür">
+                <span class="symbol-icon"></span>
+                <span class="symbol-name">Tür (offen)</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="dreieck" data-color="#e67e22" title="Dreieck">
+                <span class="symbol-icon"></span>
+                <span class="symbol-name">Dreieck</span>
+              </button>
+              <button class="quick-figure-btn" draggable="true" data-create-symbol="kugel" data-color="wood-light" title="Holzkugel">
+                <span class="symbol-icon"></span>
+                <span class="symbol-name">Kugel</span>
               </button>
             </div>
           </div>
@@ -450,7 +453,7 @@
         <!-- INSPEKTOR: überlagert das linke Menü, solange eine Figur ausgewählt ist -->
         <div class="inspector-overlay" id="inspectorOverlay">
           <div class="inspector-overlay-head">
-            <button id="btnCloseInspector" class="btn btn-secondary btn-sm" title="Inspektor schließen (Esc)">‹ Werkzeuge</button>
+            <button id="btnCloseInspector" class="btn btn-secondary btn-sm" title="Inspektor schließen (Esc)"><span class="lbl-normal">‹ Werkzeuge</span><span class="lbl-focus">✕ Schließen</span></button>
             <span class="sidebar-title">Inspektor</span>
           </div>
           <div class="inspector-overlay-body">
@@ -750,7 +753,7 @@
           <svg id="egoSvg" viewBox="0 0 640 150" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
 
-        <!-- FLOATING BOTTOM QUICK BAR -->
+        <!-- FLOATING BOTTOM QUICK BAR 
         <div class="stage-footer-bar">
           <div class="keyboard-hints">
             <span><kbd>Entf</kbd> Figur löschen</span>
@@ -761,7 +764,7 @@
             <span class="hint-3d"><kbd>Rechtsklick</kbd> / <kbd>Strg</kbd>+Ziehen drehen &amp; neigen</span>
             <span class="hint-3d"><kbd>Mausrad</kbd> Zoom</span>
           </div>
-        </div>
+        </div>-->
       </main>
 
       <!-- RIGHT SIDEBAR (SYSTEMIC IMPULSES, NOTES) -->

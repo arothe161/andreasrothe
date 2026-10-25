@@ -30,6 +30,7 @@
     viewYaw: -16,                   // 3D: Drehung des Bretts (Grad)
     viewTilt: 46,                   // 3D: Neigung des Bretts (Grad)
     isRotatingView: false,
+    fastRender: false,              // Touch-Bedienung: Figuren vereinfacht zeichnen, solange der Finger aufliegt
     rotStart: null,
     forceFlat: false,               // true = Figuren flach zeichnen (z. B. für den PNG-Export)
     solidKey: null,
@@ -328,8 +329,13 @@
   function makeGrain(el, colors) {
     const g = el.cloneNode(false);
     ['class', 'stroke', 'stroke-width', 'fill'].forEach(a => g.removeAttribute(a));
-    g.setAttribute('fill', '#000');
-    g.setAttribute('filter', 'url(#woodGrainTex)');
+    if (STATE.grainImageReady) {
+      // vorberechnete Maserung (Touchgeräte): kein Rauschfilter bei jeder Neuzeichnung
+      g.setAttribute('fill', 'url(#boardGrainImg)');
+    } else {
+      g.setAttribute('fill', '#000');
+      g.setAttribute('filter', 'url(#woodGrainTex)');
+    }
     g.setAttribute('opacity', colors.grainOpacity !== undefined ? colors.grainOpacity : 0.5);
     g.setAttribute('pointer-events', 'none');
     g.setAttribute('class', 'board-grain');
@@ -351,6 +357,47 @@
       const el = document.getElementById(id);
       if (el) el.style.display = canSplit ? '' : 'none';
     });
+  }
+
+  // Maserung einmal in ein Bild rechnen (gleiche Koordinaten wie der Live-Filter, also identische Optik).
+  // Auf Mobilgeräten spart das bei jeder Neuzeichnung den teuren Rauschfilter.
+  function prepareBoardGrainImage() {
+    if (STATE.grainImageReady || !window.matchMedia('(pointer: coarse)').matches) return;
+    const X0 = 250, Y0 = 50, SZ = 1100, SC = 1.25;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SZ * SC}" height="${SZ * SC}" viewBox="${X0} ${Y0} ${SZ} ${SZ}">
+      <defs><filter id="g" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.075" numOctaves="3" seed="11" result="fine"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.006" numOctaves="2" seed="4" result="warp"/>
+        <feDisplacementMap in="fine" in2="warp" scale="22" xChannelSelector="R" yChannelSelector="G" result="wavy"/>
+        <feColorMatrix in="wavy" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.5 0 0 0 -0.62" result="mask"/>
+        <feFlood flood-color="#6b4220" result="col"/>
+        <feComposite in="col" in2="mask" operator="in" result="streaks"/>
+        <feComposite in="streaks" in2="SourceAlpha" operator="in"/>
+      </filter></defs>
+      <rect x="${X0}" y="${Y0}" width="${SZ}" height="${SZ}" fill="#000" filter="url(#g)"/></svg>`;
+    const urlApi = window.URL || window.webkitURL;
+    const blobURL = urlApi.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = SZ * SC;
+        canvas.height = SZ * SC;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/png');
+        const pat = svgEl('pattern', { id: 'boardGrainImg', patternUnits: 'userSpaceOnUse', x: X0, y: Y0, width: SZ, height: SZ });
+        const image = svgEl('image', { x: 0, y: 0, width: SZ, height: SZ, preserveAspectRatio: 'none' });
+        image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', dataUrl);
+        image.setAttribute('href', dataUrl);
+        pat.appendChild(image);
+        svgElem.querySelector('defs').appendChild(pat);
+        STATE.grainImageReady = true;
+        renderBoard();
+      } catch (err) { /* Filter-Variante bleibt aktiv */ }
+      urlApi.revokeObjectURL(blobURL);
+    };
+    img.onerror = () => urlApi.revokeObjectURL(blobURL);
+    img.src = blobURL;
   }
 
   function renderBoard() {
@@ -636,13 +683,17 @@
 
   let solidUid = 0;
 
+  function isFastRender() {
+    return STATE.isRotatingView || STATE.fastRender;
+  }
+
   function useSolids() {
     return STATE.viewMode === '25d' && !STATE.povFigureId && !STATE.forceFlat && STATE.viewTilt >= 8;
   }
 
   function currentSolidKey() {
     return useSolids()
-      ? `${STATE.isRotatingView ? 'f' : 'q'}|${Math.round(STATE.viewYaw * 2)}|${Math.round(STATE.viewTilt * 2)}|${Math.round(STATE.panX / 20)}|${Math.round(STATE.panY / 20)}|${Math.round(STATE.zoom * 50)}`
+      ? `${isFastRender() ? 'f' : 'q'}|${Math.round(STATE.viewYaw * 2)}|${Math.round(STATE.viewTilt * 2)}|${Math.round(STATE.panX / 20)}|${Math.round(STATE.panY / 20)}|${Math.round(STATE.zoom * 50)}`
       : 'flat';
   }
 
@@ -722,7 +773,7 @@
 
   // Holzmaserung als Overlay auf einer Kopie des Elements
   function grainOver(parent, el, mat, patternId) {
-    if (STATE.isRotatingView) return null;      // beim Drehen/Neigen vereinfacht zeichnen (flüssiger)
+    if (isFastRender()) return null;      // beim Drehen/Neigen/Wischen vereinfacht zeichnen (flüssiger)
     const c = el.cloneNode(false);
     ['stroke', 'stroke-width', 'stroke-opacity', 'filter', 'class'].forEach(a => c.removeAttribute(a));
     c.setAttribute('fill', `url(#${patternId || 'pegGrain'})`);
@@ -732,16 +783,36 @@
     return c;
   }
 
-  function glossSpot(parent, ctx, x, y, r, mat) {
-    if (STATE.isRotatingView) return;
-    parent.appendChild(svgEl('ellipse', {
-      cx: x, cy: y, rx: r, ry: (r * 0.62) / ctx.cosT,
-      fill: 'url(#glossGrad)', opacity: Math.min(0.95, mat.gloss * 1.6 + 0.2), 'pointer-events': 'none'
-    }));
+  // Kugel als echter Bildschirm-Kreis: Größe und Form kommen aus der Projektion an dieser Stelle,
+  // dadurch ist sie in jeder Perspektive rund (Einheitskreis, 1 Einheit = Radius r).
+  function solidSphere(root, defs, ctx, mat, h, r, fillId) {
+    const sp = ctx.sphere(h);
+    const f = r * sp.scale;
+    const g = svgEl('g', {
+      transform: `translate(${sp.cx} ${sp.cy}) matrix(${sp.ax[0] * f} ${sp.ax[1] * f} ${sp.ay[0] * f} ${sp.ay[1] * f} 0 0)`
+    });
+    g.appendChild(svgEl('circle', { cx: 0, cy: 0, r: 1, fill: `url(#${fillId})`, stroke: mat.edge, 'stroke-width': 1 / r, 'stroke-opacity': 0.4 }));
+    if (!isFastRender()) {
+      const pid = `hg${ctx.uid}_${Math.round(h)}`;
+      defs.appendChild(svgEl('pattern', { id: pid, href: '#pegGrain', patternTransform: `scale(${1 / r})` }));
+      g.appendChild(svgEl('circle', { cx: 0, cy: 0, r: 1, fill: `url(#${pid})`, opacity: mat.grain, 'pointer-events': 'none' }));
+      g.appendChild(svgEl('ellipse', {
+        cx: -0.34, cy: -0.42, rx: 0.27, ry: 0.17,
+        fill: 'url(#glossGrad)', opacity: Math.min(0.95, mat.gloss * 1.6 + 0.2), 'pointer-events': 'none'
+      }));
+    }
+    root.appendChild(g);
+    return {
+      g: g,
+      badge: {
+        x: sp.cx + (sp.ax[0] * 0.72 - sp.ay[0] * 0.72) * f,
+        y: sp.cy + (sp.ax[1] * 0.72 - sp.ay[1] * 0.72) * f
+      }
+    };
   }
 
-  // Augen auf einer Kugel in Blickrichtung (nur sichtbar, wenn die Figur zum Betrachter schaut)
-  function sphereEyes(parent, ctx, fig, mat, cx, cy, hr, latDeg, spreadDeg, er) {
+  // Augen auf der Kugel (Koordinaten im Einheitskreis, y nach unten)
+  function sphereEyes(g, ctx, fig, mat, latDeg, spreadDeg, er) {
     const phi = (fig.rotation || 0) + ctx.yaw;
     const psi = Math.PI - (phi * Math.PI) / 180;
     const lat = (latDeg * Math.PI) / 180;
@@ -751,11 +822,10 @@
       if (vis <= 0.04) return;
       const xs = Math.cos(lat) * Math.sin(fe);
       const ys = Math.sin(lat) * Math.cos(ctx.elev) - Math.cos(lat) * Math.cos(fe) * Math.sin(ctx.elev);
-      parent.appendChild(svgEl('ellipse', {
-        cx: cx + hr * xs * 0.97,
-        cy: cy - (hr * ys) / ctx.cosT,
+      g.appendChild(svgEl('ellipse', {
+        cx: xs * 0.97, cy: -ys,
         rx: er * Math.max(0.35, vis),
-        ry: (er / ctx.cosT) * Math.max(0.55, Math.min(1, vis * 1.1)),
+        ry: er * Math.max(0.55, Math.min(1, vis * 1.1)),
         fill: mat.eye, 'pointer-events': 'none'
       }));
     });
@@ -779,24 +849,19 @@
     // Fuge zwischen Hals und Kopf
     root.appendChild(svgEl('circle', { cx: X(Hb), cy: Y(Hb) + 0.5, r: rn * 1.12, fill: shade(mat.base, -0.5), opacity: 0.5 }));
 
-    const head = svgEl('ellipse', {
-      cx: X(hc), cy: Y(hc), rx: hr, ry: hr / ctx.cosT, fill: `url(#${rg})`,
-      stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.4
-    });
-    root.appendChild(head);
-    grainOver(root, head, mat);
-    glossSpot(root, ctx, X(hc) - hr * 0.34, Y(hc) - (0.4 * hr) / ctx.cosT, hr * 0.27, mat);
-    sphereEyes(root, ctx, fig, mat, X(hc), Y(hc), hr, 6, 30, Math.max(1.7, s * 0.085));
+    const sph = solidSphere(root, defs, ctx, mat, hc, hr, rg);
+    sphereEyes(sph.g, ctx, fig, mat, 6, 30, Math.max(0.07, (s * 0.085) / hr));
 
-    return { height: hc + hr, badge: { x: X(hc) + hr * 0.95, y: Y(hc) - (hr * 0.9) / ctx.cosT } };
+    return { height: hc + hr, badge: sph.badge };
   }
 
   // ---- Zylinder (mit abgesetztem Kopf und Augen) bzw. runder Stein mit Blickkerbe ----
-  function solidCylinder(root, defs, fig, s, mat, ctx, turned) {
+  function solidCylinder(root, defs, fig, s, mat, ctx, mode) {
+    const turned = mode === 'turned';
     const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
     const lg = `lg${ctx.uid}`;
     addLinearGradient(defs, lg, mat);
-    const Rb = s * 0.95;
+    const Rb = mode === 'plain' ? s * 0.85 : s * 0.95;
     const part = (r1, h1, r2, h2, fill) => {
       const p = svgEl('path', { d: hullPath(X(h1), Y(h1), r1, X(h2), Y(h2), r2), fill: fill, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
       root.appendChild(p);
@@ -834,14 +899,14 @@
       return { height: top, badge: { x: X(top) + Rh * 0.9, y: Y(top) - 4 } };
     }
 
-    const H = s * 1.0;
+    const H = mode === 'plain' ? s * 1.35 : s * 1.0;
     const b = part(Rb, 0, Rb, H, `url(#${lg})`);
     grainOver(root, b, mat);
     cap(Rb, H, 0.2);
     // Blickkerbe (dunkles Dreieck) an der Vorderseite
     const psi = Math.PI - (((fig.rotation || 0) + ctx.yaw) * Math.PI) / 180;
     const cs = Math.cos(psi);
-    if (cs > 0.15) {
+    if (mode === 'notch' && cs > 0.15) {
       const x = X(H * 0.62) + Rb * Math.sin(psi), y = Y(H * 0.62) + Rb * cs;
       const nw = s * 0.3 * cs, nh = s * 0.42 * Math.max(0.5, ctx.tanT);
       root.appendChild(svgEl('polygon', {
@@ -914,11 +979,8 @@
     const body = svgEl('path', { d: hullPath(0, 0, R, X(ch), Y(ch), cr), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
     root.appendChild(body);
     grainOver(root, body, mat);
-    const dome = svgEl('ellipse', { cx: X(ch), cy: Y(ch), rx: cr, ry: cr / ctx.cosT, fill: `url(#${rg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.4 });
-    root.appendChild(dome);
-    grainOver(root, dome, mat);
-    glossSpot(root, ctx, X(ch) - cr * 0.3, Y(ch) - (0.42 * cr) / ctx.cosT, cr * 0.25, mat);
-    return { height: ch + cr, badge: { x: X(ch) + cr * 0.9, y: Y(ch) - cr / ctx.cosT * 0.8 } };
+    const sph = solidSphere(root, defs, ctx, mat, ch, cr, rg);
+    return { height: ch + cr, badge: sph.badge };
   }
 
   // ---- Licht: gedrechselte Holzbirne auf Fuß ----
@@ -927,18 +989,16 @@
     const lg = `lg${ctx.uid}`, rg = `rg${ctx.uid}`;
     addLinearGradient(defs, lg, mat);
     addRadialGradient(defs, rg, mat);
-    const foot = svgEl('path', { d: hullPath(0, 0, s * 0.7, X(s * 0.2), Y(s * 0.2), s * 0.58), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
-    root.appendChild(foot);
-    grainOver(root, foot, mat);
-    const neck = svgEl('path', { d: hullPath(X(s * 0.2), Y(s * 0.2), s * 0.3, X(s * 0.95), Y(s * 0.95), s * 0.34), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
-    root.appendChild(neck);
-    grainOver(root, neck, mat);
-    const hr = s * 0.74, hc = s * 1.62;
-    const bulb = svgEl('ellipse', { cx: X(hc), cy: Y(hc), rx: hr, ry: hr / ctx.cosT, fill: `url(#${rg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.4 });
-    root.appendChild(bulb);
-    grainOver(root, bulb, mat);
-    glossSpot(root, ctx, X(hc) - hr * 0.32, Y(hc) - (0.4 * hr) / ctx.cosT, hr * 0.26, mat);
-    return { height: hc + hr, badge: { x: X(hc) + hr * 0.95, y: Y(hc) - hr / ctx.cosT * 0.85 } };
+    // Sockel mit Gewinderillen (keine breite Grundscheibe)
+    const base = svgEl('path', { d: hullPath(0, 0, s * 0.36, X(s * 0.8), Y(s * 0.8), s * 0.34), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
+    root.appendChild(base);
+    grainOver(root, base, mat);
+    [0.2, 0.38, 0.56].forEach(h => {
+      root.appendChild(svgEl('circle', { cx: X(s * h), cy: Y(s * h), r: s * 0.355, fill: 'none', stroke: mat.edge, 'stroke-width': 1.2, 'stroke-opacity': 0.4, 'pointer-events': 'none' }));
+    });
+    const hr = s * 0.74, hc = s * 1.52;
+    const sph = solidSphere(root, defs, ctx, mat, hc, hr, rg);
+    return { height: hc + hr, badge: sph.badge };
   }
 
   // ---- Symbole als ausgesägte, dicke Holzplatten auf einem Fuß ----
@@ -976,6 +1036,27 @@
             { circle: [0, -0.2, 0.2] }
           ]
         };
+      case 'dreieck':
+        return { parts: [{ poly: [[0, -1.98], [1.12, -0.12], [-1.12, -0.12]] }] };
+      case 'tuer-zu':
+        return {
+          parts: [
+            { rect: [-0.78, -2.0, 1.56, 2.0] },
+            { rect: [-0.5, -1.78, 1.0, 0.8], stroke: 0.05, role: 'line' },
+            { rect: [-0.5, -0.82, 1.0, 0.66], stroke: 0.05, role: 'line' },
+            { circle: [0.52, -0.98, 0.1], role: 'gold' }
+          ]
+        };
+      case 'tuer-offen':
+        return {
+          parts: [
+            { rect: [-0.92, -2.06, 1.84, 2.06] },
+            { rect: [-0.64, -1.84, 1.28, 1.84], role: 'dark' },
+            { poly: [[-0.64, -1.84], [-0.1, -1.62], [-0.1, -0.14], [-0.64, 0]], role: 'light' },
+            { poly: [[-0.56, -1.66], [-0.2, -1.52], [-0.2, -1.04], [-0.56, -1.1]], stroke: 0.04, role: 'line' },
+            { circle: [-0.22, -0.88, 0.07], role: 'gold' }
+          ]
+        };
       case 'barriere':
       default:
         return { parts: [{ rect: [-0.95, -1.65, 0.22, 1.65] }, { rect: [0.73, -1.65, 0.22, 1.65] }, { rect: [-0.95, -1.5, 1.9, 0.34] }, { rect: [-0.95, -0.9, 1.9, 0.34] }] };
@@ -1010,11 +1091,8 @@
     const spec = plateSpec(fig.shape);
     s = s * 1.16;                                   // Platten wirken sonst klein neben den Figuren
 
-    // Standfuß
-    const footH = s * 0.2;
-    const foot = svgEl('path', { d: hullPath(0, 0, s * 0.66, X(footH), Y(footH), s * 0.58), fill: `url(#${lg})`, stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45 });
-    root.appendChild(foot);
-    root.appendChild(svgEl('circle', { cx: X(footH), cy: Y(footH), r: s * 0.58, fill: shade(mat.base, 0.15), stroke: mat.edge, 'stroke-opacity': 0.4, 'stroke-width': 1 }));
+    // Die Platte steht ohne Fuß direkt auf dem Brett
+    const footH = 0;
 
     // Maserung der Platte: waagerecht, im Einheitssystem der Platte skaliert
     const pid = `pg${ctx.uid}`;
@@ -1032,28 +1110,40 @@
     const order = frontNearest ? offs : offs.slice().reverse();     // hinten zuerst, zur Kamera hin zuletzt
     // senkrechte Achse der Platte: Bild einer Strecke der Länge s über dem Fuß
     const vx = X(footH + s) - X(footH), vy = Y(footH + s) - Y(footH);
+    // Schattenwurf in Form der Platte (Licht von links oben: Schatten fällt nach rechts unten)
+    const shadowG = svgEl('g', {
+      transform: `matrix(${-s * ca} ${-s * sa} ${-0.62 * s} ${-0.3 * s} 0 0)`,
+      opacity: 0.2, 'pointer-events': 'none'
+    });
+    spec.parts.filter(p => !p.role).forEach(p => shadowG.appendChild(plateElement(p, '#1c1006')));
+    root.appendChild(shadowG);
+
     const matrix = off => `matrix(${-s * ca} ${-s * sa} ${-vx} ${-vy} ${X(footH) + fl[0] * off} ${Y(footH) + fl[1] * off})`;
 
     order.forEach((off, idx) => {
       const g = svgEl('g', { transform: matrix(off) });
       const nearest = idx === order.length - 1;
       if (!nearest) {
-        spec.parts.forEach(p => g.appendChild(plateElement(p, mat.dark)));
+        spec.parts.filter(p => !p.role).forEach(p => g.appendChild(plateElement(p, mat.dark)));
       } else {
-        spec.parts.forEach(p => g.appendChild(plateElement(p, mat.base, 'face')));
+        const roleColor = r => r === 'dark' ? '#2a190b' : r === 'light' ? shade(mat.base, 0.3)
+          : r === 'gold' ? '#d8b24a' : r === 'line' ? shade(mat.base, -0.55) : mat.base;
+        // Beide Seiten der Platte tragen das Motiv (Rückseite spiegelverkehrt), damit es von jeder Seite erkennbar ist
+        const faceParts = spec.parts;
+        faceParts.forEach(p => g.appendChild(plateElement(p, roleColor(p.role), 'face')));
         // Maserung und Glanz auf der sichtbaren Fläche
-        if (!STATE.isRotatingView) spec.parts.forEach(p => {
+        if (!isFastRender()) faceParts.filter(p => !p.role || p.role === 'light').forEach(p => {
           const el = plateElement(p, '#000', 'face');
           if (p.stroke) { el.setAttribute('stroke', `url(#${pid})`); } else { el.setAttribute('fill', `url(#${pid})`); el.setAttribute('stroke', 'none'); }
           el.setAttribute('opacity', mat.grain);
           el.setAttribute('pointer-events', 'none');
           g.appendChild(el);
         });
-        if (frontNearest && spec.details) {
+        if (spec.details) {
           spec.details.forEach(d => g.appendChild(svgEl('path', { d: d, fill: 'none', stroke: shade(mat.base, -0.5), 'stroke-width': 0.05, 'stroke-linecap': 'round', opacity: 0.7 })));
         }
         // dunkle Kontur der Vorderfläche
-        spec.parts.forEach(p => {
+        faceParts.filter(p => !p.role || p.role === 'light').forEach(p => {
           const o = plateElement(p, 'none', 'face');
           o.setAttribute('fill', 'none');
           o.setAttribute('stroke', mat.edge);
@@ -1066,6 +1156,101 @@
       root.appendChild(g);
     });
     return { height: footH + s * 2, badge: { x: X(footH + s * 2) + s * 0.9, y: Y(footH + s * 2) } };
+  }
+
+  // Plattensymbole (flach ausgesägt) werfen einen Schatten in ihrer eigenen Form statt eines runden Flecks
+  function isPlateShape(shape) {
+    return isSymbolShape(shape) && !['kiste', 'stein', 'licht', 'klotz', 'walze', 'kugel', 'baum'].includes(shape);
+  }
+
+  // ---- Schlagschatten ----
+  function drawSolidShadow(root, s) {
+    const estH = s * 2.3;
+    [[1.2, 0.055], [1.05, 0.065], [0.9, 0.075], [0.75, 0.085], [0.6, 0.095]].forEach(([k, o]) => {
+      root.appendChild(svgEl('path', {
+        d: hullPath(0, 0, s * 1.02 * k, estH * 0.4 * k, estH * 0.17 * k, s * 0.5 * k),
+        fill: '#1c1006', opacity: o, 'pointer-events': 'none'
+      }));
+    });
+  }
+
+  // ---- Holzkugel (liegt auf dem Brett) ----
+  function solidBall(root, defs, fig, s, mat, ctx) {
+    const rg = `rg${ctx.uid}`;
+    addRadialGradient(defs, rg, mat);
+    const r = s * 0.95;
+    root.appendChild(svgEl('circle', { cx: 0, cy: 0, r: r * 0.5, fill: '#1c1006', opacity: 0.28, 'pointer-events': 'none' }));
+    const sph = solidSphere(root, defs, ctx, mat, r, r, rg);
+    return { height: r * 2, badge: sph.badge };
+  }
+
+  // ---- Baum: Stamm mit drei grünen Kegelstufen (Tannenbaum) ----
+  function solidTree(root, defs, fig, s, mat, ctx) {
+    const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
+    const trunkMat = materialFor({ color: '#8a5a2b' });
+    const lgT = `lgt${ctx.uid}`, lgC = `lg${ctx.uid}`;
+    addLinearGradient(defs, lgT, trunkMat);
+    addLinearGradient(defs, lgC, mat);
+    const edge = { 'stroke-width': 1, 'stroke-opacity': 0.45 };
+    const trunk = svgEl('path', Object.assign({ d: hullPath(0, 0, s * 0.27, X(s * 0.62), Y(s * 0.62), s * 0.22), fill: `url(#${lgT})`, stroke: trunkMat.edge }, edge));
+    root.appendChild(trunk);
+    grainOver(root, trunk, trunkMat);
+    [[0.98, 0.32, 1.3], [0.78, 0.86, 1.8], [0.56, 1.38, 2.3]].forEach(([r, h0, h1]) => {
+      const tier = svgEl('path', Object.assign({ d: hullPath(X(s * h0), Y(s * h0), s * r, X(s * h1), Y(s * h1), s * 0.05), fill: `url(#${lgC})`, stroke: mat.edge }, edge));
+      root.appendChild(tier);
+      grainOver(root, tier, mat);
+    });
+    return { height: s * 2.3, badge: { x: X(s * 1.6) + s * 0.75, y: Y(s * 1.6) } };
+  }
+
+  // ---- Auswahl des Körpers je nach Form ----
+  function buildSolidBody(root, defs, fig, s, mat, ctx) {
+    switch (fig.shape) {
+      case 'kegel': case 'pegdoll': return solidPeg(root, defs, fig, s, mat, ctx);
+      case 'zylinder': return solidCylinder(root, defs, fig, s, mat, ctx, 'turned');
+      case 'rund': return solidCylinder(root, defs, fig, s, mat, ctx, 'notch');
+      case 'walze': return solidCylinder(root, defs, fig, s, mat, ctx, 'plain');
+      case 'block': case 'kloetzchen': return solidBox(root, defs, fig, s * 0.75, s * 0.45, s * 1.5, mat, ctx, {});
+      case 'klotz': return solidBox(root, defs, fig, s * 0.95, s * 0.52, s * 1.0, mat, ctx, {});
+      case 'kiste': return solidBox(root, defs, fig, s * 0.95, s * 0.95, s * 1.4, mat, ctx, { planks: true });
+      case 'stein': return solidDome(root, defs, fig, s, mat, ctx);
+      case 'licht': return solidBulb(root, defs, fig, s, mat, ctx);
+      case 'kugel': return solidBall(root, defs, fig, s, mat, ctx);
+      case 'baum': return solidTree(root, defs, fig, s, mat, ctx);
+      default:
+        if (isSymbolShape(fig.shape)) return solidPlate(root, defs, fig, s, mat, ctx);
+        return solidBox(root, defs, fig, s, s, s * 1.5, mat, ctx, { notch: true });
+    }
+  }
+
+  // ---- Vorschau-Grafik (gleiche Zeichenroutinen wie auf dem Brett, 40° Neigung, ohne Perspektive) ----
+  function buildPreviewGroup(fig, s, noShadow) {
+    const T = (58 * Math.PI) / 180;   // steiler als die Brettansicht: Motive bleiben gut erkennbar
+    const ctx = { tanT: Math.tan(T), cosT: Math.cos(T), elev: Math.PI / 2 - T, yaw: 0, uid: ++solidUid };
+    ctx.at = (lx, ly, h) => [lx, ly - h * ctx.tanT];
+    ctx.sphere = h => ({ cx: 0, cy: -h * ctx.tanT, ax: [1, 0], ay: [0, 1 / ctx.cosT], scale: 1 });
+    const outer = svgEl('g', {});
+    const flat = svgEl('g', { transform: `scale(1, ${ctx.cosT})` });
+    outer.appendChild(flat);
+    const defs = svgEl('defs', {});
+    flat.appendChild(defs);
+    if (!noShadow && !isPlateShape(fig.shape)) drawSolidShadow(flat, s);
+    buildSolidBody(flat, defs, Object.assign({ rotation: 180, size: 'mittel', scale: 5 }, fig), s, materialFor(fig), ctx);
+    return outer;
+  }
+
+  // Vorschaubilder der Palette: zeigen genau das Objekt, das später auf dem Brett steht
+  function initPalettePreviews() {
+    document.querySelectorAll('.quick-figure-btn, .symbol-card').forEach(btn => {
+      const preset = presetFromElement(btn);
+      if (!preset) return;
+      const slot = btn.querySelector('.preview-slot, .symbol-icon');
+      if (!slot) return;
+      const svg = svgEl('svg', { viewBox: '-24 -40 48 50', class: 'palette-preview', 'aria-hidden': 'true' });
+      svg.appendChild(buildPreviewGroup({ shape: preset.shape, color: preset.color }, 15));
+      slot.textContent = '';
+      slot.appendChild(svg);
+    });
   }
 
   // ---- Zusammenbau einer 3D-Figur ----
@@ -1081,6 +1266,15 @@
     // Punkt (lx, ly) im Figuren-Bildschirmsystem in Höhe h -> Position, an der er tatsächlich erscheint
     const proj = STATE.solidProj || getTargetProjection();
     const yw = (STATE.viewYaw * Math.PI) / 180, cyw = Math.cos(yw), syw = Math.sin(yw);
+    // Lage und Form eines Bildschirm-Kreises (Kugelmitte in Höhe h) im Figuren-System
+    ctx.sphere = (h) => {
+      const S = proj.forward3(fig.x, fig.y, h);
+      const toLocal = P => { const dx = P.x - fig.x, dy = P.y - fig.y; return [dx * cyw - dy * syw, dx * syw + dy * cyw]; };
+      const c = toLocal(proj.inverse(S.x, S.y));
+      const u = toLocal(proj.inverse(S.x + 1, S.y));
+      const v = toLocal(proj.inverse(S.x, S.y + 1));
+      return { cx: c[0], cy: c[1], ax: [u[0] - c[0], u[1] - c[1]], ay: [v[0] - c[0], v[1] - c[1]], scale: STATE.zoom * S.k };
+    };
     ctx.at = (lx, ly, h) => {
       const bx = fig.x + lx * cyw + ly * syw;
       const by = fig.y - lx * syw + ly * cyw;
@@ -1097,32 +1291,13 @@
     root.appendChild(defs);
 
     // Schlagschatten auf dem Brett (Licht von links oben)
-    const estH = s * 2.3;
-    [[1.3, 0.10], [1.05, 0.12], [0.8, 0.14]].forEach(([k, o]) => {
-      root.appendChild(svgEl('path', {
-        d: hullPath(0, 0, s * 1.02 * k, estH * 0.4 * k, estH * 0.17 * k, s * 0.5 * k),
-        fill: '#1c1006', opacity: o, 'pointer-events': 'none'
-      }));
-    });
+    if (!isPlateShape(fig.shape)) drawSolidShadow(root, s);
 
     // Standfläche: Trefferfläche und Auswahlring auf dem Brett
     root.appendChild(svgEl('circle', { cx: 0, cy: 0, r: s * 1.16, fill: 'rgba(0,0,0,0.001)', class: 'fig-body' }));
 
-    let info;
-    switch (fig.shape) {
-      case 'kegel': case 'pegdoll': info = solidPeg(root, defs, fig, s, mat, ctx); break;
-      case 'zylinder': info = solidCylinder(root, defs, fig, s, mat, ctx, true); break;
-      case 'rund': info = solidCylinder(root, defs, fig, s, mat, ctx, false); break;
-      case 'block': case 'kloetzchen': info = solidBox(root, defs, fig, s * 0.75, s * 0.45, s * 1.5, mat, ctx, {}); break;
-      case 'kiste': info = solidBox(root, defs, fig, s * 0.95, s * 0.95, s * 1.4, mat, ctx, { planks: true }); break;
-      case 'stein': info = solidDome(root, defs, fig, s, mat, ctx); break;
-      case 'licht': info = solidBulb(root, defs, fig, s, mat, ctx); break;
-      default:
-        if (isSymbolShape(fig.shape)) info = solidPlate(root, defs, fig, s, mat, ctx);
-        else info = solidBox(root, defs, fig, s, s, s * 1.5, mat, ctx, { notch: true });
-    }
+    const info = buildSolidBody(root, defs, fig, s, mat, ctx);
 
-    // Beschriftung unter der Figur (bleibt aufrecht lesbar)
     // Aufrechtes, unverzerrtes Schild: Bildschirm-Pixel -> Brettebene an dieser Stelle (inkl. Perspektive)
     const S0 = proj.forward(fig.x, fig.y);
     const pX = proj.inverse(S0.x + 1, S0.y), pY = proj.inverse(S0.x, S0.y + 1);
@@ -1315,7 +1490,7 @@
       rotGroup.appendChild(notch);
 
     } else if (isSymbolShape(fig.shape)) {
-      renderSymbolFigure(rotGroup, fig.shape, sizePx, fillColor, strokeColor);
+      renderSymbolFigure(rotGroup, fig, sizePx, fillColor, strokeColor);
     } else {
       // Standard: Eckig mit Kerbe
       const half = sizePx;
@@ -1382,48 +1557,24 @@
   }
 
   function isSymbolShape(shape) {
-    return ['stern', 'herz', 'diamant', 'stein', 'wolke', 'kiste', 'anker', 'fragezeichen', 'barriere', 'licht'].includes(shape);
+    return ['stern', 'herz', 'diamant', 'stein', 'wolke', 'kiste', 'anker', 'fragezeichen', 'barriere', 'licht',
+      'klotz', 'walze', 'kugel', 'baum', 'tuer-zu', 'tuer-offen', 'dreieck'].includes(shape);
   }
 
-  function renderSymbolFigure(parent, shape, sizePx, fill, stroke) {
+  // Symbole in der Draufsicht: heller Sockel mit farbigem Rand und dem Objekt als Piktogramm
+  // (dieselbe Zeichnung wie in der Palette und in der 3D-Ansicht, ohne Augen)
+  function renderSymbolFigure(parent, fig, sizePx, fill, stroke) {
     const s = sizePx;
-    let emoji = '⭐';
-    switch (shape) {
-      case 'stern': emoji = '⭐'; break;
-      case 'herz': emoji = '❤️'; break;
-      case 'diamant': emoji = '💎'; break;
-      case 'stein': emoji = '🪨'; break;
-      case 'wolke': emoji = '⚡'; break;
-      case 'kiste': emoji = '📦'; break;
-      case 'anker': emoji = '⚓'; break;
-      case 'fragezeichen': emoji = '❓'; break;
-      case 'barriere': emoji = '🚧'; break;
-      case 'licht': emoji = '💡'; break;
-    }
+    // unsichtbare Trefferfläche (zeigt beim Auswählen den Ring), keine sichtbare Grundscheibe
+    parent.appendChild(svgEl('circle', { cx: 0, cy: 0, r: s, fill: 'rgba(0,0,0,0.001)', class: 'fig-body' }));
 
-    const base = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    base.setAttribute('cx', 0);
-    base.setAttribute('cy', 0);
-    base.setAttribute('r', s);
-    base.setAttribute('fill', fill);
-    base.setAttribute('stroke', stroke);
-    base.setAttribute('stroke-width', '2');
-    base.setAttribute('class', 'fig-body');
-    parent.appendChild(base);
-
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', 0);
-    text.setAttribute('y', s * 0.35);
-    text.setAttribute('font-size', s * 1.1);
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('pointer-events', 'none');
-    text.textContent = emoji;
-    parent.appendChild(text);
-
-    const notch = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    notch.setAttribute('points', `0,${-s + 8} -4,${-s} 4,${-s}`);
-    notch.setAttribute('fill', '#1a1006');
-    parent.appendChild(notch);
+    const k = s / 19;
+    const art = svgEl('g', {
+      transform: `rotate(${-(fig.rotation || 0)}) translate(0, ${13 * k}) scale(${k})`,
+      'pointer-events': 'none'
+    });
+    art.appendChild(buildPreviewGroup({ shape: fig.shape, color: fig.color, size: fig.size }, 15, true));
+    parent.appendChild(art);
   }
 
   // ==========================================================================
@@ -1507,6 +1658,7 @@
     ring.setAttribute('cy', fig.y);
     ring.setAttribute('r', handleDistance);
     ring.setAttribute('class', 'rotation-handle-ring');
+    ring.setAttribute('pointer-events', 'none');      // nur der Knopf ist greifbar, die Figur bleibt aus der Mitte ziehbar
     controlsOverlayGroup.appendChild(ring);
 
     const rad = degToRad(rot - 90);
@@ -1522,6 +1674,15 @@
     knob.setAttribute('title', 'Ziehen zum Drehen der Blickrichtung');
     controlsOverlayGroup.appendChild(knob);
 
+    // unsichtbare, größere Trefferfläche, damit der Knopf mit dem Finger greifbar ist
+    const knobHit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    knobHit.setAttribute('cx', hx);
+    knobHit.setAttribute('cy', hy);
+    knobHit.setAttribute('r', window.matchMedia('(pointer: coarse)').matches ? 26 : 14);
+    knobHit.setAttribute('fill', 'rgba(0,0,0,0.001)');
+    knobHit.setAttribute('data-handle-id', fig.id);
+    controlsOverlayGroup.appendChild(knobHit);
+
     const handleLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     handleLine.setAttribute('x1', fig.x);
     handleLine.setAttribute('y1', fig.y);
@@ -1529,6 +1690,7 @@
     handleLine.setAttribute('y2', hy);
     handleLine.setAttribute('stroke', 'rgba(194, 149, 93, 0.7)');
     handleLine.setAttribute('stroke-width', '1.5');
+    handleLine.setAttribute('pointer-events', 'none');
     controlsOverlayGroup.insertBefore(handleLine, knob);
   }
 
@@ -1595,6 +1757,7 @@
           renderFigures();
           updateRelationUIList();
           playWoodClick(0.8);
+          saveToStorage();
         }
       });
 
@@ -1630,6 +1793,7 @@
         phase.relations.splice(i, 1);
         renderFigures();
         playWoodClick(0.8);
+        saveToStorage();
       });
       list.appendChild(row);
     });
@@ -1646,7 +1810,79 @@
   function setupInteractions() {
     const viewport = document.getElementById('boardViewport');
 
-    svgElem.addEventListener('mousedown', (e) => {
+    // ---- Touch: aktive Finger und Zwei-Finger-Geste (zoomen, drehen, neigen) ----
+    const touchPts = new Map();   // pointerId -> {x, y}
+    let gesture = null;
+    let touchLock = false;        // nach einer Geste bleibt ein Restfinger wirkungslos, bis alle Finger oben sind
+
+    const angleBetween = (a, b) => Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+
+    function beginGesture() {
+      // laufende Einzel-Interaktionen abbrechen
+      STATE.draggingFigureId = null;
+      STATE.rotatingFigureId = null;
+      STATE.isPanning = false;
+      STATE.isRotatingView = false;
+      stopViewMotion();
+      const ids = [...touchPts.keys()].slice(0, 2);
+      const a = touchPts.get(ids[0]), b = touchPts.get(ids[1]);
+      const c0 = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      gesture = {
+        ids: ids, c0: c0,
+        dist0: Math.max(20, Math.hypot(b.x - a.x, b.y - a.y)),
+        lastAng: angleBetween(a, b), twist: 0,
+        zoom0: STATE.zoom, yaw0: STATE.viewYaw, tilt0: STATE.viewTilt,
+        anchor: clientToBoard(c0.x, c0.y),
+        is3d: STATE.viewMode === '25d' && !STATE.povFigureId
+      };
+      STATE.autoFit = false;
+      STATE.fastRender = true;
+      touchLock = true;
+    }
+
+    function updateGesture() {
+      const a = touchPts.get(gesture.ids[0]), b = touchPts.get(gesture.ids[1]);
+      if (!a || !b) return;
+      const c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const dist = Math.max(20, Math.hypot(b.x - a.x, b.y - a.y));
+      STATE.zoom = clamp(gesture.zoom0 * (dist / gesture.dist0), MIN_ZOOM, MAX_ZOOM);
+
+      let target = c;
+      if (gesture.is3d) {
+        // 3D: Drehen der Finger dreht das Brett, gemeinsames Hoch/Runter neigt – um den Startpunkt
+        const ang = angleBetween(a, b);
+        gesture.twist += ((ang - gesture.lastAng + 540) % 360) - 180;
+        gesture.lastAng = ang;
+        STATE.viewYaw = gesture.yaw0 + gesture.twist;
+        STATE.viewTilt = clamp(gesture.tilt0 - (c.y - gesture.c0.y) * 0.25, 0, 70);
+        target = gesture.c0;
+      }
+      pinPoint(gesture.anchor, target);   // Punkte unter den Fingern bleiben unter den Fingern (Zoom und Verschieben)
+    }
+
+    function endGesture() {
+      gesture = null;
+      STATE.fastRender = false;
+      refreshSolidsIfNeeded();
+      saveToStorage();
+    }
+
+    // Capture-Phase: Mehrfinger-Gesten dürfen nicht als Auswahl oder Ziehen einer Figur ankommen
+    viewport.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
+      touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // Der Viewport hält die Finger fest, auch wenn ein Figur-Element beim Ziehen neu gezeichnet wird
+      try { viewport.setPointerCapture(e.pointerId); } catch (err) { /* nicht unterstützt */ }
+      if (touchPts.size >= 2) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!gesture) beginGesture();
+      } else {
+        STATE.fastRender = true;
+      }
+    }, true);
+
+    svgElem.addEventListener('pointerdown', (e) => {
       initAudio();
       const svgPt = getSvgPoint(e);
 
@@ -1664,6 +1900,7 @@
 
         if (STATE.activeRelationMode) {
           STATE.pointerClient = { x: e.clientX, y: e.clientY };
+          STATE.relPress = { x: e.clientX, y: e.clientY };   // Ziehen von Figur zu Figur verbindet ebenfalls
           handleRelationClick(figId);
           return;
         }
@@ -1685,7 +1922,7 @@
     });
 
     // Auch die Fläche um das Brett herum nimmt Ziehen entgegen
-    viewport.addEventListener('mousedown', (e) => {
+    viewport.addEventListener('pointerdown', (e) => {
       if (e.target === viewport || e.target.id === 'boardTransform') {
         initAudio();
         selectFigure(null);
@@ -1721,10 +1958,16 @@
     });
 
     viewport.addEventListener('contextmenu', (e) => {
-      if (STATE.viewMode === '25d') e.preventDefault();
+      // langes Drücken (Touch) und rechte Maustaste in 3D sollen kein Browser-Menü öffnen
+      if (STATE.viewMode === '25d' || e.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) e.preventDefault();
     });
 
-    window.addEventListener('mousemove', (e) => {
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') {
+        if (touchPts.has(e.pointerId)) touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (gesture) { updateGesture(); return; }
+        if (touchLock) return;
+      }
       STATE.pointerClient = { x: e.clientX, y: e.clientY };
       if (STATE.activeRelationMode && STATE.relationFirstFigureId) {
         updateRubberband();
@@ -1777,18 +2020,40 @@
       }
     });
 
-    window.addEventListener('mouseup', () => {
+    const releasePointer = (e) => {
+      if (e.pointerType === 'touch') {
+        touchPts.delete(e.pointerId);
+        if (gesture && gesture.ids.includes(e.pointerId)) endGesture();
+        if (touchPts.size === 0) {
+          touchLock = false;
+          if (STATE.fastRender) { STATE.fastRender = false; refreshSolidsIfNeeded(); }
+        }
+        if (touchLock) return;
+      }
+
+      // Beziehung durch Ziehen von der ersten zur zweiten Figur
+      if (STATE.activeRelationMode && STATE.relationFirstFigureId && STATE.relPress) {
+        if (Math.hypot(e.clientX - STATE.relPress.x, e.clientY - STATE.relPress.y) > 14) {
+          const pt = getSvgPoint(e);
+          const target = findFigureAt(pt.x, pt.y, STATE.relationFirstFigureId);
+          if (target) handleRelationClick(target.id);
+        }
+      }
+      STATE.relPress = null;
+
       if (STATE.draggingFigureId) {
         playWoodClick(1.0);
         STATE.draggingFigureId = null;
         updateInspectorValues(getFigureById(STATE.selectedFigureId));
         runSystemicAnalysis();
+        saveToStorage();
       }
       if (STATE.rotatingFigureId) {
         playWoodClick(1.2);
         STATE.rotatingFigureId = null;
         runSystemicAnalysis();
         if (STATE.povFigureId) applyPovCamera(true);
+        saveToStorage();
       }
       if (STATE.isPanning && STATE.panVel && performance.now() - STATE.panLastTime < 70
           && Math.hypot(STATE.panVel.x, STATE.panVel.y) > 3) {
@@ -1799,7 +2064,9 @@
       STATE.rotStart = null;
       document.body.classList.remove('view-rotating');
       refreshSolidsIfNeeded();   // volle Qualität nach dem Drehen
-    });
+    };
+    window.addEventListener('pointerup', releasePointer);
+    window.addEventListener('pointercancel', releasePointer);
 
     viewport.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -1849,13 +2116,13 @@
           modal.style.display = 'none';
           return;
         }
+        if (STATE.selectedFigureId) {
+          selectFigure(null);      // schließt den Inspektor (auch im Fokus-Modus)
+          return;
+        }
         if (STATE.focusMode) {
           e.preventDefault();
           exitFocusMode();
-          return;
-        }
-        if (STATE.selectedFigureId) {
-          selectFigure(null);
         }
         return;
       }
@@ -1888,6 +2155,7 @@
             updateInspectorValues(fig);
             playWoodClick(1.1);
             runSystemicAnalysis();
+            saveToStorage();
           }
         }
       }
@@ -1932,7 +2200,7 @@
     const tilt = is3d ? STATE.viewTilt : 0;
     const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
     // Immer dieselbe Funktionsliste -> weiche Übergänge zwischen 2D, 3D und Perspektivenwechsel
-    return `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) rotateX(${tilt}deg) rotateZ(${rotZ}deg) scale(${STATE.zoom})`;
+    return `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) scale3d(${STATE.zoom}, ${STATE.zoom}, 1) rotateX(${tilt}deg) rotateZ(${rotZ}deg)`;
   }
 
   function updateZoomLabel() {
@@ -2044,6 +2312,7 @@
     document.getElementById('btnView25D')?.classList.toggle('active', mode === '25d');
     if (!opts.skipFit) fitToView(true);
     if (!opts.silent) playWoodClick(1.0);
+    debounceSaveToStorage();
   }
 
   // --- Projektion: Bildschirm <-> Brett-Koordinaten (inkl. 3D-Perspektive und Drehung) ---
@@ -2108,7 +2377,7 @@
       const Y = m.m12 * x + m.m22 * y + m.m32 * lz + m.m42;
       const Z = m.m13 * x + m.m23 * y + m.m33 * lz + m.m43;
       const k = persp / (persp - Z);
-      return { x: vr.left + vr.width / 2 + (ox + X) * k, y: vr.top + vr.height / 2 + (oy + Y) * k };
+      return { x: vr.left + vr.width / 2 + (ox + X) * k, y: vr.top + vr.height / 2 + (oy + Y) * k, k: k };
     };
     const forward = (lx, ly) => forward3(lx, ly, 0);
 
@@ -2130,9 +2399,9 @@
     const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
     const m = new DOMMatrix()
       .translateSelf(STATE.panX - CONTAINER_W / 2, STATE.panY - CONTAINER_H / 2)
+      .scaleSelf(STATE.zoom, STATE.zoom, 1)
       .rotateAxisAngleSelf(1, 0, 0, tilt)
-      .rotateAxisAngleSelf(0, 0, 1, rotZ)
-      .scaleSelf(STATE.zoom);
+      .rotateAxisAngleSelf(0, 0, 1, rotZ);
     return getProjection(m);
   }
 
@@ -2298,6 +2567,7 @@
         updateSplitUI();
         playWoodClick(targetGap === 0 ? 0.9 : 1.15);
         if (STATE.autoFit && !STATE.povFigureId) fitToView(true);
+        saveToStorage();
       }
     }
 
@@ -2369,11 +2639,73 @@
     renderFigures();
     playWoodClick(0.9);
     runSystemicAnalysis();
+    saveToStorage();
     return newFig;
   }
 
   // Inspektor liegt über dem linken Menü, solange eine Figur ausgewählt ist
   let lastInspectorFigId = null;
+
+  // ---- Responsives Layout (Breakpoints wie die einbindende Seite: 900 px und 600 px) ----
+  const compactMQ = window.matchMedia('(max-width: 900px)');
+  const phoneMQ = window.matchMedia('(max-width: 600px)');
+  const isCompact = () => compactMQ.matches;
+
+  function updateDrawerState() {
+    const l = document.getElementById('sidebarLeft'), r = document.getElementById('sidebarRight');
+    const open = (l && !l.classList.contains('collapsed') && !l.classList.contains('inspector-open')) ||
+                 (r && !r.classList.contains('collapsed'));
+    document.body.classList.toggle('drawer-open', !!open);
+  }
+
+  function applyResponsiveLayout() {
+    document.body.classList.toggle('layout-compact', compactMQ.matches);
+    document.body.classList.toggle('layout-phone', phoneMQ.matches);
+    if (compactMQ.matches) {
+      if (!STATE.compactApplied) {
+        // Schubladen starten geschlossen, damit das Brett den ganzen Bildschirm nutzt
+        const l = document.getElementById('sidebarLeft');
+        STATE.leftWasOpen = l ? !l.classList.contains('collapsed') : true;
+        STATE.compactApplied = true;
+        setSidebarCollapsed('left', true);
+        setSidebarCollapsed('right', true);
+      }
+    } else if (STATE.compactApplied) {
+      STATE.compactApplied = false;
+      setSidebarCollapsed('left', STATE.leftWasOpen === false);
+    }
+    updateDrawerState();
+  }
+
+  // Ausgewählte Figur sichtbar halten, wenn der Inspektor (Seitenfeld oder untere Schublade) sie verdeckt
+  function revealSelectedFigure() {
+    if (!isCompact() || STATE.povFigureId) return;
+    requestAnimationFrame(() => {
+      const fig = getFigureById(STATE.selectedFigureId);
+      const left = document.getElementById('sidebarLeft');
+      if (!fig || !left || !left.classList.contains('inspector-open')) return;
+      const vr = boardViewportEl.getBoundingClientRect();
+      const lr = left.getBoundingClientRect();
+      const vis = { l: vr.left, r: vr.right, t: vr.top, b: vr.bottom };
+      if (phoneMQ.matches) vis.b = Math.min(vis.b, lr.top);
+      else vis.l = Math.max(vis.l, lr.right);
+      const c = boardToClient(fig.x, fig.y);
+      let dx = 0, dy = 0;
+      if (c.x < vis.l + 60) dx = vis.l + 60 - c.x;
+      else if (c.x > vis.r - 60) dx = vis.r - 60 - c.x;
+      if (c.y < vis.t + 110) dy = vis.t + 110 - c.y;
+      else if (c.y > vis.b - 50) dy = vis.b - 50 - c.y;
+      if (dx || dy) {
+        STATE.autoFit = false;
+        boardTransformEl.classList.add('animating');
+        STATE.panX += dx;
+        STATE.panY += dy;
+        updateTransform();
+        clearTimeout(animTimer);
+        animTimer = setTimeout(() => boardTransformEl.classList.remove('animating'), 620);
+      }
+    });
+  }
 
   function syncInspectorOverlay() {
     const left = document.getElementById('sidebarLeft');
@@ -2381,10 +2713,12 @@
     const has = !!getFigureById(STATE.selectedFigureId);
     left.classList.toggle('inspector-open', has);
     // Ist das Menü eingeklappt, wird es für den Inspektor automatisch geöffnet
-    if (has && lastInspectorFigId !== STATE.selectedFigureId && left.classList.contains('collapsed')) {
+    if (has && !STATE.focusMode && !isCompact() && lastInspectorFigId !== STATE.selectedFigureId && left.classList.contains('collapsed')) {
       setSidebarCollapsed('left', false);
     }
+    if (has && lastInspectorFigId !== STATE.selectedFigureId) revealSelectedFigure();
     lastInspectorFigId = has ? STATE.selectedFigureId : null;
+    updateDrawerState();
   }
 
   // Akkordeon-Eintrag der linken Leiste öffnen oder schließen
@@ -2402,6 +2736,7 @@
     const el = document.getElementById(side === 'left' ? 'sidebarLeft' : 'sidebarRight');
     if (!el) return;
     el.classList.toggle('collapsed', collapsed);
+    updateDrawerState();
     // Brett an den neuen Platz anpassen (bei automatischer Einpassung)
     requestAnimationFrame(() => {
       if (STATE.povFigureId) applyPovCamera(false);
@@ -2444,6 +2779,7 @@
     selectFigure(null);
     playWoodClick(0.7);
     runSystemicAnalysis();
+    saveToStorage();
   }
 
   function duplicateSelectedFigure() {
@@ -2865,6 +3201,25 @@
     }
   }
 
+  // Schwebendes Banner (Handy/Tablet): Das Menü mit dem Abbrechen-Button ist dann geschlossen
+  function syncRelationFloating() {
+    let el = document.getElementById('relationFloating');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'relationFloating';
+      el.className = 'relation-floating';
+      el.innerHTML = '<span class="rf-text"></span><button type="button" class="btn btn-xs btn-outline" id="btnCancelRelationFloating">Abbrechen</button>';
+      document.querySelector('.workspace-body').appendChild(el);
+      el.querySelector('button').addEventListener('click', () => cancelRelationMode());
+    }
+    const show = !!STATE.activeRelationMode && isCompact();
+    el.style.display = show ? 'flex' : 'none';
+    if (show) {
+      const src = document.getElementById('relationModeText');
+      el.querySelector('.rf-text').textContent = src ? src.textContent : '';
+    }
+  }
+
   function startRelationMode(type, color) {
     STATE.activeRelationMode = type;
     STATE.activeRelationColor = color;
@@ -2874,13 +3229,17 @@
     const banner = document.getElementById('relationActiveBanner');
     const text = document.getElementById('relationModeText');
     if (banner && text) {
-      text.textContent = '1. Klicke auf die erste Figur…  (Esc bricht ab)';
+      text.textContent = window.matchMedia('(pointer: coarse)').matches
+        ? '1. Erste Figur antippen – dann zur zweiten ziehen oder diese antippen'
+        : '1. Klicke auf die erste Figur…  (Esc bricht ab)';
       banner.style.display = 'flex';
     }
 
     document.querySelectorAll('.relation-mode-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-relation-type') === type && btn.getAttribute('data-color') === color);
     });
+    if (isCompact()) setSidebarCollapsed('left', true);   // Brett freigeben, um Figuren anzutippen
+    syncRelationFloating();
   }
 
   function cancelRelationMode() {
@@ -2895,6 +3254,7 @@
       btn.classList.remove('active');
     });
     updateRubberband();
+    syncRelationFloating();
   }
 
   function handleRelationClick(figId) {
@@ -2902,9 +3262,12 @@
       STATE.relationFirstFigureId = figId;
       const f1 = getFigureById(figId);
       const text = document.getElementById('relationModeText');
-      if (text) text.textContent = `2. Ziehe die Linie zur Zielfigur und klicke sie an (Start: ${f1 ? f1.name : ''}) – Esc bricht ab`;
+      if (text) text.textContent = window.matchMedia('(pointer: coarse)').matches
+        ? `2. Zielfigur antippen (Start: ${f1 ? f1.name : ''})`
+        : `2. Ziehe die Linie zur Zielfigur und klicke sie an (Start: ${f1 ? f1.name : ''}) – Esc bricht ab`;
       playWoodClick(1.2);
       updateRubberband();
+      syncRelationFloating();
     } else {
       if (STATE.relationFirstFigureId === figId) return;
       const phase = getCurrentPhase();
@@ -2919,6 +3282,7 @@
       playWoodClick(1.5);
       cancelRelationMode();
       renderFigures();
+      saveToStorage();
     }
   }
 
@@ -2928,6 +3292,11 @@
     if (STATE.focusMode) return;
     STATE.focusMode = true;
     document.body.classList.add('focus-mode');
+
+    // Rechte Seitenleiste im Fokus-Modus eingeklappt (der vorherige Zustand wird beim Beenden wiederhergestellt)
+    const rightBar = document.getElementById('sidebarRight');
+    STATE.focusPrevRightCollapsed = rightBar ? rightBar.classList.contains('collapsed') : true;
+    setSidebarCollapsed('right', true);
 
     const root = document.documentElement;
     if (root.requestFullscreen) {
@@ -2948,6 +3317,7 @@
     if (!STATE.focusMode) return;
     STATE.focusMode = false;
     document.body.classList.remove('focus-mode');
+    setSidebarCollapsed('right', STATE.focusPrevRightCollapsed !== false);
     try {
       if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
     } catch (err) { /* ignorieren */ }
@@ -2999,6 +3369,7 @@
         if (newName && newName.trim()) {
           phase.name = newName.trim();
           renderPhasesUI();
+          saveToStorage();
         }
       });
 
@@ -3014,6 +3385,7 @@
             renderPhasesUI();
             renderFigures();
             playWoodClick(0.7);
+            saveToStorage();
           }
         });
       }
@@ -3035,6 +3407,7 @@
     STATE.phases.push(newPhase);
     switchPhaseWithTransition(STATE.phases.length - 1);
     playWoodClick(1.2);
+    saveToStorage();
   }
 
   function switchPhaseWithTransition(targetIndex) {
@@ -3058,6 +3431,7 @@
     renderPhasesUI();
     selectFigure(null);
     playWoodClick(0.85);
+    saveToStorage();
 
     function animate(currentTime) {
       const elapsed = currentTime - startTime;
@@ -3337,6 +3711,7 @@
     renderFigures();
     playWoodClick(1.0);
     runSystemicAnalysis();
+    saveToStorage();
   }
 
   // ==========================================================================
@@ -3362,7 +3737,11 @@
     // Export zeigt das Brett von oben: Figuren dafür flach zeichnen
     const wasSolid = useSolids();
     if (wasSolid) { STATE.forceFlat = true; renderFigures(); }
+    // Für den Export die scharfe Live-Maserung statt des vorberechneten Bildes verwenden
+    const hadGrainImage = STATE.grainImageReady;
+    if (hadGrainImage) { STATE.grainImageReady = false; renderBoard(); }
     const clone = svgElem.cloneNode(true);
+    if (hadGrainImage) { STATE.grainImageReady = true; renderBoard(); }
     if (wasSolid) { STATE.forceFlat = false; renderFigures(); }
 
     ['controlsOverlayGroup', 'rubberbandGroup'].forEach(id => {
@@ -3508,6 +3887,7 @@
         renderPhasesUI();
         runSystemicAnalysis();
         playWoodClick(1.2);
+        saveToStorage();
         alert('Aufstellung erfolgreich geladen!');
       } catch (err) {
         alert('Fehler beim Einlesen der Datei: ' + err.message);
@@ -3515,6 +3895,162 @@
     };
     reader.readAsText(file);
   }
+
+  // --------------------------------------------------------------------------
+  // LOKALE AUTOMATISCHE SPEICHERUNG (localStorage Persistence)
+  // --------------------------------------------------------------------------
+
+  const STORAGE_KEY = 'systembrett_autosave_v1';
+  let saveTimeout = null;
+
+  function saveToStorage() {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+    try {
+      const data = {
+        version: '1.0',
+        savedAt: Date.now(),
+        sessionTitle: STATE.sessionTitle || 'Neue Aufstellung',
+        boardType: STATE.boardType || 'classic',
+        splitDistance: typeof STATE.splitDistance === 'number' ? STATE.splitDistance : 0,
+        showLaserBorder: STATE.showLaserBorder !== false,
+        woodType: STATE.woodType || 'buche-hell',
+        viewMode: STATE.viewMode || '2d',
+        viewYaw: typeof STATE.viewYaw === 'number' ? STATE.viewYaw : -16,
+        viewTilt: typeof STATE.viewTilt === 'number' ? STATE.viewTilt : 46,
+        showCones: STATE.showCones !== false,
+        showSightLines: !!STATE.showSightLines,
+        showGrid: !!STATE.showGrid,
+        soundEnabled: STATE.soundEnabled !== false,
+        currentPhaseIndex: STATE.currentPhaseIndex || 0,
+        phases: STATE.phases || [],
+        notes: {
+          client: document.getElementById('notesClientName')?.value || STATE.notes?.client || '',
+          problem: document.getElementById('notesProblem')?.value || STATE.notes?.problem || '',
+          hypothesis: document.getElementById('notesHypothesis')?.value || STATE.notes?.hypothesis || '',
+          solution: document.getElementById('notesSolution')?.value || STATE.notes?.solution || ''
+        }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      indicateAutoSaved();
+    } catch (err) {
+      console.warn('Automatische Speicherung in localStorage fehlgeschlagen:', err);
+    }
+  }
+
+  function debounceSaveToStorage(delay = 250) {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      saveToStorage();
+    }, delay);
+  }
+
+  function indicateAutoSaved() {
+    const meta = document.getElementById('sessionMeta');
+    const phase = getCurrentPhase();
+    if (!meta || !phase) return;
+    meta.textContent = `${phase.figures.length} Figuren • ${phase.name}`;
+  }
+
+  function loadFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data || !data.phases || !Array.isArray(data.phases) || data.phases.length === 0) {
+        return false;
+      }
+
+      STATE.sessionTitle = data.sessionTitle || 'Neue Aufstellung';
+      STATE.boardType = ['classic', 'single', 'round', 'split'].includes(data.boardType) ? data.boardType : 'classic';
+      STATE.splitDistance = typeof data.splitDistance === 'number' ? data.splitDistance : 0;
+      STATE.showLaserBorder = data.showLaserBorder !== false;
+      STATE.woodType = data.woodType || 'buche-hell';
+      if (data.viewMode && (data.viewMode === '2d' || data.viewMode === '25d')) {
+        STATE.viewMode = data.viewMode;
+      }
+      if (typeof data.viewYaw === 'number') STATE.viewYaw = data.viewYaw;
+      if (typeof data.viewTilt === 'number') STATE.viewTilt = data.viewTilt;
+      if (typeof data.showCones === 'boolean') STATE.showCones = data.showCones;
+      if (typeof data.showSightLines === 'boolean') STATE.showSightLines = data.showSightLines;
+      if (typeof data.showGrid === 'boolean') STATE.showGrid = data.showGrid;
+      if (typeof data.soundEnabled === 'boolean') STATE.soundEnabled = data.soundEnabled;
+
+      STATE.phases = data.phases;
+      STATE.currentPhaseIndex = Math.max(0, Math.min(data.currentPhaseIndex || 0, STATE.phases.length - 1));
+
+      // Synchronisation mit Formular- und Oberflächenelementen
+      const titleInput = document.getElementById('sessionTitle');
+      if (titleInput) titleInput.value = STATE.sessionTitle;
+
+      if (data.notes) {
+        STATE.notes = data.notes;
+        const nClient = document.getElementById('notesClientName');
+        const nProb = document.getElementById('notesProblem');
+        const nHypo = document.getElementById('notesHypothesis');
+        const nSol = document.getElementById('notesSolution');
+        if (nClient) nClient.value = data.notes.client || '';
+        if (nProb) nProb.value = data.notes.problem || '';
+        if (nHypo) nHypo.value = data.notes.hypothesis || '';
+        if (nSol) nSol.value = data.notes.solution || '';
+      }
+
+      const checkLaser = document.getElementById('checkLaserBorder');
+      if (checkLaser) checkLaser.checked = STATE.showLaserBorder;
+
+      const splitSlider = document.getElementById('splitDistanceSlider');
+      if (splitSlider) splitSlider.value = STATE.splitDistance;
+
+      const btn2D = document.getElementById('btnView2D');
+      const btn25D = document.getElementById('btnView25D');
+      if (btn2D && btn25D) {
+        if (STATE.viewMode === '25d') {
+          document.body.classList.add('view-25d');
+          btn25D.classList.add('active');
+          btn2D.classList.remove('active');
+        } else {
+          document.body.classList.remove('view-25d');
+          btn2D.classList.add('active');
+          btn25D.classList.remove('active');
+        }
+      }
+
+      document.querySelectorAll('.wood-choice').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-wood') === STATE.woodType);
+      });
+
+      document.querySelectorAll('.board-shape-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-shape') === STATE.boardType);
+      });
+
+      document.getElementById('btnToggleCones')?.classList.toggle('active', STATE.showCones);
+      document.getElementById('btnToggleSightLines')?.classList.toggle('active', STATE.showSightLines);
+      document.getElementById('btnToggleGrid')?.classList.toggle('active', STATE.showGrid);
+      const gridGroup = document.getElementById('boardGridGroup');
+      if (gridGroup) gridGroup.style.display = STATE.showGrid ? 'block' : 'none';
+
+      const soundOn = document.getElementById('soundIconOn');
+      const soundOff = document.getElementById('soundIconOff');
+      if (soundOn && soundOff) {
+        soundOn.style.display = STATE.soundEnabled ? 'block' : 'none';
+        soundOff.style.display = STATE.soundEnabled ? 'none' : 'block';
+      }
+
+      updateSplitUI();
+      renderBoard();
+      renderFigures();
+      renderPhasesUI();
+      runSystemicAnalysis();
+      updateSessionMeta();
+      return true;
+    } catch (err) {
+      console.warn('Wiederherstellung aus localStorage fehlgeschlagen:', err);
+      return false;
+    }
+  }
+
 
   function printReport() {
     const exp = buildExportSvg(1.5);
@@ -3593,19 +4129,14 @@
   // --------------------------------------------------------------------------
 
   const QUICK_PRESETS = {
-    'kegel-gross-holz': { shape: 'kegel', size: 'gross', color: 'wood-light', name: 'Kegel Groß' },
-    'kegel-mittel-holz': { shape: 'kegel', size: 'mittel', color: 'wood-light', name: 'Kegel Mittel' },
-    'kegel-klein-holz': { shape: 'kegel', size: 'klein', color: 'wood-light', name: 'Kind / Klein' },
-    'zylinder-gross-holz': { shape: 'zylinder', size: 'gross', color: 'wood-light', name: 'Zylinder Groß' },
-    'zylinder-mittel-holz': { shape: 'zylinder', size: 'mittel', color: 'wood-light', name: 'Zylinder Mittel' },
-    'kloetzchen-holz': { shape: 'block', size: 'mittel', color: 'wood-light', name: 'Holzklötzchen' },
+    'kegel-holz': { shape: 'kegel', size: 'mittel', color: 'wood-light', name: 'Holz' },
     'kegel-rot': { shape: 'kegel', size: 'mittel', color: '#c0392b', name: 'Rot' },
+    'kegel-schwarz': { shape: 'kegel', size: 'mittel', color: '#1a1a1a', name: 'Schwarz' },
     'kegel-blau': { shape: 'kegel', size: 'mittel', color: '#2980b9', name: 'Blau' },
     'kegel-gruen': { shape: 'kegel', size: 'mittel', color: '#27ae60', name: 'Grün' },
-    'kegel-schwarz': { shape: 'kegel', size: 'mittel', color: '#1a1a1a', name: 'Schwarz' },
-    'kegel-weiss': { shape: 'kegel', size: 'mittel', color: '#f4f4f4', name: 'Weiß' },
-    'eckig-gross-holz': { shape: 'eckig', size: 'gross', color: 'wood-light', name: 'Eckig Groß' }
+    'kegel-weiss': { shape: 'kegel', size: 'mittel', color: '#f4f4f4', name: 'Weiß' }
   };
+
 
   function presetFromElement(el) {
     if (!el) return null;
@@ -3627,7 +4158,91 @@
 
   let draggedPreset = null;
 
+  // Auf kleinen Bildschirmen schließt sich die Schublade nach dem Platzieren, damit man das Ergebnis sieht
+  function afterPaletteAdd() {
+    if (isCompact()) setSidebarCollapsed('left', true);
+  }
+
+  // Touch: Langes Drücken auf eine Palettenkarte und Ziehen platziert das Objekt an der gewünschten Stelle
+  // (natives HTML5-Drag-and-Drop funktioniert auf Touchgeräten nicht zuverlässig)
+  function setupTouchPaletteDrag() {
+    const cards = document.querySelectorAll('.quick-figure-btn, .symbol-card');
+    let timer = null, active = null, ghost = null, pid = null, start = null, suppressClick = false;
+
+    const ghostAt = (x, y) => { if (ghost) ghost.style.transform = `translate(${x - 36}px, ${y - 96}px)`; };
+    const cleanup = () => {
+      clearTimeout(timer); timer = null;
+      if (ghost) { ghost.remove(); ghost = null; }
+      active = null; pid = null;
+      document.body.classList.remove('palette-dragging');
+    };
+
+    cards.forEach(card => {
+      card.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'touch') return;
+        pid = e.pointerId;
+        start = { x: e.clientX, y: e.clientY };
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          timer = null;
+          const preset = presetFromElement(card);
+          if (!preset) return;
+          active = { preset: preset };
+          ghost = document.createElement('div');
+          ghost.className = 'palette-ghost';
+          const art = card.querySelector('.palette-preview');
+          if (art) ghost.appendChild(art.cloneNode(true));
+          document.body.appendChild(ghost);
+          ghostAt(start.x, start.y);
+          document.body.classList.add('palette-dragging');
+          if (navigator.vibrate) navigator.vibrate(12);
+        }, 320);
+      });
+      // Nach einem Ziehen kein zusätzliches „Klick = in die Mitte setzen“
+      card.addEventListener('click', (e) => {
+        if (suppressClick) { suppressClick = false; e.stopImmediatePropagation(); e.preventDefault(); }
+      }, true);
+      card.addEventListener('contextmenu', (e) => e.preventDefault());
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== pid) return;
+      if (timer) {
+        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) { clearTimeout(timer); timer = null; }   // Scrollen
+        return;
+      }
+      if (active) ghostAt(e.clientX, e.clientY);
+    });
+
+    const finish = (e, drop) => {
+      if (e.pointerId !== pid) return;
+      if (active && drop) {
+        const vr = boardViewportEl.getBoundingClientRect();
+        if (e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom) {
+          const pt = clientToBoard(e.clientX, e.clientY);
+          addFigure(Object.assign({}, active.preset, {
+            x: Math.round(clamp(pt.x, 40, CONTAINER_W - 40)),
+            y: Math.round(clamp(pt.y, 40, CONTAINER_H - 40))
+          }), { select: false });
+          if (isCompact()) setSidebarCollapsed('left', true);
+        }
+      }
+      if (active) suppressClick = true;
+      cleanup();
+    };
+    window.addEventListener('pointerup', (e) => finish(e, true));
+    window.addEventListener('pointercancel', (e) => finish(e, false));
+
+    // Während des Ziehens darf die Palette nicht scrollen
+    document.addEventListener('touchmove', (e) => { if (active) e.preventDefault(); }, { passive: false });
+  }
+
   function setupDragAndDrop() {
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      document.querySelectorAll('.quick-figure-btn[draggable], .symbol-card[draggable]').forEach(el => el.setAttribute('draggable', 'false'));
+    }
+    setupTouchPaletteDrag();
+
     document.querySelectorAll('.quick-figure-btn[draggable="true"], .symbol-card[draggable="true"]').forEach(btn => {
       btn.addEventListener('dragstart', (e) => {
         draggedPreset = presetFromElement(btn);
@@ -3672,37 +4287,60 @@
   function setupUiListeners() {
     const titleInput = document.getElementById('sessionTitle');
     if (titleInput) {
+      titleInput.addEventListener('input', (e) => {
+        STATE.sessionTitle = e.target.value.trim() || 'Neue Aufstellung';
+        debounceSaveToStorage();
+      });
       titleInput.addEventListener('change', (e) => {
         STATE.sessionTitle = e.target.value.trim() || 'Neue Aufstellung';
+        saveToStorage();
       });
     }
 
     // 1-BRETT / TRENNUNG UMSCHALTER (PROMINENT IM HEADER)
-    document.getElementById('btnToggleSplit')?.addEventListener('click', toggleBoardSplit);
-    document.getElementById('btnSetUnified')?.addEventListener('click', setBoardUnified);
-    document.getElementById('btnSetSplit')?.addEventListener('click', setBoardSplit);
+    document.getElementById('btnToggleSplit')?.addEventListener('click', () => {
+      toggleBoardSplit();
+      saveToStorage();
+    });
+    document.getElementById('btnSetUnified')?.addEventListener('click', () => {
+      setBoardUnified();
+      saveToStorage();
+    });
+    document.getElementById('btnSetSplit')?.addEventListener('click', () => {
+      setBoardSplit();
+      saveToStorage();
+    });
 
     // View-Modes (Brett wird bei jedem Wechsel bildschirmfüllend eingepasst)
-    document.getElementById('btnView2D')?.addEventListener('click', () => setViewMode('2d'));
-    document.getElementById('btnView25D')?.addEventListener('click', () => setViewMode('25d'));
+    document.getElementById('btnView2D')?.addEventListener('click', () => {
+      setViewMode('2d');
+      saveToStorage();
+    });
+    document.getElementById('btnView25D')?.addEventListener('click', () => {
+      setViewMode('25d');
+      saveToStorage();
+    });
 
     // Overlays
     document.getElementById('btnToggleCones')?.addEventListener('click', (e) => {
       STATE.showCones = !STATE.showCones;
       e.currentTarget.classList.toggle('active', STATE.showCones);
       renderFigures();
+      saveToStorage();
     });
 
     document.getElementById('btnToggleSightLines')?.addEventListener('click', (e) => {
       STATE.showSightLines = !STATE.showSightLines;
       e.currentTarget.classList.toggle('active', STATE.showSightLines);
       renderFigures();
+      saveToStorage();
     });
 
     document.getElementById('btnToggleGrid')?.addEventListener('click', (e) => {
       STATE.showGrid = !STATE.showGrid;
       e.currentTarget.classList.toggle('active', STATE.showGrid);
       renderGrid();
+      saveToStorage();
     });
 
     // Sound
@@ -3711,6 +4349,7 @@
       document.getElementById('soundIconOn').style.display = STATE.soundEnabled ? 'block' : 'none';
       document.getElementById('soundIconOff').style.display = STATE.soundEnabled ? 'none' : 'block';
       if (STATE.soundEnabled) playWoodClick(1.1);
+      saveToStorage();
     });
 
     // Zoom
@@ -3769,7 +4408,7 @@
     document.querySelectorAll('.quick-figure-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const preset = presetFromElement(btn);
-        if (preset) addFigure(preset, { select: false });
+        if (preset) { addFigure(preset, { select: false }); afterPaletteAdd(); }
       });
     });
 
@@ -3814,7 +4453,7 @@
     document.querySelectorAll('.symbol-card').forEach(btn => {
       btn.addEventListener('click', () => {
         const preset = presetFromElement(btn);
-        if (preset) addFigure(preset, { select: false });
+        if (preset) { addFigure(preset, { select: false }); afterPaletteAdd(); }
       });
     });
 
@@ -3827,6 +4466,7 @@
           selectFigure(null);
           playWoodClick(0.7);
           runSystemicAnalysis();
+          saveToStorage();
         }
       }
     });
@@ -3859,6 +4499,7 @@
         renderBoard();
         if (STATE.autoFit && !STATE.povFigureId) fitToView(true);
         playWoodClick(1.0);
+        saveToStorage();
       });
     });
 
@@ -3868,9 +4509,11 @@
         STATE.splitDistance = parseInt(e.target.value, 10);
         updateSplitUI();
         renderBoard();
+        debounceSaveToStorage();
       });
       splitSlider.addEventListener('change', () => {
         if (STATE.autoFit && !STATE.povFigureId) fitToView(true);
+        saveToStorage();
       });
     }
 
@@ -3879,6 +4522,7 @@
       checkLaser.addEventListener('change', (e) => {
         STATE.showLaserBorder = e.target.checked;
         renderBoard();
+        saveToStorage();
       });
     }
 
@@ -3889,6 +4533,7 @@
         STATE.woodType = btn.getAttribute('data-wood');
         renderBoard();
         playWoodClick(1.1);
+        saveToStorage();
       });
     });
 
@@ -3900,6 +4545,7 @@
         if (fig) {
           fig.name = e.target.value;
           renderFigures();
+          debounceSaveToStorage();
         }
       });
     }
@@ -3912,6 +4558,7 @@
         updateInspectorValues(fig);
         playWoodClick(1.1);
         runSystemicAnalysis();
+        saveToStorage();
       }
     });
 
@@ -3923,6 +4570,7 @@
         updateInspectorValues(fig);
         playWoodClick(1.1);
         runSystemicAnalysis();
+        saveToStorage();
       }
     });
 
@@ -3934,6 +4582,7 @@
         updateInspectorValues(fig);
         playWoodClick(1.2);
         runSystemicAnalysis();
+        saveToStorage();
       }
     });
 
@@ -3947,6 +4596,7 @@
         updateInspectorValues(current);
         playWoodClick(1.2);
         runSystemicAnalysis();
+        saveToStorage();
       }
     });
 
@@ -3965,6 +4615,7 @@
           document.getElementById('inspScaleValue').textContent = `${fig.scale} / 10`;
           renderFigures();
           runSystemicAnalysis();
+          debounceSaveToStorage();
         }
       });
     }
@@ -3976,6 +4627,7 @@
           fig.shape = btn.getAttribute('data-shape');
           renderFigures();
           updateInspectorValues(fig);
+          saveToStorage();
         }
       });
     });
@@ -3987,6 +4639,7 @@
           fig.size = btn.getAttribute('data-size');
           renderFigures();
           updateInspectorValues(fig);
+          saveToStorage();
         }
       });
     });
@@ -3998,6 +4651,7 @@
           fig.color = dot.getAttribute('data-color');
           renderFigures();
           updateInspectorValues(fig);
+          saveToStorage();
         }
       });
     });
@@ -4006,7 +4660,10 @@
     if (inspNotes) {
       inspNotes.addEventListener('input', (e) => {
         const fig = getFigureById(STATE.selectedFigureId);
-        if (fig) fig.notes = e.target.value;
+        if (fig) {
+          fig.notes = e.target.value;
+          debounceSaveToStorage();
+        }
       });
     }
 
@@ -4083,6 +4740,18 @@
       // Vollbild wurde vom Browser beendet (z. B. durch Esc) -> Fokus-Modus ebenfalls beenden
       if (!document.fullscreenElement && STATE.focusMode) exitFocusMode();
     });
+
+    // Sitzungsnotizen (Protokoll) automatisch speichern
+    ['notesClientName', 'notesProblem', 'notesHypothesis', 'notesSolution'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', () => {
+        debounceSaveToStorage();
+      });
+    });
+
+    // Sitzung vor Verlassen oder Neuladen der Seite absichern
+    window.addEventListener('beforeunload', () => {
+      saveToStorage();
+    });
   }
 
   // ==========================================================================
@@ -4091,13 +4760,32 @@
 
   function init() {
     renderBoard();
-    loadTemplate('leer'); // Startet mit einem leeren, ganzen Brett
+    const restored = loadFromStorage();
+    if (!restored) {
+      loadTemplate('leer'); // Startet mit einem leeren, ganzen Brett, wenn noch keine Sitzung gespeichert ist
+    }
     renderPhasesUI();
     setupInteractions();
     setupUiListeners();
     pickRandomQuestion('all');
     runSystemicAnalysis();
     updateSplitUI();
+    initPalettePreviews();
+    prepareBoardGrainImage();
+
+    // Responsives Layout (Tablet ≤ 900 px, Handy ≤ 600 px)
+    const scrim = document.createElement('div');
+    scrim.id = 'drawerScrim';
+    scrim.className = 'drawer-scrim';
+    document.querySelector('.workspace-body').appendChild(scrim);
+    scrim.addEventListener('pointerdown', () => { setSidebarCollapsed('left', true); setSidebarCollapsed('right', true); });
+    if (compactMQ.addEventListener) {
+      compactMQ.addEventListener('change', applyResponsiveLayout);
+      phoneMQ.addEventListener('change', applyResponsiveLayout);
+    }
+    applyResponsiveLayout();
+    // Audio darf auf Mobilgeräten erst nach einer Berührung starten
+    ['touchend', 'click'].forEach(t => document.addEventListener(t, () => initAudio(), { once: true }));
 
     // Brett immer bildschirmfüllend: beim Start, bei Größenänderung und bei Ansichtswechsel
     fitToView(false);
@@ -4108,7 +4796,7 @@
       }).observe(boardViewportEl);
     }
 
-    console.log('Virtuelles Systembrett erfolgreich initialisiert.');
+    console.log('Virtuelles Systembrett erfolgreich initialisiert.' + (restored ? ' (Sitzung aus automatischem Speicher wiederhergestellt)' : ''));
   }
 
   window.addEventListener('DOMContentLoaded', init);

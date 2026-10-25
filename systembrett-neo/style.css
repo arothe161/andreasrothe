@@ -404,7 +404,7 @@ body {
 
 .quick-figure-btn {
   background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  border: 0px solid var(--border-subtle);
   padding: 10px 8px;
   display: flex;
   flex-direction: column;
@@ -845,9 +845,6 @@ body {
 }
 
 .zoom-controls {
-  background: rgba(34, 36, 42, 0.85);
-  border: 1px solid var(--border-main);
-  border-radius: 10px;
   display: flex;
   align-items: center;
   padding: 2px;
@@ -1716,13 +1713,12 @@ body.focus-mode .app-timeline {
   display: none !important;
 }
 
-body.focus-mode .app-header .header-center,
 body.focus-mode .app-header #btnExportMenu,
 body.focus-mode .app-header #btnSaveSession {
   display: none !important;
 }
 
-body.focus-mode .sidebar-right {
+body.focus-mode .sidebar-right:not(.collapsed) {
   width: 420px !important;
   max-width: 440px;
   border-left: 2px solid var(--border-main);
@@ -1741,7 +1737,6 @@ body.focus-mode #tab-notes {
   overflow-y: auto;
 }
 
-body.focus-mode #tab-inspector,
 body.focus-mode #tab-impulses {
   display: none !important;
 }
@@ -2147,14 +2142,11 @@ body.relation-mode .system-figure {
 }
 
 /* Fokus-Modus: rechte Leiste immer offen, ohne Einklapp-Elemente */
-body.focus-mode .sidebar-head,
-body.focus-mode .sidebar-rail-btn {
+body.focus-mode .sidebar-left .sidebar-head,
+body.focus-mode .sidebar-left .sidebar-rail-btn {
   display: none !important;
 }
 
-body.focus-mode .sidebar-right.collapsed > .sidebar-tab-content {
-  display: block !important;
-}
 
 .hint-3d { display: none; }
 body.view-25d .hint-3d { display: inline; }
@@ -2206,3 +2198,312 @@ body.view-25d .nav3d { display: flex; }
 .nav3d-compass svg { transition: none; }
 .nav3d-sep { width: 1px; height: 22px; background: var(--border-subtle); margin: 0 2px; }
 body.view-rotating, body.view-rotating .board-viewport { cursor: grabbing; }
+
+/* Paletten-Vorschau: gleiche 3D-Zeichnung wie auf dem Brett */
+.color-figures-row { grid-template-columns: repeat(3, 1fr); }
+.preview-slot, .symbol-icon { display: flex; align-items: center; justify-content: center; }
+.palette-preview { width: 60px; height: 62px; display: block; overflow: visible; pointer-events: none; }
+.quick-figure-btn .palette-preview { width: 56px; height: 58px; }
+
+/* ==========================================================================
+   FOKUS-MODUS: INSPEKTOR BEI AUSGEWÄHLTEM OBJEKT, OHNE PROTOKOLL
+   ========================================================================== */
+/* Das linke Menü bleibt im Fokus-Modus ausgeblendet – nur der Inspektor erscheint, solange ein Objekt ausgewählt ist */
+body.focus-mode .sidebar-left.inspector-open {
+  display: flex !important;
+  width: 18rem !important;
+}
+body.focus-mode .sidebar-left.inspector-open > .sidebar-head,
+body.focus-mode .sidebar-left.inspector-open > .sidebar-rail-btn,
+body.focus-mode .sidebar-left.inspector-open > .sidebar-tab-content {
+  display: none !important;
+}
+body.focus-mode .sidebar-left.inspector-open > .inspector-overlay {
+  display: flex !important;
+}
+
+/* Beschriftung des Schließen-Buttons: im Fokus-Modus gibt es kein Werkzeug-Menü zum Zurückkehren */
+.lbl-focus { display: none; }
+body.focus-mode .lbl-focus { display: inline; }
+body.focus-mode .lbl-normal { display: none; }
+
+/* Das Protokoll (Titel und Druck-/PDF-Button) ist im Fokus-Modus ausgeblendet, die Notizfelder bleiben */
+body.focus-mode #btnExportProtocol,
+body.focus-mode #tab-notes > .pane-header:first-child {
+  display: none !important;
+}
+
+/* Fokus-Modus: Overlay-Schalter ausgeblendet, 2D/3D-Umschalter bleibt */
+body.focus-mode .header-center .overlays {
+  display: none !important;
+}
+
+/* Fokus-Modus: Der Inspektor liegt über der Bühne statt sie zu verschmälern – das Brett springt nicht */
+body.focus-mode .sidebar-left.inspector-open {
+  position: absolute !important;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 70;
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.18);
+}
+
+/* ==========================================================================
+   MOBIL: TOUCH, TABLET (≤ 900 px) UND HANDY (≤ 600 px)
+   Die Breakpoints entsprechen denen der einbindenden Seite.
+   ========================================================================== */
+html, body { overscroll-behavior: none; }
+body {
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-layout {
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+}
+.board-viewport,
+.board-viewport svg {
+  touch-action: none;                 /* Wischen und Pinch gehören dem Brett, nicht dem Browser */
+  -webkit-touch-callout: none;
+}
+input, textarea, select, [contenteditable] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.inspector-overlay-body, .sidebar-tab-content, .timeline-phases {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.drawer-scrim { display: none; }
+
+/* Schwebendes Bild beim Ziehen aus der Palette (Touch) */
+.palette-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 72px;
+  height: 72px;
+  z-index: 3000;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+  opacity: 0.95;
+}
+.palette-ghost svg { width: 100%; height: 100%; overflow: visible; }
+body.palette-dragging .sidebar-left,
+body.palette-dragging .sidebar-right,
+body.palette-dragging .drawer-scrim {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+
+/* ---- Touch-Geräte: größere Bedienflächen ---- */
+@media (pointer: coarse) {
+  .stage-footer-bar { display: none; }            /* Tastaturhinweise sind ohne Tastatur sinnlos */
+  .btn-sm { min-height: 38px; }
+  .btn-icon { min-width: 38px; min-height: 38px; }
+  .acc-header { min-height: 50px; }
+  .tab-btn { min-height: 44px; padding: 10px 14px; }
+  .phase-pill { min-height: 36px; }
+  .sidebar-collapse-btn { width: 40px; height: 40px; }
+  .nav3d-btn { width: 42px; height: 42px; }
+  .symbol-card, .quick-figure-btn { min-height: 92px; }
+  input, textarea, select { font-size: 16px; }      /* verhindert das automatische Hineinzoomen auf iOS */
+  input[type="range"] { height: 30px; }
+  .zoom-controls .btn { min-width: 38px; min-height: 38px; }
+}
+
+/* ==========================================================================
+   TABLET und kleiner (≤ 900 px): Seitenleisten werden Schubladen über dem Brett
+   ========================================================================== */
+@media (max-width: 900px) {
+  .stage-footer-bar { display: none; }
+
+  .sidebar-left,
+  .sidebar-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 60;
+    box-shadow: 0 0 32px rgba(0, 0, 0, 0.28);
+  }
+  .sidebar-left { left: 0; width: min(330px, 88vw); }
+  .sidebar-right { right: 0; width: min(370px, 90vw); }
+
+  /* Eingeklappt: keine Breite, nur ein schwebender Knopf am Rand */
+  .sidebar-left.collapsed,
+  .sidebar-right.collapsed {
+    width: 0;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .sidebar-left.collapsed .sidebar-rail-btn,
+  .sidebar-right.collapsed .sidebar-rail-btn {
+    position: absolute;
+    top: 10px;
+    width: auto;
+    height: 42px;
+    flex-direction: row;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid var(--border-main);
+    border-radius: 21px;
+    background: var(--bg-sidebar);
+    box-shadow: var(--shadow-md);
+    z-index: 61;
+  }
+  .sidebar-left.collapsed .sidebar-rail-btn { left: 10px; }
+  .sidebar-right.collapsed .sidebar-rail-btn { right: 10px; }
+  .rail-label { writing-mode: horizontal-tb; white-space: nowrap; }
+
+  /* Ist eine Schublade offen, verschwinden die schwebenden Knöpfe der anderen */
+  body.drawer-open .sidebar-left.collapsed .sidebar-rail-btn,
+  body.drawer-open .sidebar-right.collapsed .sidebar-rail-btn { display: none; }
+
+  /* Abdunklung hinter geöffneten Schubladen; Tippen daneben schließt sie */
+  body.drawer-open .drawer-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+    background: rgba(20, 14, 6, 0.38);
+  }
+
+  /* Inspektor: seitliches Feld über dem Brett, auch bei eingeklappter Schublade */
+  .sidebar-left.inspector-open {
+    display: flex !important;
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(340px, 88vw) !important;
+    overflow: hidden !important;
+    z-index: 70;
+  }
+  .sidebar-left.inspector-open > .sidebar-head,
+  .sidebar-left.inspector-open > .sidebar-rail-btn,
+  .sidebar-left.inspector-open > .sidebar-tab-content { display: none !important; }
+  .sidebar-left.inspector-open > .inspector-overlay { display: flex !important; }
+
+  /* Kopfzeile kompakt */
+  .app-header { height: 54px; padding: 0 10px; gap: 8px; }
+  .brand-title, .brand-subtitle, .session-meta { display: none; }
+  .app-header .session-title-wrapper { display: block; border: none; padding: 0; margin: 0; }
+  .session-title-input { width: 130px; font-size: 14px; }
+  .header-left { gap: 8px; }
+  .header-center { gap: 6px; }
+  .header-right { gap: 6px; }
+
+  /* Schalter nur als Symbole */
+  .header-center .overlays .btn { font-size: 0; gap: 0; padding: 6px 11px; min-width: 40px; justify-content: center; }
+  .header-center .overlays .btn svg { display: block; width: 18px; height: 18px; }
+  #btnExportMenu, #btnSaveSession, #btnEnterFocus {
+    font-size: 0;
+    gap: 0;
+    min-width: 40px;
+    padding: 6px 10px;
+    justify-content: center;
+  }
+  #btnExportMenu svg, #btnSaveSession svg { display: block; width: 18px; height: 18px; }
+  #btnEnterFocus span { font-size: 17px; }
+  body.focus-mode #btnExitFocus { font-size: 13px; }
+
+  /* Zeitleiste kompakt */
+  .app-timeline { padding: 0 10px; gap: 8px; }
+  .timeline-label { display: none; }
+
+  /* Hinweise und Banner unter den schwebenden Knöpfen */
+  .stage-overlay-top { top: 62px; max-width: calc(100% - 24px); }
+  .nav3d { bottom: 14px; right: 10px; }
+  .ego-view { bottom: 14px; }
+}
+
+/* ==========================================================================
+   HANDY (≤ 600 px)
+   ========================================================================== */
+@media (max-width: 600px) {
+  /* Kopfzeile in zwei Reihen: oben Titel und Aktionen, darunter Ansicht-Schalter */
+  .app-header {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    row-gap: 6px;
+  }
+  .header-left { order: 1; flex: 1; min-width: 0; }
+  .header-right { order: 2; }
+  .header-center { order: 3; width: 100%; justify-content: center; }
+  .brand > div:not(.brand-icon) { display: none; }
+  .session-title-input { width: 100%; max-width: 46vw; }
+  #btnSoundToggle { display: none; }
+  .zoom-controls #btnZoomIn,
+  .zoom-controls #btnZoomOut,
+  .zoom-controls #zoomLevel { display: none; }      /* gezoomt wird mit zwei Fingern */
+
+  /* Zeitleiste: nur Symbole für die Aktionen */
+  .app-timeline { height: 50px; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #btnAddPhase, #btnPlayPhases { font-size: 0; gap: 0; min-width: 40px; padding: 0; justify-content: center; }
+  #btnAddPhase::before { content: "+"; font-size: 20px; line-height: 1; }
+  #btnPlayPhases::before { content: "▶"; font-size: 14px; }
+
+  /* Schubladen: fast volle Breite; Inspektor als untere Schublade */
+  .sidebar-left { width: min(360px, 92vw); }
+  .sidebar-right { width: min(380px, 94vw); }
+  .sidebar-left.inspector-open {
+    top: auto !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto !important;
+    height: min(58%, 470px);
+    border-radius: 18px 18px 0 0;
+    border-top: 1px solid var(--border-main);
+    box-shadow: 0 -10px 34px rgba(0, 0, 0, 0.3);
+  }
+
+  .stage-overlay-top { top: 64px; }
+  .ego-view { bottom: 10px; width: calc(100% - 16px); }
+  .ego-head { flex-direction: column; gap: 2px; }
+  .ego-summary { text-align: left; }
+  .nav3d { gap: 2px; padding: 3px; }
+  .nav3d-btn { width: 38px; height: 38px; }
+
+  /* Dialoge */
+  .modal-card { width: 94%; max-height: 90vh; max-height: 90dvh; overflow-y: auto; }
+  .export-options-grid { grid-template-columns: 1fr; }
+}
+
+/* Querformat auf dem Handy: wenig Höhe -> alles in eine schmale Kopfzeile */
+@media (max-height: 520px) and (max-width: 900px) {
+  .app-header { height: 46px; flex-wrap: nowrap; padding: 0 8px; row-gap: 0; }
+  .header-center { order: 0; width: auto; }
+  .header-left { flex: 0 1 auto; }
+  .session-title-input { width: 110px; }
+  .app-timeline { height: 42px; }
+  .stage-overlay-top { top: 54px; }
+  .ego-view { display: none !important; }
+}
+
+/* Schwebendes Banner bei der Beziehungswahl (nur mit geschlossenem Menü, Handy/Tablet) */
+.relation-floating {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 52;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  max-width: calc(100% - 24px);
+  background: rgba(34, 24, 12, 0.94);
+  color: #fff;
+  border-radius: 22px;
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.relation-floating .btn { background: #fff; color: #222; min-height: 32px; }
+@media (max-width: 600px) { .relation-floating { top: 66px; } }
