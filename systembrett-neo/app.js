@@ -1814,6 +1814,9 @@
     const touchPts = new Map();   // pointerId -> {x, y}
     let gesture = null;
     let touchLock = false;        // nach einer Geste bleibt ein Restfinger wirkungslos, bis alle Finger oben sind
+    let tapCandidate = null;      // möglicher Tipp auf freier Fläche
+    let lastTap = null;           // letzter gültiger Tipp (für Doppeltipp)
+    let lastTouchZoomAt = -Infinity;   // verhindert doppeltes Zoomen durch ein nachgeschobenes dblclickclick
 
     const angleBetween = (a, b) => Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
 
@@ -1824,6 +1827,8 @@
       STATE.isPanning = false;
       STATE.isRotatingView = false;
       stopViewMotion();
+      tapCandidate = null;
+      lastTap = null;
       const ids = [...touchPts.keys()].slice(0, 2);
       const a = touchPts.get(ids[0]), b = touchPts.get(ids[1]);
       const c0 = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -1870,6 +1875,7 @@
     // Capture-Phase: Mehrfinger-Gesten dürfen nicht als Auswahl oder Ziehen einer Figur ankommen
     viewport.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch') return;
+      tapCandidate = null;
       touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       // Der Viewport hält die Finger fest, auch wenn ein Figur-Element beim Ziehen neu gezeichnet wird
       try { viewport.setPointerCapture(e.pointerId); } catch (err) { /* nicht unterstützt */ }
@@ -1928,13 +1934,22 @@
         selectFigure(null);
         startViewDrag(e);
       }
+    });
+
+    // Doppeltipp: Tipp auf freier Fläche merken (Figuren stoppen das Ereignis vorher)
+    viewport.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' || touchPts.size !== 1) { tapCandidate = null; return; }
+      const free = e.target === viewport || e.target.id === 'boardTransform' ||
+        e.target.id === 'outerSpace' || e.target.id === 'boardSvg' ||
+        e.target.classList.contains('board-half');
+      tapCandidate = free ? { id: e.pointerId, x: e.clientX, y: e.clientY } : null;
     });
 
     // Freie Fläche: Brett greifen und verschieben; in 3D mit rechter Maustaste oder Strg/Shift drehen und neigen
     function startViewDrag(e) {
       stopViewMotion();
       const is3d = STATE.viewMode === '25d' && !STATE.povFigureId;
-      if (is3d && (e.button === 2 || e.ctrlKey || e.metaKey || e.shiftKey)) {
+        if (is3d && (STATE.rotateViewMode || e.button === 2 || e.ctrlKey || e.metaKey || e.shiftKey)) {
         const c = viewportCenterClient();
         STATE.isRotatingView = true;
         STATE.rotStart = {
@@ -1952,6 +1967,7 @@
 
     // Doppelklick auf freie Fläche: hineinzoomen (wie bei Karten)
     svgElem.addEventListener('dblclick', (e) => {
+      if (performance.now() - lastTouchZoomAt < 700) return;   // Touch hat schon gezoomt
       if (e.target.id === 'outerSpace' || e.target.classList.contains('board-half') || e.target.id === 'boardSvg') {
         zoomAt(1.6, e.clientX, e.clientY);
       }
@@ -2031,7 +2047,26 @@
         if (touchLock) return;
       }
 
-      // Beziehung durch Ziehen von der ersten zur zweiten Figur
+      // Doppeltipp auf freier Fläche (max. 300 ms, max. 10 px Abstand): hineinzoomen
+      if (e.pointerType === 'touch' && tapCandidate && tapCandidate.id === e.pointerId) {
+        const moved = Math.hypot(e.clientX - tapCandidate.x, e.clientY - tapCandidate.y);
+        const now = performance.now();
+        if (moved <= 10 && e.type === 'pointerup') {
+          if (lastTap && now - lastTap.t <= 300 &&
+              Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) <= 10) {
+            lastTouchZoomAt = now;
+            lastTap = null;
+            zoomAt(1.6, e.clientX, e.clientY);
+          } else {
+            lastTap = { x: e.clientX, y: e.clientY, t: now };
+          }
+        } else {
+          lastTap = null;
+        }
+        tapCandidate = null;
+      }
+  
+    // Beziehung durch Ziehen von der ersten zur zweiten Figur
       if (STATE.activeRelationMode && STATE.relationFirstFigureId && STATE.relPress) {
         if (Math.hypot(e.clientX - STATE.relPress.x, e.clientY - STATE.relPress.y) > 14) {
           const pt = getSvgPoint(e);
@@ -2070,16 +2105,18 @@
 
     viewport.addEventListener('wheel', (e) => {
       e.preventDefault();
-
-      const figTarget = e.target.closest('.system-figure');
-      if (figTarget) {
+      const figTarget = e.target.closest('.system-figure');
+      if (figTarget && e.shiftKey) {
         const figId = figTarget.getAttribute('data-id');
         const fig = getFigureById(figId);
-        if (fig) {
-          const delta = e.deltaY < 0 ? -15 : 15;
+        const raw = e.deltaY || e.deltaX;   // macOS liefert bei Shift oft deltaX
+        if (fig && raw !== 0) {
+          const delta = raw < 0 ? -15 : 15;
           fig.rotation = normalizeAngle(fig.rotation + delta);
           renderFigures();
           updateInspectorValues(fig);
+          runSystemicAnalysis();
+          debounceSaveToStorage();
           return;
         }
       }
@@ -2174,6 +2211,15 @@
       }
     });
 
+    // Umschalter "Ansicht drehen" (3D-Navigation)
+    const btnRotateMode = document.getElementById('btnRotateViewMode');
+    if (btnRotateMode) {
+      btnRotateMode.addEventListener('click', () => {
+        STATE.rotateViewMode = !STATE.rotateViewMode;
+        btnRotateMode.classList.toggle('active', STATE.rotateViewMode);
+        btnRotateMode.setAttribute('aria-pressed', STATE.rotateViewMode ? 'true' : 'false');
+      });
+    }
     setupDragAndDrop();
   }
 
@@ -2520,8 +2566,7 @@
     const needle = document.getElementById('compassNeedle');
     if (needle) needle.style.transform = `rotate(${STATE.viewYaw}deg)`;
   }
-
-
+
   // ==========================================================================
   // 9. BRETT TRENNEN / ZUSAMMENFÜGEN (1-BRETT DEFAULT LOGIK)
   // ==========================================================================

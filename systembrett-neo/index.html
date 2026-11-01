@@ -731,6 +731,8 @@
 
         <!-- 3D-NAVIGATION (nur in der 3D-Ansicht) -->
         <div id="nav3d" class="nav3d">
+          <button id="btnRotateViewMode" type="button" class="nav3d-btn nav3d-toggle" aria-pressed="false" title="Ansicht drehen: Ziehen auf der freien Fläche dreht und neigt das Brett">Ansicht drehen</button>
+          <span class="nav3d-sep"></span>
           <button id="btnRotLeft" class="nav3d-btn" title="Nach links drehen (Shift + ←)">⟲</button>
           <button id="btnCompass" class="nav3d-btn nav3d-compass" title="Ansicht zurücksetzen">
             <svg id="compassNeedle" viewBox="0 0 24 24" width="22" height="22">
@@ -743,7 +745,6 @@
           <button id="btnTiltUp" class="nav3d-btn" title="Mehr Neigung – Blick zum Horizont (Shift + ↑)">⤒</button>
           <button id="btnTiltDown" class="nav3d-btn" title="Weniger Neigung – Draufsicht (Shift + ↓)">⤓</button>
         </div>
-
         <!-- EGO-VIEW (Perspektivenwechsel: Sicht aus den Augen der Figur) -->
         <div id="egoView" class="ego-view" style="display:none;">
           <div class="ego-head">

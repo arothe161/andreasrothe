@@ -2507,3 +2507,6 @@ body.palette-dragging .drawer-scrim {
 }
 .relation-floating .btn { background: #fff; color: #222; min-height: 32px; }
 @media (max-width: 600px) { .relation-floating { top: 66px; } }
+
+.nav3d-toggle { width: auto; padding: 0 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.nav3d-toggle.active { background: var(--primary); color: #2b1d0c; }
