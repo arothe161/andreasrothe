@@ -121,10 +121,10 @@
         </button>
 
         <div class="sidebar-tab-content accordion" id="leftAccordion">
-          <button class="acc-header open" data-acc="tab-templates" aria-expanded="true">
+          <button class="acc-header" data-acc="tab-templates" aria-expanded="false">
             <span>Vorlagen</span><span class="acc-chevron">▾</span>
           </button>
-<div id="tab-templates" class="acc-body open">
+<div id="tab-templates" class="acc-body">
             <div class="pane-header">
               <h3>Aufstellungs-Vorlagen</h3>
               <p class="pane-hint">Schnellstart mit bewährten systemischen Settings.</p>
@@ -453,8 +453,8 @@
         <!-- INSPEKTOR: überlagert das linke Menü, solange eine Figur ausgewählt ist -->
         <div class="inspector-overlay" id="inspectorOverlay">
           <div class="inspector-overlay-head">
-            <button id="btnCloseInspector" class="btn btn-secondary btn-sm" title="Inspektor schließen (Esc)"><span class="lbl-normal">‹ Werkzeuge</span><span class="lbl-focus">✕ Schließen</span></button>
-            <span class="sidebar-title">Inspektor</span>
+            <button id="btnCloseInspector" class="btn btn-secondary btn-sm" title="Inspektor schließen (Esc)"><span class="lbl-normal">‹ Werkzeuge</span><span class="lbl-focus">✕ Schließen</span><span class="lbl-phone">✕</span></button>
+            <span class="sidebar-title">Inspektor</span><span class="insp-peek-name" id="inspPeekName"></span><span class="insp-peek-actions"><button id="btnPeekDuplicate" class="btn btn-secondary btn-sm" title="Duplizieren">⧉</button><button id="btnPeekDelete" class="btn btn-danger btn-sm" title="Löschen">🗑</button></span><button id="btnPeekToggle" class="btn btn-primary btn-sm insp-toggle" aria-expanded="false">Mehr ▲</button>
           </div>
           <div class="inspector-overlay-body">
           <div id="tab-inspector" class="inspector-pane">

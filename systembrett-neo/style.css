@@ -2224,6 +2224,7 @@ body.focus-mode .sidebar-left.inspector-open > .inspector-overlay {
 
 /* Beschriftung des Schließen-Buttons: im Fokus-Modus gibt es kein Werkzeug-Menü zum Zurückkehren */
 .lbl-focus { display: none; }
+.lbl-phone, .insp-peek-name, .insp-peek-actions, .insp-toggle { display: none; }
 body.focus-mode .lbl-focus { display: inline; }
 body.focus-mode .lbl-normal { display: none; }
 
@@ -2465,6 +2466,28 @@ body.palette-dragging .drawer-scrim {
   }
 
   .stage-overlay-top { top: 64px; }
+
+  /* Inspektor auf dem Handy: zuerst schmale Leiste, volles Fenster erst auf Wunsch */
+  .inspector-overlay-head #btnCloseInspector .lbl-normal,
+  .inspector-overlay-head #btnCloseInspector .lbl-focus,
+  .inspector-overlay-head .sidebar-title { display: none; }
+  .inspector-overlay-head #btnCloseInspector .lbl-phone { display: inline; }
+  .inspector-overlay-head .insp-peek-name {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .inspector-overlay-head .insp-toggle { display: inline-flex; }
+  .sidebar-left.inspector-peek .insp-peek-actions { display: flex; gap: 6px; }
+  .sidebar-left.inspector-open.inspector-peek {
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+  }
+  .sidebar-left.inspector-peek .inspector-overlay-body { display: none; }
+  .sidebar-left.inspector-peek .inspector-overlay-head { border-bottom: none; padding: 8px 12px; }
   .ego-view { bottom: 10px; width: calc(100% - 16px); }
   .ego-head { flex-direction: column; gap: 2px; }
   .ego-summary { text-align: left; }

@@ -2278,8 +2278,41 @@
     if (label) label.textContent = `${Math.round(STATE.zoom * 100)}%`;
   }
 
+  // Brett nur verschiebbar, solange es (auf der jeweiligen Achse) nicht komplett sichtbar ist:
+  //  - passt das Brett in die Ansicht, bleibt es zentriert
+  //  - ist es größer (Zoom), darf der Rand nie ins Innere der Ansicht wandern
+  function constrainPan() {
+    if (STATE.povFigureId || !boardViewportEl) return;
+    const vr = boardViewportEl.getBoundingClientRect();
+    if (vr.width < 60 || vr.height < 60) return;
+    const bb = getBoardBounds();
+    const corners = [[bb.x, bb.y], [bb.x + bb.w, bb.y], [bb.x + bb.w, bb.y + bb.h], [bb.x, bb.y + bb.h]];
+    for (let i = 0; i < 3; i++) {
+      const proj = getTargetProjection();
+      let l = Infinity, r = -Infinity, t = Infinity, bt = -Infinity;
+      corners.forEach(c => {
+        const p = proj.forward(c[0], c[1]);
+        if (p.x < l) l = p.x;
+        if (p.x > r) r = p.x;
+        if (p.y < t) t = p.y;
+        if (p.y > bt) bt = p.y;
+      });
+      let dx = 0, dy = 0;
+      if (r - l <= vr.width) dx = (vr.left + vr.width / 2) - (l + r) / 2;
+      else if (l > vr.left) dx = vr.left - l;
+      else if (r < vr.right) dx = vr.right - r;
+      if (bt - t <= vr.height) dy = (vr.top + vr.height / 2) - (t + bt) / 2;
+      else if (t > vr.top) dy = vr.top - t;
+      else if (bt < vr.bottom) dy = vr.bottom - bt;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) break;
+      STATE.panX += dx;
+      STATE.panY += dy;
+    }
+  }
+
   function updateTransform() {
     if (!boardTransformEl) return;
+    constrainPan();
     boardTransformEl.style.transform = buildTransformString();
     updateZoomLabel();
     updateCompass();
@@ -2715,6 +2748,8 @@
 
   // Inspektor liegt über dem linken Menü, solange eine Figur ausgewählt ist
   let lastInspectorFigId = null;
+  // Handy: Inspektor zuerst als schmale Leiste, erst „Mehr“ öffnet das volle Fenster
+  let inspectorExpanded = false;
 
   // ---- Responsives Layout (Breakpoints wie die einbindende Seite: 900 px und 600 px) ----
   const compactMQ = window.matchMedia('(max-width: 900px)');
@@ -2744,12 +2779,14 @@
       STATE.compactApplied = false;
       setSidebarCollapsed('left', STATE.leftWasOpen === false);
     }
+    syncInspectorOverlay();
     updateDrawerState();
   }
 
   // Ausgewählte Figur sichtbar halten, wenn der Inspektor (Seitenfeld oder untere Schublade) sie verdeckt
   function revealSelectedFigure() {
-    if (!isCompact() || STATE.povFigureId) return;
+    // Auf dem Handy bleibt das Brett unverändert (kein Springen)
+    if (!isCompact() || phoneMQ.matches || STATE.povFigureId) return;
     requestAnimationFrame(() => {
       const fig = getFigureById(STATE.selectedFigureId);
       const left = document.getElementById('sidebarLeft');
@@ -2782,6 +2819,15 @@
     if (!left) return;
     const has = !!getFigureById(STATE.selectedFigureId);
     left.classList.toggle('inspector-open', has);
+    const peek = has && phoneMQ.matches && !inspectorExpanded;
+    left.classList.toggle('inspector-peek', peek);
+    const peekName = document.getElementById('inspPeekName');
+    if (peekName) peekName.textContent = has ? (getFigureById(STATE.selectedFigureId).name || 'Figur') : '';
+    const peekToggle = document.getElementById('btnPeekToggle');
+    if (peekToggle) {
+      peekToggle.textContent = peek ? 'Mehr ▲' : 'Weniger ▼';
+      peekToggle.setAttribute('aria-expanded', peek ? 'false' : 'true');
+    }
     // Ist das Menü eingeklappt, wird es für den Inspektor automatisch geöffnet
     if (has && !STATE.focusMode && !isCompact() && lastInspectorFigId !== STATE.selectedFigureId && left.classList.contains('collapsed')) {
       setSidebarCollapsed('left', false);
@@ -2802,6 +2848,23 @@
     }
   }
 
+  // Zuletzt geöffnete Akkordeon-Einträge merken und wiederherstellen
+  const ACC_KEY = 'systembrett-neo-open-accordions';
+  function saveAccordionState() {
+    try {
+      const ids = [...document.querySelectorAll('.acc-header.open')].map(h => h.getAttribute('data-acc'));
+      localStorage.setItem(ACC_KEY, JSON.stringify(ids));
+    } catch (e) { /* ignorieren */ }
+  }
+  function restoreAccordionState() {
+    try {
+      const raw = localStorage.getItem(ACC_KEY);
+      if (!raw) return;
+      const ids = JSON.parse(raw);
+      if (Array.isArray(ids)) ids.forEach(id => setAccordion(id, true));
+    } catch (e) { /* ignorieren */ }
+  }
+
   function setSidebarCollapsed(side, collapsed) {
     const el = document.getElementById(side === 'left' ? 'sidebarLeft' : 'sidebarRight');
     if (!el) return;
@@ -2815,6 +2878,7 @@
   }
 
   function selectFigure(figId) {
+    if (figId !== STATE.selectedFigureId) inspectorExpanded = false;
     STATE.selectedFigureId = figId;
     const fig = getFigureById(figId);
 
@@ -4443,8 +4507,10 @@
         header.setAttribute('aria-expanded', open ? 'true' : 'false');
         const body = document.getElementById(header.getAttribute('data-acc'));
         if (body) body.classList.toggle('open', open);
+        saveAccordionState();
       });
     });
+    restoreAccordionState();
 
     // 3D-Navigation (Kompass, Drehen, Neigen)
     document.getElementById('btnRotLeft')?.addEventListener('click', () => { stopViewMotion(); tweenViewAngles(STATE.viewYaw + 15, STATE.viewTilt, 260); });
@@ -4459,6 +4525,9 @@
     document.getElementById('btnCollapseRight')?.addEventListener('click', () => setSidebarCollapsed('right', true));
     document.getElementById('btnExpandRight')?.addEventListener('click', () => setSidebarCollapsed('right', false));
     document.getElementById('btnCloseInspector')?.addEventListener('click', () => selectFigure(null));
+    document.getElementById('btnPeekToggle')?.addEventListener('click', () => { inspectorExpanded = !inspectorExpanded; syncInspectorOverlay(); });
+    document.getElementById('btnPeekDuplicate')?.addEventListener('click', duplicateSelectedFigure);
+    document.getElementById('btnPeekDelete')?.addEventListener('click', deleteSelectedFigure);
 
     // Rechte Leiste: Tabs
     document.querySelectorAll('.sidebar-tabs').forEach(tabsNav => {
