@@ -1,0 +1,74 @@
+From 8e61711f291227c05d1ad331fb166be65a662ead Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 18 Nov 2026 20:21:29 +0000
+Subject: [PATCH] Systembrett-neo: perspektivische Verzerrung beim Drehen (Ecke
+ zum Betrachter) beheben
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Die z-Achse wurde beim Zoom nicht mitskaliert und die Perspektive war mit
+1200px zu stark. Jetzt skalieren Perspektive und Höhe mit dem Zoom (3200px).
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ewr5D7y51AnsyEumHvZLij
+---
+ systembrett-neo/app.js | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/systembrett-neo/app.js b/systembrett-neo/app.js
+index df929e2..5bf469b 100644
+--- a/systembrett-neo/app.js
++++ b/systembrett-neo/app.js
+@@ -2241,12 +2241,20 @@
+     return Math.max(lo, Math.min(hi, v));
+   }
+ 
++  // Perspektive und Höhe skalieren mit dem Zoom mit; so bleibt die Verzerrung unabhängig vom
++  // Zoom konstant und moderat, auch wenn eine Brettecke dem Betrachter zugewandt ist.
++  const PERSPECTIVE = 3200;
++  function perspectiveFor(zoom) {
++    return PERSPECTIVE * zoom;
++  }
++
+   function buildTransformString() {
++    boardViewportEl.style.perspective = perspectiveFor(STATE.zoom) + 'px';
+     const is3d = STATE.viewMode === '25d';
+     const tilt = is3d ? STATE.viewTilt : 0;
+     const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
+     // Immer dieselbe Funktionsliste -> weiche Übergänge zwischen 2D, 3D und Perspektivenwechsel
+-    return `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) scale3d(${STATE.zoom}, ${STATE.zoom}, 1) rotateX(${tilt}deg) rotateZ(${rotZ}deg)`;
++    return `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) scale3d(${STATE.zoom}, ${STATE.zoom}, ${STATE.zoom}) rotateX(${tilt}deg) rotateZ(${rotZ}deg)`;
+   }
+ 
+   function updateZoomLabel() {
+@@ -2407,11 +2415,11 @@
+   }
+ 
+   // Projektion zwischen Brett-Koordinaten und Bildschirm (berücksichtigt Neigung, Drehung und Perspektive)
+-  function getProjection(matrix) {
++  function getProjection(matrix, perspOverride) {
+     const cs = getComputedStyle(boardTransformEl);
+     const m = matrix || new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform);
+     const vr = boardViewportEl.getBoundingClientRect();
+-    const persp = parseFloat(getComputedStyle(boardViewportEl).perspective) || 1e9;
++    const persp = perspOverride || parseFloat(getComputedStyle(boardViewportEl).perspective) || 1e9;
+     const ox = CONTAINER_W / 2;
+     const oy = CONTAINER_H / 2;
+ 
+@@ -2445,10 +2453,10 @@
+     const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
+     const m = new DOMMatrix()
+       .translateSelf(STATE.panX - CONTAINER_W / 2, STATE.panY - CONTAINER_H / 2)
+-      .scaleSelf(STATE.zoom, STATE.zoom, 1)
++      .scaleSelf(STATE.zoom, STATE.zoom, STATE.zoom)
+       .rotateAxisAngleSelf(1, 0, 0, tilt)
+       .rotateAxisAngleSelf(0, 0, 1, rotZ);
+-    return getProjection(m);
++    return getProjection(m, perspectiveFor(STATE.zoom));
+   }
+ 
+   function clientToBoard(clientX, clientY) {
+-- 
+2.43.0
+

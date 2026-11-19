@@ -834,14 +834,28 @@
   // ---- Kegelfigur: Kegelkörper mit Kugelkopf und aufgemalten Augen ----
   function solidPeg(root, defs, fig, s, mat, ctx) {
     const Y = h => ctx.at(0, 0, h)[1], X = h => ctx.at(0, 0, h)[0];
-    const R = s * 0.95, Hb = s * 1.35, rn = s * 0.3, hr = s * 0.6, hc = Hb + hr * 0.5;
+    // Proportionen einer klassischen Spielfigur: breiter Fuß, schlank nach oben auslaufender
+    // (leicht hohl geschwungener) Körper und ein kleiner Kugelkopf obenauf.
+    const R = s * 0.78, Hb = s * 2.35, rn = s * 0.2, hr = s * 0.47, hc = Hb + hr * 0.45;
     const lg = `lg${ctx.uid}`, rg = `rg${ctx.uid}`;
     addLinearGradient(defs, lg, mat);
     addRadialGradient(defs, rg, mat);
 
+    // Körperumriss: Radius nimmt konkav von R (Fuß) auf rn (Hals) ab
+    const N = 14, left = [], right = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, h = Hb * t, r = rn + (R - rn) * Math.pow(1 - t, 1.7);
+      left.push([X(h) - r, Y(h)]);
+      right.push([X(h) + r, Y(h)]);
+    }
+    const f2 = v => v.toFixed(2);
+    let d = `M ${f2(left[0][0])},${f2(left[0][1])}`;
+    for (let i = 1; i <= N; i++) d += ` L ${f2(left[i][0])},${f2(left[i][1])}`;
+    for (let i = N; i >= 0; i--) d += ` L ${f2(right[i][0])},${f2(right[i][1])}`;
+    d += ` A ${R},${R} 0 0,1 ${f2(left[0][0])},${f2(left[0][1])} Z`;
     const body = svgEl('path', {
-      d: hullPath(0, 0, R, X(Hb), Y(Hb), rn), fill: `url(#${lg})`,
-      stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45
+      d: d, fill: `url(#${lg})`,
+      stroke: mat.edge, 'stroke-width': 1, 'stroke-opacity': 0.45, 'stroke-linejoin': 'round'
     });
     root.appendChild(body);
     grainOver(root, body, mat);
@@ -850,7 +864,7 @@
     root.appendChild(svgEl('circle', { cx: X(Hb), cy: Y(Hb) + 0.5, r: rn * 1.12, fill: shade(mat.base, -0.5), opacity: 0.5 }));
 
     const sph = solidSphere(root, defs, ctx, mat, hc, hr, rg);
-    sphereEyes(sph.g, ctx, fig, mat, 6, 30, Math.max(0.07, (s * 0.085) / hr));
+    sphereEyes(sph.g, ctx, fig, mat, 6, 30, Math.max(0.07, (s * 0.075) / hr));
 
     return { height: hc + hr, badge: sph.badge };
   }
@@ -1934,7 +1948,8 @@
         selectFigure(null);
         startViewDrag(e);
       }
-    });
+    });
+
 
     // Doppeltipp: Tipp auf freier Fläche merken (Figuren stoppen das Ereignis vorher)
     viewport.addEventListener('pointerdown', (e) => {
@@ -2105,7 +2120,8 @@
 
     viewport.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const figTarget = e.target.closest('.system-figure');
+
+      const figTarget = e.target.closest('.system-figure');
       if (figTarget && e.shiftKey) {
         const figId = figTarget.getAttribute('data-id');
         const fig = getFigureById(figId);
@@ -2574,7 +2590,8 @@
     const needle = document.getElementById('compassNeedle');
     if (needle) needle.style.transform = `rotate(${STATE.viewYaw}deg)`;
   }
-
+
+
   // ==========================================================================
   // 9. BRETT TRENNEN / ZUSAMMENFÜGEN (1-BRETT DEFAULT LOGIK)
   // ==========================================================================
