@@ -2241,12 +2241,20 @@
     return Math.max(lo, Math.min(hi, v));
   }
 
+  // Perspektive und Höhe skalieren mit dem Zoom mit; so bleibt die Verzerrung unabhängig vom
+  // Zoom konstant und moderat, auch wenn eine Brettecke dem Betrachter zugewandt ist.
+  const PERSPECTIVE = 3200;
+  function perspectiveFor(zoom) {
+    return PERSPECTIVE * zoom;
+  }
+
   function buildTransformString() {
+    boardViewportEl.style.perspective = perspectiveFor(STATE.zoom) + 'px';
     const is3d = STATE.viewMode === '25d';
     const tilt = is3d ? STATE.viewTilt : 0;
     const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
     // Immer dieselbe Funktionsliste -> weiche Übergänge zwischen 2D, 3D und Perspektivenwechsel
-    return `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) scale3d(${STATE.zoom}, ${STATE.zoom}, 1) rotateX(${tilt}deg) rotateZ(${rotZ}deg)`;
+    return `translate(calc(-50% + ${STATE.panX}px), calc(-50% + ${STATE.panY}px)) scale3d(${STATE.zoom}, ${STATE.zoom}, ${STATE.zoom}) rotateX(${tilt}deg) rotateZ(${rotZ}deg)`;
   }
 
   function updateZoomLabel() {
@@ -2407,11 +2415,11 @@
   }
 
   // Projektion zwischen Brett-Koordinaten und Bildschirm (berücksichtigt Neigung, Drehung und Perspektive)
-  function getProjection(matrix) {
+  function getProjection(matrix, perspOverride) {
     const cs = getComputedStyle(boardTransformEl);
     const m = matrix || new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform);
     const vr = boardViewportEl.getBoundingClientRect();
-    const persp = parseFloat(getComputedStyle(boardViewportEl).perspective) || 1e9;
+    const persp = perspOverride || parseFloat(getComputedStyle(boardViewportEl).perspective) || 1e9;
     const ox = CONTAINER_W / 2;
     const oy = CONTAINER_H / 2;
 
@@ -2445,10 +2453,10 @@
     const rotZ = (is3d ? STATE.viewYaw : 0) + STATE.viewRotation;
     const m = new DOMMatrix()
       .translateSelf(STATE.panX - CONTAINER_W / 2, STATE.panY - CONTAINER_H / 2)
-      .scaleSelf(STATE.zoom, STATE.zoom, 1)
+      .scaleSelf(STATE.zoom, STATE.zoom, STATE.zoom)
       .rotateAxisAngleSelf(1, 0, 0, tilt)
       .rotateAxisAngleSelf(0, 0, 1, rotZ);
-    return getProjection(m);
+    return getProjection(m, perspectiveFor(STATE.zoom));
   }
 
   function clientToBoard(clientX, clientY) {
