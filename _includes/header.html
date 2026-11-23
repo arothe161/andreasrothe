@@ -24,13 +24,9 @@
 
       <div class="lang-switch">
         {% if page.lang == 'de' %}
-          <a href="{{ '/en/' | relative_url }}" class="lang-icon-link" title="Switch to English version" aria-label="Switch to English version">
-            <img src="{{ '/assets/icons/flag-en.svg' | relative_url }}" alt="English" class="lang-flag-icon">
-          </a>
+          <a href="{{ '/en/' | relative_url }}" class="lang-link" lang="en" hreflang="en" title="Switch to English version" aria-label="Switch to English version">EN</a>
         {% else %}
-          <a href="{{ '/' | relative_url }}" class="lang-icon-link" title="Zur deutschen Version wechseln" aria-label="Zur deutschen Version wechseln">
-            <img src="{{ '/assets/icons/flag-de.svg' | relative_url }}" alt="Deutsch" class="lang-flag-icon">
-          </a>
+          <a href="{{ '/' | relative_url }}" class="lang-link" lang="de" hreflang="de" title="Zur deutschen Version wechseln" aria-label="Zur deutschen Version wechseln">DE</a>
         {% endif %}
       </div>
     </div>

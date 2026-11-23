@@ -76,6 +76,24 @@
       var klaroConfig = {
         acceptAll: true,
         lang: '{{ page.lang | default: site.lang | default: "de" }}',
+        translations: {
+          de: {
+            consentNotice: {
+              description: 'Wir möchten Dienste für {purposes} aktivieren. Ihre Zustimmung können Sie jederzeit ändern oder widerrufen.',
+              learnMore: 'Auswählen'
+            },
+            decline: 'Ablehnen',
+            ok: 'Zustimmen'
+          },
+          en: {
+            consentNotice: {
+              description: 'We would like to enable services for {purposes}. You can change or withdraw your consent at any time.',
+              learnMore: 'Choose'
+            },
+            decline: 'Decline',
+            ok: 'Accept'
+          }
+        },
         services: [
           {
             name: 'google-analytics',
